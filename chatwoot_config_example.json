@@ -1,9 +1,9 @@
 {
   "url": "http://127.0.0.1:3001",
-  "token": "tMo1XbvJWXM1V4BcJtFjkMXr",
+  "token": "your-chatwoot-access-token-here",
   "accountId": "1",
   "autoCreate": true,
-  "inboxName": "WhatsApp zpwoot - my-session",
+  "inboxName": "WhatsApp zpwoot",
   "enabled": true,
   "signMsg": false,
   "signDelimiter": "\n\n",
@@ -13,7 +13,7 @@
   "importMessages": false,
   "importDays": 60,
   "mergeBrazil": true,
-  "number": "554988989314",
+  "number": "5511999999999",
   "organization": "Minha Empresa",
   "logo": "https://example.com/logo.png"
 }

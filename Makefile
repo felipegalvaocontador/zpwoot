@@ -1,6 +1,6 @@
 # zpwoot Makefile
 
-.PHONY: help build run test clean deps docker-build docker-run migrate-up migrate-down kill ps-port down-clean down-cw-clean clean-volumes list-volumes swagger swagger-quick install-swag
+.PHONY: help build run test clean deps docker-build docker-run migrate-up migrate-down kill ps-port down-clean down-cw-clean clean-volumes list-volumes swagger swagger-quick install-swag create-chatwoot-example setup-chatwoot test-chatwoot remove-chatwoot chatwoot-help
 
 # Variables
 APP_NAME=zpwoot
@@ -397,3 +397,102 @@ backup: ## Backup database
 restore: ## Restore database from backup (usage: make restore BACKUP=backup_file.sql)
 	@echo "Restoring database from $(BACKUP)..."
 	psql $(DATABASE_URL) < $(BACKUP)
+
+# Chatwoot Configuration
+create-chatwoot-example: ## Create chatwoot_config_example.json file
+	@echo "📝 Creating chatwoot_config_example.json..."
+	@echo '{' > chatwoot_config_example.json
+	@echo '  "url": "http://127.0.0.1:3001",' >> chatwoot_config_example.json
+	@echo '  "token": "your-chatwoot-access-token-here",' >> chatwoot_config_example.json
+	@echo '  "accountId": "1",' >> chatwoot_config_example.json
+	@echo '  "autoCreate": true,' >> chatwoot_config_example.json
+	@echo '  "inboxName": "WhatsApp zpwoot",' >> chatwoot_config_example.json
+	@echo '  "enabled": true,' >> chatwoot_config_example.json
+	@echo '  "signMsg": false,' >> chatwoot_config_example.json
+	@echo '  "signDelimiter": "\\n\\n",' >> chatwoot_config_example.json
+	@echo '  "reopenConv": true,' >> chatwoot_config_example.json
+	@echo '  "convPending": false,' >> chatwoot_config_example.json
+	@echo '  "importContacts": false,' >> chatwoot_config_example.json
+	@echo '  "importMessages": false,' >> chatwoot_config_example.json
+	@echo '  "importDays": 60,' >> chatwoot_config_example.json
+	@echo '  "mergeBrazil": true,' >> chatwoot_config_example.json
+	@echo '  "number": "5511999999999",' >> chatwoot_config_example.json
+	@echo '  "organization": "Minha Empresa",' >> chatwoot_config_example.json
+	@echo '  "logo": "https://example.com/logo.png"' >> chatwoot_config_example.json
+	@echo '}' >> chatwoot_config_example.json
+	@echo "✅ chatwoot_config_example.json created!"
+	@echo "📝 Edit the file with your Chatwoot configuration before using setup-chatwoot"
+
+setup-chatwoot: ## Setup Chatwoot inbox using chatwoot_config_example.json (usage: make setup-chatwoot SESSION=my-session)
+	@echo "🔧 Setting up Chatwoot inbox..."
+	@if [ -z "$(SESSION)" ]; then \
+		echo "❌ Error: SESSION is required. Usage: make setup-chatwoot SESSION=my-session"; \
+		exit 1; \
+	fi
+	@if [ ! -f chatwoot_config_example.json ]; then \
+		echo "❌ Error: chatwoot_config_example.json not found. Run 'make create-chatwoot-example' first"; \
+		exit 1; \
+	fi
+	@echo "📤 Sending configuration to zpwoot API..."
+	@echo "🎯 Session: $(SESSION)"
+	@echo "📋 Config file: chatwoot_config_example.json"
+	@curl -X POST \
+		-H "Content-Type: application/json" \
+		-H "Authorization: $${ZPWOOT_API_KEY:-a0b1125a0eb3364d98e2c49ec6f7d6ba}" \
+		-d @chatwoot_config_example.json \
+		"http://localhost:8080/sessions/$(SESSION)/chatwoot/set" \
+		| jq '.' || echo "❌ Failed to setup Chatwoot. Make sure zpwoot is running and the session exists."
+	@echo ""
+	@echo "✅ Chatwoot setup completed!"
+	@echo "💬 Check your Chatwoot dashboard at: http://localhost:3001"
+
+test-chatwoot: ## Test Chatwoot configuration (usage: make test-chatwoot SESSION=my-session)
+	@echo "🧪 Testing Chatwoot configuration..."
+	@if [ -z "$(SESSION)" ]; then \
+		echo "❌ Error: SESSION is required. Usage: make test-chatwoot SESSION=my-session"; \
+		exit 1; \
+	fi
+	@echo "📋 Getting current Chatwoot configuration..."
+	@curl -X GET \
+		-H "Authorization: $${ZPWOOT_API_KEY:-a0b1125a0eb3364d98e2c49ec6f7d6ba}" \
+		"http://localhost:8080/sessions/$(SESSION)/chatwoot/find" \
+		| jq '.' || echo "❌ Failed to get Chatwoot config"
+
+remove-chatwoot: ## Remove Chatwoot configuration (usage: make remove-chatwoot SESSION=my-session)
+	@echo "🗑️  Removing Chatwoot configuration..."
+	@if [ -z "$(SESSION)" ]; then \
+		echo "❌ Error: SESSION is required. Usage: make remove-chatwoot SESSION=my-session"; \
+		exit 1; \
+	fi
+	@echo "⚠️  This will permanently remove the Chatwoot configuration for session: $(SESSION)"
+	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	@curl -X DELETE \
+		-H "Authorization: $${ZPWOOT_API_KEY:-a0b1125a0eb3364d98e2c49ec6f7d6ba}" \
+		"http://localhost:8080/sessions/$(SESSION)/chatwoot/delete" \
+		| jq '.' || echo "❌ Failed to remove Chatwoot config"
+	@echo "✅ Chatwoot configuration removed!"
+
+chatwoot-help: ## Show Chatwoot setup help and examples
+	@echo "💬 Chatwoot Integration Help"
+	@echo "============================"
+	@echo ""
+	@echo "📋 Available Commands:"
+	@echo "  make create-chatwoot-example  - Create example configuration file"
+	@echo "  make setup-chatwoot SESSION=my-session - Setup Chatwoot for a session"
+	@echo "  make test-chatwoot SESSION=my-session  - Test Chatwoot configuration"
+	@echo "  make remove-chatwoot SESSION=my-session - Remove Chatwoot configuration"
+	@echo ""
+	@echo "🚀 Quick Setup:"
+	@echo "  1. Start Chatwoot: make up-cw"
+	@echo "  2. Create config: make create-chatwoot-example"
+	@echo "  3. Edit chatwoot_config_example.json with your token"
+	@echo "  4. Setup inbox: make setup-chatwoot SESSION=my-session"
+	@echo ""
+	@echo "🔑 Required Configuration:"
+	@echo "  - url: Your Chatwoot instance URL (default: http://127.0.0.1:3001)"
+	@echo "  - token: Your Chatwoot access token (get from Chatwoot settings)"
+	@echo "  - accountId: Your Chatwoot account ID (usually '1')"
+	@echo ""
+	@echo "🌐 Chatwoot URLs:"
+	@echo "  - Dashboard: http://localhost:3001"
+	@echo "  - API Docs: http://localhost:3001/api-docs"

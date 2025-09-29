@@ -158,10 +158,17 @@ func (q *QRCodeGenerator) DisplayQRCodeInTerminal(qrCode, sessionID string) {
 		return
 	}
 
-	// Render the QR code here
-	// e.g. qrterminal.GenerateHalfBlock(qrCode, qrterminal.L, os.Stdout)
-	// or just manually `echo 2@... | qrencode -t ansiutf8` in a terminal
-	fmt.Println("QR code:", qrCode)
+	// Log QR code string for debugging (separate from terminal display)
+	q.logger.InfoWithFields("QR code generated", map[string]interface{}{
+		"session_id": sessionID,
+		"qr_code":    qrCode, // Log the actual QR string for debugging
+	})
+
+	// Clear terminal before displaying new QR code (WhatsApp renews every 20-30 seconds)
+	fmt.Print("\033[2J\033[H") // Clear screen and move cursor to top
+
+	// Display QR code using HalfBlock for better terminal compatibility
+	fmt.Println("Scan this QR code with WhatsApp:")
 	qrterminal.GenerateHalfBlock(qrCode, qrterminal.L, os.Stdout)
 
 	// Armazena o QR code atual para evitar duplicates
@@ -196,9 +203,23 @@ func (s *sessionManager) UpdateConnectionStatus(sessionID string, isConnected bo
 
 	sessionEntity, err := s.sessionRepo.GetByID(ctx, sessionID)
 	if err != nil {
-		s.logger.ErrorWithFields("Failed to get session", map[string]interface{}{
+		// Check if it's a "not found" error (session may have been deleted)
+		if err.Error() == "session not found" {
+			s.logger.InfoWithFields("Session not found during status update (may have been deleted)", map[string]interface{}{
+				"session_id": sessionID,
+			})
+		} else {
+			s.logger.ErrorWithFields("Failed to get session", map[string]interface{}{
+				"session_id": sessionID,
+				"error":      err.Error(),
+			})
+		}
+		return
+	}
+
+	if sessionEntity == nil {
+		s.logger.InfoWithFields("Session entity is nil (may have been deleted)", map[string]interface{}{
 			"session_id": sessionID,
-			"error":      err.Error(),
 		})
 		return
 	}

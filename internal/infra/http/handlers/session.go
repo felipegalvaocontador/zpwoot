@@ -9,6 +9,7 @@ import (
 	"zpwoot/internal/app/session"
 	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
+	"zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
 
 	"github.com/gofiber/fiber/v2"
@@ -101,6 +102,12 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 	err := actionFunc(c.Context(), sess.ID.String())
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
+
+		// Handle specific error types
+		if appErr, ok := err.(*errors.AppError); ok {
+			return c.Status(appErr.Code).JSON(common.NewErrorResponse(appErr.Message))
+		}
+
 		if err.Error() == "session not found" {
 			return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
 		}
@@ -270,12 +277,12 @@ func (h *SessionHandler) DeleteSession(c *fiber.Ctx) error {
 }
 
 // @Summary Connect session
-// @Description Connect a WhatsApp session to start receiving messages. Returns QR code if device is not registered.
+// @Description Connect a WhatsApp session to start receiving messages. Automatically returns QR code (both string and base64 image) if device needs to be paired. If session is already connected, returns confirmation message.
 // @Tags Sessions
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} session.ConnectSessionResponse "Session connection initiated successfully with QR code if needed"
+// @Success 200 {object} session.ConnectSessionResponse "Session connection initiated successfully with QR code if needed, or confirmation if already connected"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/connect [post]

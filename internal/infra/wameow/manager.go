@@ -168,7 +168,14 @@ func (m *Manager) DisconnectSession(sessionID string) error {
 		return fmt.Errorf("failed to disconnect session %s: %w", sessionID, err)
 	}
 
+	// Update connection status
 	m.sessionMgr.UpdateConnectionStatus(sessionID, false)
+
+	// Remove client from manager to prevent further operations
+	m.clientsMutex.Lock()
+	delete(m.clients, sessionID)
+	m.clientsMutex.Unlock()
+
 	return nil
 }
 

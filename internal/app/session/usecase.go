@@ -6,6 +6,7 @@ import (
 
 	"zpwoot/internal/domain/session"
 	"zpwoot/internal/ports"
+	"zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
 )
 
@@ -31,13 +32,13 @@ type useCaseImpl struct {
 
 func NewUseCase(
 	sessionRepo ports.SessionRepository,
-	WameowMgr ports.WameowManager,
+	wameowMgr ports.WameowManager,
 	sessionService *session.Service,
 	logger *logger.Logger,
 ) UseCase {
 	return &useCaseImpl{
 		sessionRepo:    sessionRepo,
-		WameowMgr:      WameowMgr,
+		WameowMgr:      wameowMgr,
 		sessionService: sessionService,
 		logger:         logger,
 	}
@@ -141,27 +142,55 @@ func (uc *useCaseImpl) DeleteSession(ctx context.Context, sessionID string) erro
 
 func (uc *useCaseImpl) ConnectSession(ctx context.Context, sessionID string) (*ConnectSessionResponse, error) {
 	err := uc.sessionService.ConnectSession(ctx, sessionID)
+
+	var response *ConnectSessionResponse
+
 	if err != nil {
-		return nil, err
+		// Check if it's an "already connected" error
+		if appErr, ok := err.(*errors.AppError); ok && appErr.Code == 409 {
+			response = &ConnectSessionResponse{
+				Success: true,
+				Message: "Session is already connected and active",
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		response = &ConnectSessionResponse{
+			Success: true,
+			Message: "Session connection initiated successfully",
+		}
 	}
 
-	response := &ConnectSessionResponse{
-		Success: true,
-		Message: "Session connection initiated successfully",
-	}
-
-	// Try to get QR code if available
+	// Always try to get QR code if available (for both connected and connecting sessions)
 	qrResponse, qrErr := uc.sessionService.GetQRCode(ctx, sessionID)
 	if qrErr == nil && qrResponse != nil {
 		response.QrCode = qrResponse.QRCodeImage
 		response.Code = qrResponse.QRCode
+
+		// Update message based on session state
+		if err != nil && response.Message == "Session is already connected and active" {
+			// Session is connected but has QR code (shouldn't happen normally)
+			response.Message = "Session is connected"
+		} else {
+			response.Message = "QR code generated - scan with WhatsApp to connect"
+		}
 	}
 
 	return response, nil
 }
 
 func (uc *useCaseImpl) LogoutSession(ctx context.Context, sessionID string) error {
-	return uc.sessionService.LogoutSession(ctx, sessionID)
+	err := uc.sessionService.LogoutSession(ctx, sessionID)
+	if err != nil {
+		// Check if it's an "already disconnected" error
+		if appErr, ok := err.(*errors.AppError); ok && appErr.Code == 409 {
+			// Return success for already disconnected sessions
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (uc *useCaseImpl) GetQRCode(ctx context.Context, sessionID string) (*QRCodeResponse, error) {

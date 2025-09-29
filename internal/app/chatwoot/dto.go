@@ -32,7 +32,7 @@ type CreateChatwootConfigRequest struct {
 	Logo           *string  `json:"logo,omitempty" example:"https://zpwoot.com/logo.png"`
 	Number         *string  `json:"number,omitempty" example:"5511999999999"`
 	IgnoreJids     []string `json:"ignoreJids,omitempty" example:"[\"5511888888888@s.whatsapp.net\"]"`
-} //@name CreateChatwootConfigRequest
+} // @name CreateChatwootConfigRequest
 
 type CreateChatwootConfigResponse struct {
 	ID        string    `json:"id" example:"chatwoot-config-123"`
@@ -41,7 +41,7 @@ type CreateChatwootConfigResponse struct {
 	InboxID   *string   `json:"inboxId,omitempty" example:"1"`
 	Active    bool      `json:"active" example:"true"`
 	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
-} //@name CreateChatwootConfigResponse
+} // @name CreateChatwootConfigResponse
 
 type UpdateChatwootConfigRequest struct {
 	URL       *string `json:"url,omitempty" validate:"omitempty,url" example:"http://localhost:3001"`
@@ -75,7 +75,7 @@ type ChatwootConfigResponse struct {
 	Active    bool      `json:"active" example:"true"`
 	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 	UpdatedAt time.Time `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
-} //@name ChatwootConfigResponse
+} // @name ChatwootConfigResponse
 
 type SyncContactRequest struct {
 	PhoneNumber string                 `json:"phoneNumber" validate:"required" example:"+5511999999999"`
@@ -145,12 +145,12 @@ type WebhookRequest struct {
 	Private           bool                   `json:"private"`
 	ContentAttributes map[string]interface{} `json:"content_attributes,omitempty"`
 	Meta              *Meta                  `json:"meta,omitempty"`
-} //@name WebhookRequest
+} // @name WebhookRequest
 
 // Meta represents metadata in webhook payload
 type Meta struct {
 	Sender *Sender `json:"sender,omitempty"`
-} //@name Meta
+} // @name Meta
 
 // Sender represents the sender information in webhook
 type Sender struct {
@@ -162,7 +162,7 @@ type Sender struct {
 	Type          string `json:"type"` // contact, user, agent_bot
 	Email         string `json:"email,omitempty"`
 	PhoneNumber   string `json:"phone_number,omitempty"`
-} //@name Sender
+} // @name Sender
 
 type ChatwootWebhookPayload struct {
 	Event        string               `json:"event" example:"message_created"`
@@ -267,7 +267,7 @@ type ChatwootConfigEvolutionRequest struct {
 	Organization            string   `json:"organization,omitempty" example:"My Company"`
 	Logo                    string   `json:"logo,omitempty" example:"https://example.com/logo.png"`
 	IgnoreJids              []string `json:"ignoreJids,omitempty" example:"['123456@s.whatsapp.net']"`
-} //@name ChatwootConfigEvolutionRequest
+} // @name ChatwootConfigEvolutionRequest
 
 type ChatwootConfigEvolutionResponse struct {
 	Enabled                 bool     `json:"enabled" example:"true"`
@@ -290,7 +290,7 @@ type ChatwootConfigEvolutionResponse struct {
 	IgnoreJids              []string `json:"ignoreJids" example:"['123456@s.whatsapp.net']"`
 	WebhookURL              string   `json:"webhook_url" example:"http://localhost:8080/chatwoot/webhook/session-id"`
 	InboxID                 *string  `json:"inboxId,omitempty" example:"1"`
-} //@name ChatwootConfigEvolutionResponse
+} // @name ChatwootConfigEvolutionResponse
 
 type InitInstanceChatwootRequest struct {
 	InboxName    string `json:"inboxName" validate:"required" example:"WhatsApp Inbox"`
@@ -299,11 +299,11 @@ type InitInstanceChatwootRequest struct {
 	Number       string `json:"number,omitempty" example:"5511999999999"`
 	Organization string `json:"organization,omitempty" example:"My Company"`
 	Logo         string `json:"logo,omitempty" example:"https://example.com/logo.png"`
-} //@name InitInstanceChatwootRequest
+} // @name InitInstanceChatwootRequest
 
 type ImportHistoryRequest struct {
 	DaysLimit int `json:"daysLimit" validate:"min=1,max=365" example:"60"`
-} //@name ImportHistoryRequest
+} // @name ImportHistoryRequest
 
 func (r *CreateChatwootConfigRequest) ToCreateChatwootConfigRequest(sessionID string) (*chatwoot.CreateChatwootConfigRequest, error) {
 	sessionUUID, err := uuid.Parse(sessionID)

@@ -1381,7 +1381,7 @@ info:
     name: zpwoot Support
     url: https://github.com/your-org/zpwoot
   description: |-
-    A complete REST API for managing multiple WhatsApp sessions using Go, Fiber, PostgreSQL, and whatsmeow library.
+    A complete REST API for managing multiple WhatsApp sessions using Go, Fiber, PostgreSQL, and whatsmeow.
 
     ## Authentication
     All API endpoints (except /health/* and /swagger/*) require API key authentication.

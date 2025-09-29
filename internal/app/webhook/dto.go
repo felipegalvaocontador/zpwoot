@@ -12,7 +12,7 @@ type SetConfigRequest struct {
 	Secret    string   `json:"secret,omitempty" example:"my-webhook-secret-key-123"`
 	Events    []string `json:"events" validate:"required,min=1" example:"message,status,connection"`
 	Enabled   *bool    `json:"enabled,omitempty" example:"true"` // Whether webhook is enabled (default: true)
-} //@name SetConfigRequest
+} // @name SetConfigRequest
 
 type SetConfigResponse struct {
 	ID        string    `json:"id" example:"webhook-456def"`
@@ -21,28 +21,28 @@ type SetConfigResponse struct {
 	Events    []string  `json:"events" example:"message,status,connection"`
 	Enabled   bool      `json:"enabled" example:"true"` // Whether webhook is enabled
 	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
-} //@name SetConfigResponse
+} // @name SetConfigResponse
 
 type UpdateWebhookRequest struct {
 	URL     *string  `json:"url,omitempty" validate:"omitempty,url" example:"https://myapp.com/webhook/whatsapp/v2"`
 	Secret  *string  `json:"secret,omitempty" example:"updated-webhook-secret-456"`
 	Events  []string `json:"events,omitempty" validate:"omitempty,min=1" example:"message,status,connection,qr"`
 	Enabled *bool    `json:"enabled,omitempty" example:"false"` // Whether webhook is enabled
-} //@name UpdateWebhookRequest
+} // @name UpdateWebhookRequest
 
 type ListWebhooksRequest struct {
 	SessionID *string `json:"sessionId,omitempty" query:"sessionId" example:"1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"`
 	Enabled   *bool   `json:"enabled,omitempty" query:"enabled" example:"true"` // Filter by enabled status
 	Limit     int     `json:"limit,omitempty" query:"limit" validate:"omitempty,min=1,max=100" example:"20"`
 	Offset    int     `json:"offset,omitempty" query:"offset" validate:"omitempty,min=0" example:"0"`
-} //@name ListWebhooksRequest
+} // @name ListWebhooksRequest
 
 type ListWebhooksResponse struct {
 	Webhooks []WebhookResponse `json:"webhooks"`
 	Total    int               `json:"total" example:"5"`
 	Limit    int               `json:"limit" example:"20"`
 	Offset   int               `json:"offset" example:"0"`
-} //@name ListWebhooksResponse
+} // @name ListWebhooksResponse
 
 type WebhookResponse struct {
 	ID        string    `json:"id" example:"webhook-123"`
@@ -52,7 +52,7 @@ type WebhookResponse struct {
 	Enabled   bool      `json:"enabled" example:"true"` // Whether webhook is enabled
 	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 	UpdatedAt time.Time `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
-} //@name WebhookResponse
+} // @name WebhookResponse
 
 type WebhookEventResponse struct {
 	ID        string                 `json:"id" example:"event-123"`
@@ -60,12 +60,12 @@ type WebhookEventResponse struct {
 	Type      string                 `json:"type" example:"message"`
 	Timestamp time.Time              `json:"timestamp" example:"2024-01-01T00:00:00Z"`
 	Data      map[string]interface{} `json:"data"`
-} //@name WebhookEventResponse
+} // @name WebhookEventResponse
 
 type TestWebhookRequest struct {
 	EventType string                 `json:"eventType" validate:"required" example:"message"`
 	TestData  map[string]interface{} `json:"testData,omitempty"`
-} //@name TestWebhookRequest
+} // @name TestWebhookRequest
 
 type TestWebhookResponse struct {
 	Success      bool   `json:"success" example:"true"`

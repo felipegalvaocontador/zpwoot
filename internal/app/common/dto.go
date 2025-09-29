@@ -4,21 +4,21 @@ type SuccessResponse struct {
 	Success bool        `json:"success" example:"true"`
 	Message string      `json:"message,omitempty" example:"Operation completed successfully"`
 	Data    interface{} `json:"data,omitempty"`
-} //@name SuccessResponse
+} // @name SuccessResponse
 
 type ErrorResponse struct {
 	Success bool        `json:"success" example:"false"`
 	Error   string      `json:"error" example:"Invalid request"`
 	Details interface{} `json:"details,omitempty"`
 	Code    string      `json:"code,omitempty" example:"VALIDATION_ERROR"`
-} //@name ErrorResponse
+} // @name ErrorResponse
 
 type HealthResponse struct {
 	Status  string `json:"status" example:"ok"`
 	Service string `json:"service" example:"zpwoot"`
 	Version string `json:"version,omitempty" example:"1.0.0"`
 	Uptime  string `json:"uptime,omitempty" example:"2h30m15s"`
-} //@name HealthResponse
+} // @name HealthResponse
 
 type PaginationResponse struct {
 	Total   int  `json:"total" example:"100"`
@@ -55,7 +55,7 @@ type StatusResponse struct {
 
 type MessageResponse struct {
 	Message string `json:"message" example:"Operation completed successfully"`
-} //@name MessageResponse
+} // @name MessageResponse
 
 func NewSuccessResponse(data interface{}, message ...string) *SuccessResponse {
 	response := &SuccessResponse{

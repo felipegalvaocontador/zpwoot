@@ -11,29 +11,29 @@ import (
 	"zpwoot/platform/logger"
 )
 
-func SetupRoutes(app *fiber.App, database *db.DB, logger *logger.Logger, WameowManager *wameow.Manager, container *app.Container) {
+func SetupRoutes(app *fiber.App, database *db.DB, logger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	// Health check endpoints
-	healthHandler := handlers.NewHealthHandler(logger, WameowManager)
+	healthHandler := handlers.NewHealthHandler(logger, wameowManager)
 	app.Get("/health", healthHandler.GetHealth)
 	app.Get("/health/wameow", healthHandler.GetWameowHealth)
 
-	setupSessionRoutes(app, logger, WameowManager, container)
+	setupSessionRoutes(app, logger, wameowManager, container)
 
-	setupSessionSpecificRoutes(app, database, logger, WameowManager, container)
+	setupSessionSpecificRoutes(app, database, logger, wameowManager, container)
 
-	setupGlobalRoutes(app, database, logger, WameowManager, container)
+	setupGlobalRoutes(app, database, logger, wameowManager, container)
 }
 
-func setupSessionRoutes(app *fiber.App, appLogger *logger.Logger, WameowManager *wameow.Manager, container *app.Container) {
-	logWameowAvailability(appLogger, WameowManager)
+func setupSessionRoutes(app *fiber.App, appLogger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
+	logWameowAvailability(appLogger, wameowManager)
 
 	sessions := app.Group("/sessions")
 
 	// Setup all route groups
 	setupSessionManagementRoutes(sessions, container, appLogger)
-	setupMessageRoutes(sessions, container, WameowManager, appLogger)
+	setupMessageRoutes(sessions, container, wameowManager, appLogger)
 	setupGroupRoutes(sessions, container, appLogger)
 	setupNewsletterRoutes(sessions, container, appLogger)
 	setupCommunityRoutes(sessions, container, appLogger)
@@ -43,8 +43,8 @@ func setupSessionRoutes(app *fiber.App, appLogger *logger.Logger, WameowManager 
 }
 
 // logWameowAvailability logs Wameow manager availability
-func logWameowAvailability(appLogger *logger.Logger, WameowManager *wameow.Manager) {
-	if WameowManager != nil {
+func logWameowAvailability(appLogger *logger.Logger, wameowManager *wameow.Manager) {
+	if wameowManager != nil {
 		appLogger.Info("Wameow manager is available for session routes")
 	} else {
 		appLogger.Warn("Wameow manager is nil - session functionality will be limited")
@@ -68,8 +68,8 @@ func setupSessionManagementRoutes(sessions fiber.Router, container *app.Containe
 }
 
 // setupMessageRoutes sets up message-related routes
-func setupMessageRoutes(sessions fiber.Router, container *app.Container, WameowManager *wameow.Manager, appLogger *logger.Logger) {
-	messageHandler := handlers.NewMessageHandler(container.GetMessageUseCase(), WameowManager, container.GetSessionRepository(), appLogger)
+func setupMessageRoutes(sessions fiber.Router, container *app.Container, wameowManager *wameow.Manager, appLogger *logger.Logger) {
+	messageHandler := handlers.NewMessageHandler(container.GetMessageUseCase(), wameowManager, container.GetSessionRepository(), appLogger)
 
 	// Basic message sending
 	sessions.Post("/:sessionId/messages/send/text", messageHandler.SendText)
@@ -185,13 +185,13 @@ func setupChatwootRoutes(sessions fiber.Router, container *app.Container, appLog
 	sessions.Post("/:sessionId/chatwoot/conversations/sync", chatwootHandler.SyncConversations)
 }
 
-func setupSessionSpecificRoutes(app *fiber.App, database *db.DB, appLogger *logger.Logger, WameowManager *wameow.Manager, container *app.Container) {
+func setupSessionSpecificRoutes(app *fiber.App, database *db.DB, appLogger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
 	// Session-specific advanced routes that require additional processing
 	// Currently no additional session-specific routes needed
 	// All core functionality is handled in setupSessionRoutes
 }
 
-func setupGlobalRoutes(app *fiber.App, database *db.DB, appLogger *logger.Logger, WameowManager *wameow.Manager, container *app.Container) {
+func setupGlobalRoutes(app *fiber.App, database *db.DB, appLogger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
 	// Global webhook info routes
 	webhookHandler := handlers.NewWebhookHandler(container.WebhookUseCase, appLogger)
 	app.Get("/webhook/events", webhookHandler.GetSupportedEvents) // GET /webhook/events

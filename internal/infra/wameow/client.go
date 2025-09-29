@@ -222,24 +222,63 @@ func (c *WameowClient) Connect() error {
 }
 
 func (c *WameowClient) Disconnect() error {
-	c.logger.InfoWithFields("Disconnecting client", map[string]interface{}{
+	c.logger.InfoWithFields("Starting client disconnection", map[string]interface{}{
 		"session_id": c.sessionID,
 	})
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// Step 1: Stop QR loop
+	c.logger.InfoWithFields("Stopping QR loop", map[string]interface{}{
+		"session_id": c.sessionID,
+	})
 	c.stopQRLoop()
 
+	// Step 2: Disconnect whatsmeow client with timeout
 	if c.client.IsConnected() {
-		c.client.Disconnect()
+		c.logger.InfoWithFields("Disconnecting whatsmeow client", map[string]interface{}{
+			"session_id": c.sessionID,
+		})
+
+		// Use goroutine with timeout to prevent hanging
+		done := make(chan bool, 1)
+		go func() {
+			c.client.Disconnect()
+			done <- true
+		}()
+
+		select {
+		case <-done:
+			c.logger.InfoWithFields("Whatsmeow client disconnected successfully", map[string]interface{}{
+				"session_id": c.sessionID,
+			})
+		case <-time.After(5 * time.Second):
+			c.logger.WarnWithFields("Whatsmeow client disconnect timeout, continuing anyway", map[string]interface{}{
+				"session_id": c.sessionID,
+			})
+		}
+	} else {
+		c.logger.InfoWithFields("Client was not connected, skipping disconnect", map[string]interface{}{
+			"session_id": c.sessionID,
+		})
 	}
 
+	// Step 3: Cancel context
 	if c.cancel != nil {
+		c.logger.InfoWithFields("Cancelling client context", map[string]interface{}{
+			"session_id": c.sessionID,
+		})
 		c.cancel()
 	}
 
+	// Step 4: Update status
 	c.setStatus("disconnected")
+
+	c.logger.InfoWithFields("Client disconnection completed", map[string]interface{}{
+		"session_id": c.sessionID,
+	})
+
 	return nil
 }
 
@@ -496,6 +535,9 @@ func (c *WameowClient) stopQRLoop() {
 	c.qrState.mu.RUnlock()
 
 	if !isActive {
+		c.logger.InfoWithFields("QR loop is not active, nothing to stop", map[string]interface{}{
+			"session_id": c.sessionID,
+		})
 		return
 	}
 
@@ -503,9 +545,14 @@ func (c *WameowClient) stopQRLoop() {
 		"session_id": c.sessionID,
 	})
 
+	// Try to send stop signal with timeout
 	select {
 	case c.qrState.stopChannel <- true:
-		c.logger.InfoWithFields("QR loop stop signal sent", map[string]interface{}{
+		c.logger.InfoWithFields("QR loop stop signal sent successfully", map[string]interface{}{
+			"session_id": c.sessionID,
+		})
+	case <-time.After(1 * time.Second):
+		c.logger.WarnWithFields("QR loop stop signal timeout, loop may be stuck", map[string]interface{}{
 			"session_id": c.sessionID,
 		})
 	default:
@@ -513,7 +560,24 @@ func (c *WameowClient) stopQRLoop() {
 			"session_id": c.sessionID,
 		})
 	}
-	time.Sleep(100 * time.Millisecond)
+
+	// Give some time for the loop to stop gracefully
+	time.Sleep(200 * time.Millisecond)
+
+	// Check if loop actually stopped
+	c.qrState.mu.RLock()
+	stillActive := c.qrState.loopActive
+	c.qrState.mu.RUnlock()
+
+	if stillActive {
+		c.logger.WarnWithFields("QR loop still active after stop signal", map[string]interface{}{
+			"session_id": c.sessionID,
+		})
+	} else {
+		c.logger.InfoWithFields("QR loop stopped successfully", map[string]interface{}{
+			"session_id": c.sessionID,
+		})
+	}
 }
 
 func (c *WameowClient) Logout() error {

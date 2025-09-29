@@ -61,10 +61,14 @@ func (m *Manager) GetClient(sessionID string) (ports.ChatwootClient, error) {
 func (m *Manager) IsEnabled(sessionID string) bool {
 	config, err := m.GetConfig(sessionID)
 	if err != nil {
-		m.logger.ErrorWithFields("Failed to check if Chatwoot is enabled", map[string]interface{}{
-			"session_id": sessionID,
-			"error":      err.Error(),
-		})
+		// Only log as error if it's not a "not found" error
+		if err.Error() != "failed to get config from repository: chatwoot config not found" {
+			m.logger.ErrorWithFields("Failed to check if Chatwoot is enabled", map[string]interface{}{
+				"session_id": sessionID,
+				"error":      err.Error(),
+			})
+		}
+		// Chatwoot is simply not configured, which is normal
 		return false
 	}
 

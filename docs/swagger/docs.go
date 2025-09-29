@@ -5178,7 +5178,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "zpwoot - WhatsApp Multi-Session API",
-	Description:      "A complete REST API for managing multiple WhatsApp sessions using Go, Fiber, PostgreSQL, and whatsmeow library.\n\n## Authentication\nAll API endpoints (except /health/* and /swagger/*) require API key authentication.\nProvide your API key in the `Authorization` header.",
+	Description:      "A complete REST API for managing multiple WhatsApp sessions using Go, Fiber, PostgreSQL, and whatsmeow.\n\n## Authentication\nAll API endpoints (except /health/* and /swagger/*) require API key authentication.\nProvide your API key in the `Authorization` header.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

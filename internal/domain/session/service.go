@@ -41,10 +41,10 @@ type WameowManager interface {
 	GetProxy(sessionID string) (*ProxyConfig, error)
 }
 
-func NewService(repo Repository, Wameow WameowManager, qrGenerator QRGenerator) *Service {
+func NewService(repo Repository, wameow WameowManager, qrGenerator QRGenerator) *Service {
 	return &Service{
 		repo:        repo,
-		Wameow:      Wameow,
+		Wameow:      wameow,
 		generator:   uuid.New(),
 		qrGenerator: qrGenerator,
 	}
@@ -120,12 +120,42 @@ func (s *Service) DeleteSession(ctx context.Context, id string) error {
 		return errors.ErrNotFound
 	}
 
-	if session.IsActive() {
-		if err := s.Wameow.DisconnectSession(id); err != nil {
-			_ = err // Explicitly ignore error
-		}
+	// Step 1: Mark session as being deleted to prevent race conditions
+	session.SetConnected(false)
+	session.ConnectionError = nil
+	if err := s.repo.Update(ctx, session); err != nil {
+		// Log error but continue with deletion
+		_ = err
 	}
 
+	// Step 2: Disconnect session if active, with timeout
+	if s.Wameow.IsConnected(id) {
+		// Create a context with timeout for disconnect operation
+		disconnectCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		// Run disconnect in goroutine with timeout
+		done := make(chan error, 1)
+		go func() {
+			done <- s.Wameow.DisconnectSession(id)
+		}()
+
+		select {
+		case err := <-done:
+			if err != nil {
+				// Log error but don't fail deletion
+				_ = err // Explicitly ignore error
+			}
+		case <-disconnectCtx.Done():
+			// Timeout occurred, log warning but continue with deletion
+			_ = disconnectCtx.Err() // Explicitly ignore timeout error
+		}
+
+		// Give additional time for cleanup
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	// Step 3: Delete from database
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return errors.Wrap(err, "failed to delete session")
 	}
@@ -141,6 +171,17 @@ func (s *Service) ConnectSession(ctx context.Context, id string) error {
 
 	if session == nil {
 		return errors.ErrNotFound
+	}
+
+	// Check if session is already connected
+	if s.Wameow.IsConnected(id) {
+		// Update session status to reflect current state
+		session.SetConnected(true)
+		session.ConnectionError = nil
+		if err := s.repo.Update(ctx, session); err != nil {
+			return errors.Wrap(err, "failed to update session status")
+		}
+		return errors.NewWithDetails(409, "Session already connected", "session is already connected and active")
 	}
 
 	session.SetConnected(false)   // Ensure it starts as disconnected during QR process
@@ -170,8 +211,18 @@ func (s *Service) LogoutSession(ctx context.Context, id string) error {
 		return errors.ErrNotFound
 	}
 
+	// Check if session is already disconnected
+	if !s.Wameow.IsConnected(id) && !session.IsConnected {
+		// Update session status to reflect current state
+		session.SetConnected(false)
+		if err := s.repo.Update(ctx, session); err != nil {
+			return errors.Wrap(err, "failed to update session status")
+		}
+		return errors.NewWithDetails(409, "Session already disconnected", "session is already disconnected")
+	}
+
 	if !session.CanLogout() {
-		return errors.NewWithDetails(400, "Cannot logout session", "Session is not connected")
+		return errors.NewWithDetails(400, "Cannot logout session", "Session is not in a state that allows logout")
 	}
 
 	if err := s.Wameow.LogoutSession(id); err != nil {

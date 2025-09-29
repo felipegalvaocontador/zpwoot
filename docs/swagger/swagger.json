@@ -1,0 +1,5166 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "A complete REST API for managing multiple WhatsApp sessions using Go, Fiber, PostgreSQL, and whatsmeow library.\n\n## Authentication\nAll API endpoints (except /health/* and /swagger/*) require API key authentication.\nProvide your API key in the `Authorization` header.",
+        "title": "zpwoot - WhatsApp Multi-Session API",
+        "contact": {
+            "name": "zpwoot Support",
+            "url": "https://github.com/your-org/zpwoot",
+            "email": "support@zpwoot.com"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/health": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Check if the API is running and healthy",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "API is healthy",
+                        "schema": {
+                            "$ref": "#/definitions/HealthResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/health/wameow": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Check if WhatsApp manager and whatsmeow tables are available",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "WhatsApp manager health check",
+                "responses": {
+                    "200": {
+                        "description": "WhatsApp manager is healthy",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/create": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create a new WhatsApp session with optional proxy configuration. If qrCode is true, returns QR code immediately for connection.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Create new session",
+                "parameters": [
+                    {
+                        "description": "Session creation request with optional qrCode flag",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Session created successfully. If qrCode was true, includes QR code data.",
+                        "schema": {
+                            "$ref": "#/definitions/CreateSessionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "409": {
+                        "description": "Session already exists",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/list": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a list of all WhatsApp sessions with optional filtering",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "List sessions",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Filter by connection status",
+                        "name": "isConnected",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by device JID",
+                        "name": "deviceJid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of sessions to return (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of sessions to skip (default: 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sessions retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/ListSessionsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/chatwoot/find": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get current Chatwoot integration configuration for a WhatsApp session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chatwoot"
+                ],
+                "summary": "Get Chatwoot configuration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Chatwoot configuration retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/ChatwootConfigResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/chatwoot/set": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Set or update Chatwoot integration configuration for a WhatsApp session",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chatwoot"
+                ],
+                "summary": "Set Chatwoot configuration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Chatwoot configuration request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateChatwootConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Chatwoot configuration set successfully",
+                        "schema": {
+                            "$ref": "#/definitions/CreateChatwootConfigResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/connect": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Connect a WhatsApp session to start receiving messages. Returns QR code if device is not registered.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Connect session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session connection initiated successfully with QR code if needed",
+                        "schema": {
+                            "$ref": "#/definitions/ConnectSessionResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/contacts": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "List all contacts from the WhatsApp account",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "List contacts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Limit number of results",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search contacts by name or phone",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contacts retrieved successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zpwoot_internal_app_contact.ListContactsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/contacts/avatar": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get profile picture URL and metadata for a WhatsApp user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Get profile picture",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"5511999999999@s.whatsapp.net\"",
+                        "description": "WhatsApp JID",
+                        "name": "jid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Get preview (low resolution) image",
+                        "name": "preview",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile picture retrieved successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zpwoot_internal_app_contact.ProfilePictureResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session or user not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/contacts/business": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get business profile information for a WhatsApp Business account",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Get business profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"5511999999999@s.whatsapp.net\"",
+                        "description": "WhatsApp JID",
+                        "name": "jid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Business profile retrieved successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zpwoot_internal_app_contact.BusinessProfileResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session or business not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/contacts/check": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Check if one or more phone numbers are registered on WhatsApp",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Check if phone numbers are on WhatsApp",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Phone numbers to check",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zpwoot_internal_app_contact.CheckWhatsAppRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Phone numbers checked successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zpwoot_internal_app_contact.CheckWhatsAppResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/contacts/info": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get detailed information about WhatsApp users",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Get user information",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User JIDs to get info for",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/zpwoot_internal_app_contact.GetUserInfoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User information retrieved successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zpwoot_internal_app_contact.GetUserInfoResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/contacts/sync": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Synchronize contacts from the device with WhatsApp",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Sync contacts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contacts synchronized successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zpwoot_internal_app_contact.SyncContactsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Delete a WhatsApp session and all associated data",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Delete session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/SuccessResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/info": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get detailed information about a specific WhatsApp session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Get session information",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session information retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/SessionInfoResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/logout": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Logout from WhatsApp session and disconnect",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Logout session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session logout successful",
+                        "schema": {
+                            "$ref": "#/definitions/SuccessResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/media/cache": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "List all cached media files for a session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Media"
+                ],
+                "summary": "List cached media",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Limit number of results",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cached media list",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zpwoot_internal_app_media.ListCachedMediaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/media/cache/clear": {
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Clear cached media files for a session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Media"
+                ],
+                "summary": "Clear media cache",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 24,
+                        "description": "Clear files older than X hours",
+                        "name": "olderThan",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cache cleared successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zpwoot_internal_app_media.ClearCacheResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/media/download/{messageId}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Download media (image, video, audio, document) from a WhatsApp message",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Media"
+                ],
+                "summary": "Download media from message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"3EB0C431C26A1916E07E\"",
+                        "description": "Message ID",
+                        "name": "messageId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Media file content",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session or message not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/media/download/{messageId}/{mediaType}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Download media from a message filtered by media type",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Media"
+                ],
+                "summary": "Download media by type",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"3EB0C431C26A1916E07E\"",
+                        "description": "Message ID",
+                        "name": "messageId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "image",
+                            "video",
+                            "audio",
+                            "document",
+                            "sticker"
+                        ],
+                        "type": "string",
+                        "description": "Media Type",
+                        "name": "mediaType",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Media file content",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session or message not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/media/info/{messageId}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get information about media in a message without downloading it",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Media"
+                ],
+                "summary": "Get media info",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"3EB0C431C26A1916E07E\"",
+                        "description": "Message ID",
+                        "name": "messageId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Media information",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/zpwoot_internal_app_media.MediaInfoResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session or message not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/edit": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Edit an existing message",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Edit message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Edit message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/EditMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message edited successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/EditResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/mark-read": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Mark a specific message as read",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Mark message as read",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Mark as read request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/MarkReadRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message marked as read successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/MarkReadResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/poll/{messageId}/results": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get voting results for a poll message",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Get poll results",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"3EB0C431C26A1916E07E\"",
+                        "description": "Poll Message ID",
+                        "name": "messageId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Chat JID where the poll was sent",
+                        "name": "chatJid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Poll results retrieved successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/GetPollResultsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session or poll not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/revoke": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Revoke (delete for everyone) a previously sent message",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Revoke message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Revoke message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/RevokeMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message revoked successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/RevokeMessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/audio": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send an audio message through WhatsApp with optional reply context",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send audio message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Audio message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AudioMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/SendMessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/button": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a message with interactive buttons through WhatsApp",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send button message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Button message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ButtonMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Button message sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/MessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/contact": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a single contact or multiple contacts through WhatsApp. Automatically detects if it's a single contact (ContactMessage) or multiple contacts (ContactsArrayMessage) based on the array length.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send contact message(s)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Contact message request (single contact) or ContactListMessageRequest (multiple contacts)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ContactMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contact list sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/ContactListMessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/document": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a document message through WhatsApp with optional reply context",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send document message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Document message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/DocumentMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/SendMessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/image": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send an image message through WhatsApp with optional reply context",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send image message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Image message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ImageMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/SendMessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/list": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a message with interactive list through WhatsApp",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send list message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "List message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ListMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List message sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/MessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/location": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a location message through WhatsApp",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send location message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Location message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/LocationMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/SendMessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/media": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a media file (image, audio, video, document) with optional caption",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send media message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Media message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/MediaMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Media message sent successfully",
+                        "schema": {
+                            "$ref": "#/definitions/MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/poll": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a poll message through WhatsApp",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send poll",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Poll request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreatePollRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Poll sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/CreatePollResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/presence": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send presence information (typing, online, etc.)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send presence",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Presence request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PresenceMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Presence sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/PresenceResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/profile/business": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a business profile contact using Business format (with waid, X-ABLabel, X-WA-BIZ-NAME)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send business profile contact",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Business profile request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/BusinessProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Business profile sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/SendMessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/reaction": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a reaction (emoji) to a specific message",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send reaction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reaction request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ReactionMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reaction sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/ReactionResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/sticker": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a sticker message through WhatsApp",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send sticker message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Sticker message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/MediaMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/SendMessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/text": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a text message with optional context info for replies",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send text message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Text message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/TextMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Text message sent successfully",
+                        "schema": {
+                            "$ref": "#/definitions/MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/messages/send/video": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a video message through WhatsApp with optional reply context",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send video message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"mySession\"",
+                        "description": "Session ID or Name",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Video message request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/VideoMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message sent successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/SendMessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/pair": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Pair WhatsApp session with phone number",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Pair phone number",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Phone pairing request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PairPhoneRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Phone pairing initiated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/proxy/find": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get current proxy configuration for a WhatsApp session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Get proxy configuration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proxy configuration retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/ProxyResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/proxy/set": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Set or update proxy configuration for a WhatsApp session",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Set proxy configuration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Proxy configuration request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SetProxyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proxy configuration set successfully",
+                        "schema": {
+                            "$ref": "#/definitions/ProxyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/qr": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get QR code for WhatsApp session pairing. Returns both raw QR code string and base64 image.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Get QR code",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "QR code generated successfully with base64 image",
+                        "schema": {
+                            "$ref": "#/definitions/QRCodeResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/webhook/find": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get current webhook configuration for a WhatsApp session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Get webhook configuration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Webhook configuration retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/WebhookResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid session ID format",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Webhook not found for this session",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/webhook/set": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create or update webhook configuration for a WhatsApp session. Set enabled=true to activate, enabled=false to disable without deleting. If enabled is not provided, defaults to true.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Set webhook configuration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Webhook configuration request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SetConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Webhook configuration created/updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/SetConfigResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid session ID, URL, or event types",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{sessionId}/webhook/test": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Test webhook endpoint for a WhatsApp session with a sample event",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Test webhook",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Test webhook request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/TestWebhookRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Webhook tested successfully",
+                        "schema": {
+                            "$ref": "#/definitions/zpwoot_internal_app_webhook.TestWebhookResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid session ID or event type",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Webhook not found for this session",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/webhook/events": {
+            "get": {
+                "description": "Get list of all supported webhook event types that can be subscribed to",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Get supported webhook events",
+                "responses": {
+                    "200": {
+                        "description": "Supported events retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/zpwoot_internal_app_webhook.WebhookEventsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "AudioMessageRequest": {
+            "type": "object",
+            "required": [
+                "file",
+                "remoteJid"
+            ],
+            "properties": {
+                "caption": {
+                    "type": "string",
+                    "example": "Voice message"
+                },
+                "contextInfo": {
+                    "$ref": "#/definitions/ContextInfo"
+                },
+                "file": {
+                    "type": "string",
+                    "example": "https://example.com/audio.ogg"
+                },
+                "mimeType": {
+                    "type": "string",
+                    "example": "audio/ogg"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "BusinessProfileRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "phone",
+                "remoteJid"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "example": "Rua Teste, 123 - São Paulo, SP"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "contato@empresateste.com.br"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Empresa Teste Ltda"
+                },
+                "organization": {
+                    "type": "string",
+                    "example": "Empresa Teste Ltda"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+5511987654321"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511987654321@s.whatsapp.net"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Atendimento ao Cliente"
+                },
+                "website": {
+                    "type": "string",
+                    "example": "https://www.empresateste.com.br"
+                }
+            }
+        },
+        "Button": {
+            "type": "object",
+            "required": [
+                "text"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "btn_yes"
+                },
+                "text": {
+                    "type": "string",
+                    "example": "Yes, I agree"
+                }
+            }
+        },
+        "ButtonMessageRequest": {
+            "type": "object",
+            "required": [
+                "body",
+                "buttons",
+                "remoteJid"
+            ],
+            "properties": {
+                "body": {
+                    "type": "string",
+                    "example": "Please choose one of the options below:"
+                },
+                "buttons": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/Button"
+                    }
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "ChatwootConfigResponse": {
+            "type": "object",
+            "properties": {
+                "accountId": {
+                    "type": "string",
+                    "example": "1"
+                },
+                "active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "chatwoot-config-123"
+                },
+                "inboxId": {
+                    "type": "string",
+                    "example": "1"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://chatwoot.example.com"
+                }
+            }
+        },
+        "ConnectSessionResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "2@abc123..."
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Session connection initiated successfully"
+                },
+                "qrCode": {
+                    "type": "string",
+                    "example": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "ContactListMessageResponse": {
+            "type": "object",
+            "properties": {
+                "failureCount": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ContactSendResult"
+                    }
+                },
+                "successCount": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
+                "totalContacts": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "ContactMessageRequest": {
+            "type": "object",
+            "required": [
+                "contactName",
+                "contactPhone",
+                "remoteJid"
+            ],
+            "properties": {
+                "contactName": {
+                    "type": "string",
+                    "example": "Maria Silva"
+                },
+                "contactPhone": {
+                    "type": "string",
+                    "example": "+5511987654321"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "ContactSendResult": {
+            "type": "object",
+            "properties": {
+                "contactName": {
+                    "type": "string",
+                    "example": "João Santos"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "messageId": {
+                    "type": "string",
+                    "example": "3EB07F264CA1B4AD714A3F"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "sent"
+                }
+            }
+        },
+        "ContextInfo": {
+            "type": "object",
+            "required": [
+                "stanzaId"
+            ],
+            "properties": {
+                "participant": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "stanzaId": {
+                    "type": "string",
+                    "example": "ABCD1234abcd"
+                }
+            }
+        },
+        "CreateChatwootConfigRequest": {
+            "type": "object",
+            "required": [
+                "accountId",
+                "token",
+                "url"
+            ],
+            "properties": {
+                "accountId": {
+                    "type": "string",
+                    "example": "1"
+                },
+                "autoCreate": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "convPending": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "ignoreJids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"5511888888888@s.whatsapp.net\"]"
+                    ]
+                },
+                "importContacts": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "importDays": {
+                    "type": "integer",
+                    "example": 60
+                },
+                "importMessages": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "inboxId": {
+                    "type": "string",
+                    "example": "1"
+                },
+                "inboxName": {
+                    "description": "Advanced configuration - shorter names matching DB columns",
+                    "type": "string",
+                    "example": "WhatsApp zpwoot"
+                },
+                "logo": {
+                    "type": "string",
+                    "example": "https://zpwoot.com/logo.png"
+                },
+                "mergeBrazil": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "number": {
+                    "type": "string",
+                    "example": "5511999999999"
+                },
+                "organization": {
+                    "type": "string",
+                    "example": "zpwoot Bot"
+                },
+                "reopenConv": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "signDelimiter": {
+                    "type": "string",
+                    "example": "\\n\\n"
+                },
+                "signMsg": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "token": {
+                    "type": "string",
+                    "example": "WAF6y4K5s6sdR9uVpsdE7BCt"
+                },
+                "url": {
+                    "description": "Core configuration - matching zpChatwoot table",
+                    "type": "string",
+                    "example": "http://localhost:3001"
+                }
+            }
+        },
+        "CreateChatwootConfigResponse": {
+            "type": "object",
+            "properties": {
+                "accountId": {
+                    "type": "string",
+                    "example": "1"
+                },
+                "active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "chatwoot-config-123"
+                },
+                "inboxId": {
+                    "type": "string",
+                    "example": "1"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://chatwoot.example.com"
+                }
+            }
+        },
+        "CreatePollRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "options",
+                "remoteJid"
+            ],
+            "properties": {
+                "allowMultipleAnswers": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "What's your favorite color?"
+                },
+                "options": {
+                    "type": "array",
+                    "maxItems": 12,
+                    "minItems": 2,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Red",
+                        "Blue",
+                        "Green"
+                    ]
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "selectableOptionCount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
+                }
+            }
+        },
+        "CreatePollResponse": {
+            "type": "object",
+            "properties": {
+                "messageId": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Red",
+                        "Blue",
+                        "Green"
+                    ]
+                },
+                "pollName": {
+                    "type": "string",
+                    "example": "What's your favorite color?"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "sent"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                }
+            }
+        },
+        "CreateSessionRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
+                    "example": "my-session"
+                },
+                "proxyConfig": {
+                    "$ref": "#/definitions/ProxyConfig"
+                },
+                "qrCode": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "CreateSessionResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "2@abc123..."
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"
+                },
+                "isConnected": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "name": {
+                    "type": "string",
+                    "example": "my-session"
+                },
+                "proxyConfig": {
+                    "$ref": "#/definitions/ProxyConfig"
+                },
+                "qrCode": {
+                    "type": "string",
+                    "example": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+                }
+            }
+        },
+        "DeviceInfoResponse": {
+            "type": "object",
+            "properties": {
+                "appVersion": {
+                    "type": "string",
+                    "example": "2.21.4.18"
+                },
+                "deviceModel": {
+                    "type": "string",
+                    "example": "Samsung Galaxy S21"
+                },
+                "osVersion": {
+                    "type": "string",
+                    "example": "11"
+                },
+                "platform": {
+                    "type": "string",
+                    "example": "android"
+                }
+            }
+        },
+        "DocumentMessageRequest": {
+            "type": "object",
+            "required": [
+                "file",
+                "filename",
+                "remoteJid"
+            ],
+            "properties": {
+                "caption": {
+                    "type": "string",
+                    "example": "Important document"
+                },
+                "contextInfo": {
+                    "$ref": "#/definitions/ContextInfo"
+                },
+                "file": {
+                    "type": "string",
+                    "example": "https://example.com/document.pdf"
+                },
+                "filename": {
+                    "type": "string",
+                    "example": "important_document.pdf"
+                },
+                "mimeType": {
+                    "type": "string",
+                    "example": "application/pdf"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "EditMessageRequest": {
+            "type": "object",
+            "required": [
+                "messageId",
+                "newBody",
+                "remoteJid"
+            ],
+            "properties": {
+                "messageId": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "newBody": {
+                    "type": "string",
+                    "example": "Updated message text"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "sessionId": {
+                    "type": "string",
+                    "example": "mySession"
+                }
+            }
+        },
+        "EditResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "newBody": {
+                    "type": "string",
+                    "example": "Updated message text"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "edited"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                }
+            }
+        },
+        "GetPollResultsResponse": {
+            "type": "object",
+            "properties": {
+                "allowMultipleAnswers": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/PollOption"
+                    }
+                },
+                "pollMessageId": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "pollName": {
+                    "type": "string",
+                    "example": "What's your favorite color?"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "selectableOptionCount": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "totalVotes": {
+                    "type": "integer",
+                    "example": 10
+                }
+            }
+        },
+        "HealthResponse": {
+            "type": "object",
+            "properties": {
+                "service": {
+                    "type": "string",
+                    "example": "zpwoot"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "uptime": {
+                    "type": "string",
+                    "example": "2h30m15s"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "1.0.0"
+                }
+            }
+        },
+        "ImageMessageRequest": {
+            "type": "object",
+            "required": [
+                "file",
+                "remoteJid"
+            ],
+            "properties": {
+                "caption": {
+                    "type": "string",
+                    "example": "Beautiful sunset photo"
+                },
+                "contextInfo": {
+                    "$ref": "#/definitions/ContextInfo"
+                },
+                "file": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
+                },
+                "filename": {
+                    "type": "string",
+                    "example": "sunset.jpg"
+                },
+                "mimeType": {
+                    "type": "string",
+                    "example": "image/jpeg"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "ListMessageRequest": {
+            "type": "object",
+            "required": [
+                "body",
+                "buttonText",
+                "remoteJid",
+                "sections"
+            ],
+            "properties": {
+                "body": {
+                    "type": "string",
+                    "example": "Please select one of the available options:"
+                },
+                "buttonText": {
+                    "type": "string",
+                    "example": "Select Option"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "sections": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/Section"
+                    }
+                }
+            }
+        },
+        "ListSessionsResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "offset": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SessionInfoResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 10
+                }
+            }
+        },
+        "LocationMessageRequest": {
+            "type": "object",
+            "required": [
+                "latitude",
+                "longitude",
+                "remoteJid"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "example": "Avenida Paulista, 1578 - Bela Vista, São Paulo - SP, Brazil"
+                },
+                "latitude": {
+                    "type": "number",
+                    "example": -23.5505
+                },
+                "longitude": {
+                    "type": "number",
+                    "example": -46.6333
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "MarkReadRequest": {
+            "type": "object",
+            "required": [
+                "messageId",
+                "remoteJid"
+            ],
+            "properties": {
+                "messageId": {
+                    "type": "string",
+                    "example": "3EB0C431C26A1916E07E"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "MarkReadResponse": {
+            "type": "object",
+            "properties": {
+                "markedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Message marked as read successfully"
+                },
+                "messageId": {
+                    "type": "string",
+                    "example": "3EB0C431C26A1916E07E"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "MediaMessageRequest": {
+            "type": "object",
+            "required": [
+                "file",
+                "remoteJid"
+            ],
+            "properties": {
+                "caption": {
+                    "type": "string",
+                    "example": "Media caption"
+                },
+                "file": {
+                    "type": "string",
+                    "example": "https://example.com/media.file"
+                },
+                "filename": {
+                    "type": "string",
+                    "example": "media.file"
+                },
+                "mimeType": {
+                    "type": "string",
+                    "example": "application/octet-stream"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "MessageResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "sent"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                }
+            }
+        },
+        "PairPhoneRequest": {
+            "type": "object",
+            "required": [
+                "phoneNumber"
+            ],
+            "properties": {
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "+5511987654321"
+                }
+            }
+        },
+        "PollOption": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Red"
+                },
+                "voteCount": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "voters": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "5511999999999@s.whatsapp.net"
+                    ]
+                }
+            }
+        },
+        "PresenceMessageRequest": {
+            "type": "object",
+            "required": [
+                "presence",
+                "remoteJid"
+            ],
+            "properties": {
+                "presence": {
+                    "type": "string",
+                    "enum": [
+                        "typing",
+                        "recording",
+                        "online",
+                        "offline",
+                        "paused"
+                    ],
+                    "example": "typing"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "PresenceResponse": {
+            "type": "object",
+            "properties": {
+                "presence": {
+                    "type": "string",
+                    "example": "typing"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "sent"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                }
+            }
+        },
+        "ProxyConfig": {
+            "type": "object",
+            "properties": {
+                "host": {
+                    "type": "string",
+                    "example": "proxy.example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "proxypass123"
+                },
+                "port": {
+                    "type": "integer",
+                    "example": 8080
+                },
+                "type": {
+                    "description": "http, socks5",
+                    "type": "string",
+                    "example": "http"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "proxyuser"
+                }
+            }
+        },
+        "ProxyResponse": {
+            "type": "object",
+            "properties": {
+                "proxyConfig": {
+                    "$ref": "#/definitions/ProxyConfig"
+                }
+            }
+        },
+        "QRCodeResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:01:00Z"
+                },
+                "qrCode": {
+                    "type": "string",
+                    "example": "2@abc123def456..."
+                },
+                "qrCodeImage": {
+                    "type": "string",
+                    "example": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                },
+                "timeoutSeconds": {
+                    "type": "integer",
+                    "example": 60
+                }
+            }
+        },
+        "ReactionMessageRequest": {
+            "type": "object",
+            "required": [
+                "messageId",
+                "reaction",
+                "remoteJid"
+            ],
+            "properties": {
+                "messageId": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "reaction": {
+                    "type": "string",
+                    "example": "👍"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "ReactionResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "reaction": {
+                    "type": "string",
+                    "example": "👍"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "sent"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                }
+            }
+        },
+        "RevokeMessageRequest": {
+            "type": "object",
+            "required": [
+                "messageId",
+                "remoteJid",
+                "sessionId"
+            ],
+            "properties": {
+                "messageId": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "sessionId": {
+                    "type": "string",
+                    "example": "mySession"
+                }
+            }
+        },
+        "RevokeMessageResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "revoked"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                }
+            }
+        },
+        "Row": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Get help from our support team"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "service_support"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Customer Support"
+                }
+            }
+        },
+        "Section": {
+            "type": "object",
+            "required": [
+                "rows"
+            ],
+            "properties": {
+                "rows": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/Row"
+                    }
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Available Services"
+                }
+            }
+        },
+        "SendMessageResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "sent"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                }
+            }
+        },
+        "SessionInfoResponse": {
+            "type": "object",
+            "properties": {
+                "deviceInfo": {
+                    "$ref": "#/definitions/DeviceInfoResponse"
+                },
+                "session": {
+                    "$ref": "#/definitions/SessionResponse"
+                }
+            }
+        },
+        "SessionResponse": {
+            "type": "object",
+            "properties": {
+                "connectedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:30Z"
+                },
+                "connectionError": {
+                    "type": "string",
+                    "example": "Connection timeout"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
+                "deviceJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.Wameow.net"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "session-123"
+                },
+                "isConnected": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "name": {
+                    "type": "string",
+                    "example": "my-Wameow-session"
+                },
+                "proxyConfig": {
+                    "$ref": "#/definitions/ProxyConfig"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                }
+            }
+        },
+        "SetConfigRequest": {
+            "type": "object",
+            "required": [
+                "events",
+                "url"
+            ],
+            "properties": {
+                "enabled": {
+                    "description": "Whether webhook is enabled (default: true)",
+                    "type": "boolean",
+                    "example": true
+                },
+                "events": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "message",
+                        "status",
+                        "connection"
+                    ]
+                },
+                "secret": {
+                    "type": "string",
+                    "example": "my-webhook-secret-key-123"
+                },
+                "sessionId": {
+                    "type": "string",
+                    "example": "1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://myapp.com/webhook/whatsapp"
+                }
+            }
+        },
+        "SetConfigResponse": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
+                "enabled": {
+                    "description": "Whether webhook is enabled",
+                    "type": "boolean",
+                    "example": true
+                },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "message",
+                        "status",
+                        "connection"
+                    ]
+                },
+                "id": {
+                    "type": "string",
+                    "example": "webhook-456def"
+                },
+                "sessionId": {
+                    "type": "string",
+                    "example": "1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://myapp.com/webhook/whatsapp"
+                }
+            }
+        },
+        "SetProxyRequest": {
+            "type": "object",
+            "properties": {
+                "proxyConfig": {
+                    "$ref": "#/definitions/ProxyConfig"
+                }
+            }
+        },
+        "SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "Operation completed successfully"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "TestWebhookRequest": {
+            "type": "object",
+            "required": [
+                "eventType"
+            ],
+            "properties": {
+                "eventType": {
+                    "type": "string",
+                    "example": "message"
+                },
+                "testData": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
+        "TextMessageRequest": {
+            "type": "object",
+            "required": [
+                "body",
+                "remoteJid"
+            ],
+            "properties": {
+                "body": {
+                    "type": "string",
+                    "example": "Hello, this is a text message"
+                },
+                "contextInfo": {
+                    "$ref": "#/definitions/ContextInfo"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511987654321@s.whatsapp.net"
+                }
+            }
+        },
+        "VideoMessageRequest": {
+            "type": "object",
+            "required": [
+                "file",
+                "remoteJid"
+            ],
+            "properties": {
+                "caption": {
+                    "type": "string",
+                    "example": "Check out this amazing video!"
+                },
+                "contextInfo": {
+                    "$ref": "#/definitions/ContextInfo"
+                },
+                "file": {
+                    "type": "string",
+                    "example": "https://example.com/video.mp4"
+                },
+                "filename": {
+                    "type": "string",
+                    "example": "amazing_video.mp4"
+                },
+                "mimeType": {
+                    "type": "string",
+                    "example": "video/mp4"
+                },
+                "remoteJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                }
+            }
+        },
+        "WebhookResponse": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
+                "enabled": {
+                    "description": "Whether webhook is enabled",
+                    "type": "boolean",
+                    "example": true
+                },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "message",
+                        "status"
+                    ]
+                },
+                "id": {
+                    "type": "string",
+                    "example": "webhook-123"
+                },
+                "sessionId": {
+                    "type": "string",
+                    "example": "session-123"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T00:00:00Z"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://example.com/webhook"
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.BusinessProfile": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "example": "123 Main St, City"
+                },
+                "category": {
+                    "type": "string",
+                    "example": "Retail"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "We sell amazing products"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "contact@mybusiness.com"
+                },
+                "jid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "My Business"
+                },
+                "verified": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "website": {
+                    "type": "string",
+                    "example": "https://mybusiness.com"
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.BusinessProfileResponse": {
+            "type": "object",
+            "properties": {
+                "found": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "profile": {
+                    "$ref": "#/definitions/zpwoot_internal_app_contact.BusinessProfile"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.CheckWhatsAppRequest": {
+            "type": "object",
+            "required": [
+                "phoneNumbers"
+            ],
+            "properties": {
+                "phoneNumbers": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"+5511999999999\"",
+                        " \"+5511888888888\"]"
+                    ]
+                },
+                "sessionId": {
+                    "type": "string"
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.CheckWhatsAppResponse": {
+            "type": "object",
+            "properties": {
+                "checked": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zpwoot_internal_app_contact.WhatsAppStatus"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.Contact": {
+            "type": "object",
+            "properties": {
+                "addedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                },
+                "isBlocked": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "isBusiness": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "isContact": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "jid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "+5511999999999"
+                },
+                "pushName": {
+                    "type": "string",
+                    "example": "John"
+                },
+                "shortName": {
+                    "type": "string",
+                    "example": "John"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.GetUserInfoRequest": {
+            "type": "object",
+            "required": [
+                "jids"
+            ],
+            "properties": {
+                "jids": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"5511999999999@s.whatsapp.net\"",
+                        " \"5511888888888@s.whatsapp.net\"]"
+                    ]
+                },
+                "sessionId": {
+                    "type": "string"
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.GetUserInfoResponse": {
+            "type": "object",
+            "properties": {
+                "found": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zpwoot_internal_app_contact.UserInfo"
+                    }
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.ListContactsResponse": {
+            "type": "object",
+            "properties": {
+                "contacts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zpwoot_internal_app_contact.Contact"
+                    }
+                },
+                "hasMore": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "offset": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 150
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.ProfilePictureResponse": {
+            "type": "object",
+            "properties": {
+                "directPath": {
+                    "type": "string"
+                },
+                "hasPicture": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "id": {
+                    "type": "string",
+                    "example": "1234567890"
+                },
+                "jid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "image"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://pps.whatsapp.net/v/..."
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.SyncContactsResponse": {
+            "type": "object",
+            "properties": {
+                "added": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Contacts synchronized successfully"
+                },
+                "removed": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "synced": {
+                    "type": "integer",
+                    "example": 25
+                },
+                "syncedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 150
+                },
+                "updated": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.UserInfo": {
+            "type": "object",
+            "properties": {
+                "isBusiness": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "isContact": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "isOnline": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "jid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "lastSeen": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "+5511999999999"
+                },
+                "pictureId": {
+                    "type": "string",
+                    "example": "1234567890"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "Hey there! I am using WhatsApp."
+                },
+                "verifiedName": {
+                    "type": "string",
+                    "example": "Company Name"
+                }
+            }
+        },
+        "zpwoot_internal_app_contact.WhatsAppStatus": {
+            "type": "object",
+            "properties": {
+                "isBusiness": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "isOnWhatsapp": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "jid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "phoneNumber": {
+                    "type": "string",
+                    "example": "+5511999999999"
+                },
+                "verifiedName": {
+                    "type": "string",
+                    "example": "Company Name"
+                }
+            }
+        },
+        "zpwoot_internal_app_media.CachedMediaItem": {
+            "type": "object",
+            "properties": {
+                "cachedAt": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                },
+                "expiresAt": {
+                    "type": "string",
+                    "example": "2024-01-02T12:00:00Z"
+                },
+                "filePath": {
+                    "type": "string",
+                    "example": "/tmp/media/abc123.jpg"
+                },
+                "fileSize": {
+                    "type": "integer",
+                    "example": 1024000
+                },
+                "filename": {
+                    "type": "string",
+                    "example": "image.jpg"
+                },
+                "lastAccess": {
+                    "type": "string",
+                    "example": "2024-01-01T12:30:00Z"
+                },
+                "mediaType": {
+                    "type": "string",
+                    "example": "image"
+                },
+                "messageId": {
+                    "type": "string",
+                    "example": "3EB0C431C26A1916E07E"
+                },
+                "mimeType": {
+                    "type": "string",
+                    "example": "image/jpeg"
+                }
+            }
+        },
+        "zpwoot_internal_app_media.ClearCacheResponse": {
+            "type": "object",
+            "properties": {
+                "filesDeleted": {
+                    "type": "integer",
+                    "example": 25
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Cache cleared successfully"
+                },
+                "spaceFreed": {
+                    "description": "Bytes freed",
+                    "type": "integer",
+                    "example": 10485760
+                }
+            }
+        },
+        "zpwoot_internal_app_media.ListCachedMediaResponse": {
+            "type": "object",
+            "properties": {
+                "hasMore": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zpwoot_internal_app_media.CachedMediaItem"
+                    }
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "offset": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 150
+                },
+                "totalSize": {
+                    "description": "Total size in bytes",
+                    "type": "integer",
+                    "example": 52428800
+                }
+            }
+        },
+        "zpwoot_internal_app_media.MediaInfoResponse": {
+            "type": "object",
+            "properties": {
+                "cacheExpiry": {
+                    "type": "string",
+                    "example": "2024-01-02T12:00:00Z"
+                },
+                "caption": {
+                    "type": "string",
+                    "example": "Beautiful sunset"
+                },
+                "fileSize": {
+                    "type": "integer",
+                    "example": 1024000
+                },
+                "filename": {
+                    "type": "string",
+                    "example": "image.jpg"
+                },
+                "fromJid": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "isDownloaded": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "mediaType": {
+                    "type": "string",
+                    "example": "image"
+                },
+                "messageId": {
+                    "type": "string",
+                    "example": "3EB0C431C26A1916E07E"
+                },
+                "mimeType": {
+                    "type": "string",
+                    "example": "image/jpeg"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                }
+            }
+        },
+        "zpwoot_internal_app_webhook.TestWebhookResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "responseTimeMs": {
+                    "type": "integer",
+                    "example": 150
+                },
+                "statusCode": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "zpwoot_internal_app_webhook.WebhookEventInfo": {
+            "type": "object",
+            "properties": {
+                "data_schema": {
+                    "type": "string",
+                    "example": "MessageEventData"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Triggered when a message is received or sent"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "message"
+                }
+            }
+        },
+        "zpwoot_internal_app_webhook.WebhookEventsResponse": {
+            "type": "object",
+            "properties": {
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zpwoot_internal_app_webhook.WebhookEventInfo"
+                    }
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "description": "Enter your API key directly (no Bearer prefix required). Example: a0b1125a0eb3364d98e2c49ec6f7d6ba",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

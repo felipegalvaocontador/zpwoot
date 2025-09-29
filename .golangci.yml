@@ -1,0 +1,149 @@
+# golangci-lint configuration for zpwoot
+# Documentation: https://golangci-lint.run/usage/configuration/
+
+version: 2
+
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  skip-dirs:
+    - vendor
+    - tmp
+    - build
+    - docs/swagger
+  skip-files:
+    - ".*_test.go"
+    - ".*\\.pb\\.go"
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    exclude-functions:
+      - (*os.File).Close
+      - (*database/sql.Rows).Close
+      - (*database/sql.Stmt).Close
+      - (*net/http.Response.Body).Close
+
+  govet:
+    check-shadowing: true
+    enable-all: true
+
+  gocyclo:
+    min-complexity: 15
+
+  dupl:
+    threshold: 200
+
+  goconst:
+    min-len: 5
+    min-occurrences: 5
+
+  misspell:
+    locale: US
+
+  lll:
+    line-length: 150
+
+  goimports:
+    local-prefixes: zpwoot
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+
+  funlen:
+    lines: 120
+    statements: 80
+
+  nestif:
+    min-complexity: 4
+
+  staticcheck:
+    go: "1.24"
+    checks: ["all"]
+
+  unused:
+    go: "1.24"
+
+linters:
+  enable:
+    # Essential linters (enabled by default)
+    - errcheck      # Check for unchecked errors
+    - govet         # Go vet
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Static analysis
+    - unused        # Unused code detection
+
+    # Additional quality linters
+    - dupl          # Code clone detection
+    - gocyclo       # Cyclomatic complexity
+    - goconst       # Repeated strings that could be constants
+    - gocritic      # Comprehensive Go source code linter
+    - misspell      # Spelling mistakes
+    - unconvert     # Remove unnecessary type conversions
+    - unparam       # Unused function parameters
+    - funlen        # Function length
+    - lll           # Line length
+    - nestif        # Nested if statements
+    - whitespace    # Whitespace issues
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - funlen
+        - goconst
+        - lll
+
+    # Exclude known issues in generated code
+    - path: ".*\\.pb\\.go"
+      linters:
+        - all
+
+    # Exclude specific issues
+    - text: "Error return value of.*is not checked"
+      linters:
+        - errcheck
+      source: "defer.*\\.Close\\(\\)"
+
+    # Allow long lines in comments
+    - source: "^//.*"
+      linters:
+        - lll
+
+    # Allow unused parameters in interface implementations
+    - text: "parameter.*is unused"
+      linters:
+        - unparam
+
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+
+severity:
+  default-severity: error

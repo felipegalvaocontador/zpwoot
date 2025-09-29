@@ -1,0 +1,145 @@
+services:
+  # PostgreSQL para Chatwoot
+  chatwoot-postgres:
+    image: pgvector/pgvector:pg13
+    container_name: zpwoot_chatwoot_postgres_dev
+    restart: unless-stopped
+    ports:
+      - "5433:5432"  # Porta diferente para evitar conflito
+    environment:
+      POSTGRES_DB: chatwoot_production
+      POSTGRES_USER: chatwoot
+      POSTGRES_PASSWORD: chatwoot_dev_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - chatwoot_postgres_data:/var/lib/postgresql/data
+    networks:
+      - zpwoot_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatwoot -d chatwoot_production"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis para Chatwoot
+  chatwoot-redis:
+    image: redis:6.2-alpine
+    container_name: zpwoot_chatwoot_redis_dev
+    restart: unless-stopped
+    volumes:
+      - chatwoot_redis_data:/data
+    networks:
+      - zpwoot_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Chatwoot Web Application
+  chatwoot-app:
+    image: chatwoot/chatwoot:latest
+    container_name: zpwoot_chatwoot_app_dev
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      # Database
+      POSTGRES_HOST: chatwoot-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: chatwoot_production
+      POSTGRES_USERNAME: chatwoot
+      POSTGRES_PASSWORD: chatwoot_dev_password
+      
+      # Redis
+      REDIS_URL: redis://chatwoot-redis:6379
+      
+      # Rails
+      RAILS_ENV: production
+      SECRET_KEY_BASE: zpwoot_chatwoot_secret_key_base_development_2024
+      RAILS_LOG_TO_STDOUT: true
+      
+      # Chatwoot
+      FRONTEND_URL: http://localhost:3001
+      FORCE_SSL: false
+      ENABLE_ACCOUNT_SIGNUP: true
+      
+      # Storage
+      ACTIVE_STORAGE_SERVICE: local
+      
+      # Installation
+      INSTALLATION_ENV: docker
+      
+    volumes:
+      - chatwoot_storage:/app/storage
+      - chatwoot_public:/app/public
+    networks:
+      - zpwoot_network
+    depends_on:
+      chatwoot-postgres:
+        condition: service_healthy
+      chatwoot-redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        bundle exec rails db:chatwoot_prepare &&
+        bundle exec rails server -b 0.0.0.0 -p 3000
+      "
+
+  # Chatwoot Sidekiq
+  chatwoot-sidekiq:
+    image: chatwoot/chatwoot:latest
+    container_name: zpwoot_chatwoot_sidekiq_dev
+    restart: unless-stopped
+    environment:
+      # Database
+      POSTGRES_HOST: chatwoot-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: chatwoot_production
+      POSTGRES_USERNAME: chatwoot
+      POSTGRES_PASSWORD: chatwoot_dev_password
+      
+      # Redis
+      REDIS_URL: redis://chatwoot-redis:6379
+      
+      # Rails
+      RAILS_ENV: production
+      SECRET_KEY_BASE: zpwoot_chatwoot_secret_key_base_development_2024
+      RAILS_LOG_TO_STDOUT: true
+      
+      # Chatwoot
+      FRONTEND_URL: http://localhost:3001
+      FORCE_SSL: false
+      
+      # Storage
+      ACTIVE_STORAGE_SERVICE: local
+      
+      # Installation
+      INSTALLATION_ENV: docker
+      
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - zpwoot_network
+    depends_on:
+      chatwoot-postgres:
+        condition: service_healthy
+      chatwoot-redis:
+        condition: service_healthy
+    command: bundle exec sidekiq -C config/sidekiq.yml
+
+volumes:
+  chatwoot_postgres_data:
+    driver: local
+  chatwoot_redis_data:
+    driver: local
+  chatwoot_storage:
+    driver: local
+  chatwoot_public:
+    driver: local
+
+networks:
+  zpwoot_network:
+    external: true
+    name: zpwoot_network

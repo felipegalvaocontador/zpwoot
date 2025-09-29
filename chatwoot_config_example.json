@@ -1,0 +1,19 @@
+{
+  "url": "http://127.0.0.1:3001",
+  "token": "tMo1XbvJWXM1V4BcJtFjkMXr",
+  "accountId": "1",
+  "autoCreate": true,
+  "inboxName": "WhatsApp zpwoot - my-session",
+  "enabled": true,
+  "signMsg": false,
+  "signDelimiter": "\n\n",
+  "reopenConv": true,
+  "convPending": false,
+  "importContacts": false,
+  "importMessages": false,
+  "importDays": 60,
+  "mergeBrazil": true,
+  "number": "554988989314",
+  "organization": "Minha Empresa",
+  "logo": "https://example.com/logo.png"
+}

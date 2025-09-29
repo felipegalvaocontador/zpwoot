@@ -1,0 +1,115 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: zpwoot_postgres_dev
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zpwoot}
+      POSTGRES_USER: ${POSTGRES_USER:-zpwoot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zpwoot123}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - zpwoot_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zpwoot} -d ${POSTGRES_DB:-zpwoot}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  # Redis (for caching and session storage)
+  redis:
+    image: redis:7-alpine
+    container_name: zpwoot_redis_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - zpwoot_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # DbGate - Database Administration Tool
+  dbgate:
+    image: dbgate/dbgate:latest
+    container_name: zpwoot_dbgate_dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      CONNECTIONS: con1
+      LABEL_con1: zpwoot PostgreSQL
+      SERVER_con1: postgres
+      USER_con1: ${POSTGRES_USER:-zpwoot}
+      PASSWORD_con1: ${POSTGRES_PASSWORD:-zpwoot123}
+      PORT_con1: 5432
+      ENGINE_con1: postgres@dbgate-plugin-postgres
+      DATABASE_con1: ${POSTGRES_DB:-zpwoot}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - zpwoot_network
+
+  # Webhook Tester - For testing webhooks
+  webhook-tester:
+    image: ghcr.io/tarampampam/webhook-tester:2
+    container_name: zpwoot_webhook_tester_dev
+    ports:
+      - "8090:8080"
+    environment:
+      - LOG_LEVEL=info
+      - LOG_FORMAT=console
+      - SESSION_TTL=24h
+      - MAX_REQUESTS=1000
+      - AUTO_CREATE_SESSIONS=true
+      - STORAGE_DRIVER=memory
+      - PUBSUB_DRIVER=memory
+    networks:
+      - zpwoot_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Commander - Redis Web UI (Alternative to DbGate for Redis)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: zpwoot_redis_commander_dev
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=admin123
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - zpwoot_network
+    restart: unless-stopped
+
+
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  zpwoot_network:
+    driver: bridge
+    name: zpwoot_network

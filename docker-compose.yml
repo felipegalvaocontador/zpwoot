@@ -1,0 +1,38 @@
+services:
+  # zpwoot Application
+  zpwoot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zpwoot_app
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - LOG_LEVEL=info
+      - LOG_FORMAT=console
+      - LOG_OUTPUT=stdout
+      - DATABASE_URL=postgres://zpwoot:zpwoot123@postgres:5432/zpwoot?sslmode=disable
+      - WA_LOG_LEVEL=INFO
+      - ZP_API_KEY=a0b1125a0eb3364d98e2c49ec6f7d6ba
+    volumes:
+      - ./sessions:/app/sessions
+      - ./logs:/app/logs
+    networks:
+      - zpwoot_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  zpwoot_sessions:
+    driver: local
+  zpwoot_logs:
+    driver: local
+
+networks:
+  zpwoot_network:
+    driver: bridge

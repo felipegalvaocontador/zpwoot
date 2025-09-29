@@ -238,8 +238,8 @@ func (d *EventDispatcher) enrichEventData(evt interface{}, eventMap map[string]i
 	case *events.JoinedGroup:
 		// Add joined group metadata
 		eventMap["group_jid"] = v.JID.String()
-		eventMap["reason"] = string(v.Reason)
-		eventMap["type"] = string(v.Type)
+		eventMap["reason"] = v.Reason
+		eventMap["type"] = v.Type
 	}
 
 	return eventMap

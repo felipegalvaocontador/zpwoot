@@ -103,9 +103,6 @@ type WameowClient struct {
 	// QR code management
 	qrState QRState
 
-	// Event handling
-	eventHandlers []func(interface{})
-
 	// Lifecycle management
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -477,11 +474,6 @@ func (c *WameowClient) updateQRCode(code string) {
 	c.qrState.code = code
 	c.qrState.codeBase64 = c.qrGenerator.GenerateQRCodeImage(code)
 }
-
-func (c *WameowClient) displayQRCode(code string) {
-	c.qrGenerator.DisplayQRCodeInTerminal(code, c.sessionID)
-}
-
 
 func (c *WameowClient) clearQRCode() {
 	c.qrState.mu.Lock()
@@ -1528,7 +1520,7 @@ func (c *WameowClient) SendReaction(ctx context.Context, to, messageID, reaction
 		"reaction":   reaction,
 	})
 
-	message := c.client.BuildReaction(jid, jid, types.MessageID(messageID), reaction)
+	message := c.client.BuildReaction(jid, jid, messageID, reaction)
 
 	_, err = c.client.SendMessage(ctx, jid, message)
 	if err != nil {
@@ -1958,8 +1950,8 @@ func (c *WameowClient) MarkRead(ctx context.Context, to, messageID string) error
 		"message_id": messageID,
 	})
 
-	// Convert messageID string to types.MessageID
-	msgID := types.MessageID(messageID)
+	// Use messageID directly
+	msgID := messageID
 
 	// MarkRead expects a slice of message IDs, timestamp, chat JID, sender JID, and optional receipt type
 	err = c.client.MarkRead([]types.MessageID{msgID}, time.Now(), jid, jid, "")
@@ -3407,10 +3399,10 @@ func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, s
 		return fmt.Errorf("server ID must be numeric, got: %s", serverID)
 	}
 
-	// Convert messageID to types.MessageID
-	var msgID types.MessageID
+	// Use messageID directly
+	var msgID string
 	if messageID != "" {
-		msgID = types.MessageID(messageID)
+		msgID = messageID
 	}
 
 	err = c.client.NewsletterSendReaction(parsedJID, types.MessageServerID(msgServerID), reaction, msgID)

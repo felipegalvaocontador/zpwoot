@@ -20,6 +20,11 @@ var (
 	ErrInvalidNewsletterState = errors.New("invalid newsletter state")
 )
 
+// JID suffix for newsletter entities
+const (
+	NewsletterJIDSuffix = "@newsletter"
+)
+
 // NewsletterRole represents the user's role in a newsletter
 type NewsletterRole string
 
@@ -190,7 +195,7 @@ func (req *GetNewsletterInfoRequest) Validate() error {
 	if req.JID == "" {
 		return ErrInvalidNewsletterJID
 	}
-	if !strings.Contains(req.JID, "@newsletter") {
+	if !strings.Contains(req.JID, NewsletterJIDSuffix) {
 		return ErrInvalidNewsletterJID
 	}
 	return nil
@@ -217,7 +222,7 @@ func (req *FollowNewsletterRequest) Validate() error {
 	if req.JID == "" {
 		return ErrInvalidNewsletterJID
 	}
-	if !strings.Contains(req.JID, "@newsletter") {
+	if !strings.Contains(req.JID, NewsletterJIDSuffix) {
 		return ErrInvalidNewsletterJID
 	}
 	return nil
@@ -228,7 +233,7 @@ func (req *UnfollowNewsletterRequest) Validate() error {
 	if req.JID == "" {
 		return ErrInvalidNewsletterJID
 	}
-	if !strings.Contains(req.JID, "@newsletter") {
+	if !strings.Contains(req.JID, NewsletterJIDSuffix) {
 		return ErrInvalidNewsletterJID
 	}
 	return nil
@@ -238,7 +243,7 @@ func (req *UnfollowNewsletterRequest) Validate() error {
 
 // IsValidNewsletterJID checks if a JID is a valid newsletter JID
 func IsValidNewsletterJID(jid string) bool {
-	return strings.Contains(jid, "@newsletter")
+	return strings.Contains(jid, NewsletterJIDSuffix)
 }
 
 // IsValidNewsletterRole checks if a role is valid

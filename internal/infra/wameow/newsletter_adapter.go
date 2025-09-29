@@ -335,7 +335,7 @@ func convertNewsletterMessage(msg *types.NewsletterMessage) *newsletter.Newslett
 	}
 
 	domainMsg := &newsletter.NewsletterMessage{
-		ID:        string(msg.MessageID),
+		ID:        msg.MessageID,
 		ServerID:  fmt.Sprintf("%d", msg.MessageServerID), // Convert numeric ID to string properly
 		FromJID:   "",                                     // Newsletter messages don't have a specific sender JID
 		Timestamp: msg.Timestamp,

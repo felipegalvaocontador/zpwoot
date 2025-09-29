@@ -2,8 +2,6 @@ package community
 
 import (
 	"time"
-
-	"zpwoot/internal/constants"
 )
 
 // Community represents a WhatsApp community
@@ -119,6 +117,11 @@ type CommunityEvent struct {
 type CommunityEventType string
 
 const (
+	// JID suffixes for WhatsApp entities
+	GroupJIDSuffix      = "@g.us"
+	NewsletterJIDSuffix = "@newsletter"
+
+	// Community event types
 	CommunityEventGroupLinked       CommunityEventType = "group_linked"
 	CommunityEventGroupUnlinked     CommunityEventType = "group_unlinked"
 	CommunityEventParticipantJoined CommunityEventType = "participant_joined"
@@ -133,45 +136,45 @@ const (
 func IsValidCommunityJID(jid string) bool {
 	// Community JIDs typically end with @g.us but have specific patterns
 	// This is a basic validation - may need to be refined based on WhatsApp's actual format
-	return len(jid) > 0 && (jid[len(jid)-len(constants.GroupJIDSuffix):] == constants.GroupJIDSuffix ||
-		jid[len(jid)-len(constants.NewsletterJIDSuffix):] == constants.NewsletterJIDSuffix)
+	return len(jid) > 0 && (jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix ||
+		jid[len(jid)-len(NewsletterJIDSuffix):] == NewsletterJIDSuffix)
 }
 
 // IsValidGroupJID checks if a JID is a valid group JID
 func IsValidGroupJID(jid string) bool {
-	return len(jid) > 0 && jid[len(jid)-len(constants.GroupJIDSuffix):] == constants.GroupJIDSuffix
+	return len(jid) > 0 && jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix
 }
 
 // Helper methods
 
 // GetCommunityID extracts the community ID from a JID
 func GetCommunityID(jid string) string {
-	if len(jid) > 5 && jid[len(jid)-5:] == "@g.us" {
-		return jid[:len(jid)-5]
+	if len(jid) > len(GroupJIDSuffix) && jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix {
+		return jid[:len(jid)-len(GroupJIDSuffix)]
 	}
 	return jid
 }
 
 // FormatCommunityJID formats a community ID to a full JID
 func FormatCommunityJID(id string) string {
-	if len(id) > 5 && id[len(id)-5:] == "@g.us" {
+	if len(id) > len(GroupJIDSuffix) && id[len(id)-len(GroupJIDSuffix):] == GroupJIDSuffix {
 		return id
 	}
-	return id + "@g.us"
+	return id + GroupJIDSuffix
 }
 
 // GetGroupID extracts the group ID from a JID
 func GetGroupID(jid string) string {
-	if len(jid) > 5 && jid[len(jid)-5:] == "@g.us" {
-		return jid[:len(jid)-5]
+	if len(jid) > len(GroupJIDSuffix) && jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix {
+		return jid[:len(jid)-len(GroupJIDSuffix)]
 	}
 	return jid
 }
 
 // FormatGroupJID formats a group ID to a full JID
 func FormatGroupJID(id string) string {
-	if len(id) > 5 && id[len(id)-5:] == "@g.us" {
+	if len(id) > len(GroupJIDSuffix) && id[len(id)-len(GroupJIDSuffix):] == GroupJIDSuffix {
 		return id
 	}
-	return id + "@g.us"
+	return id + GroupJIDSuffix
 }

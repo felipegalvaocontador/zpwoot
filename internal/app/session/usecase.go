@@ -86,8 +86,6 @@ func (uc *useCaseImpl) CreateSession(ctx context.Context, req *CreateSessionRequ
 	return response, nil
 }
 
-
-
 func (uc *useCaseImpl) ListSessions(ctx context.Context, req *ListSessionsRequest) (*ListSessionsResponse, error) {
 	domainReq := &session.ListSessionsRequest{
 		IsConnected: req.IsConnected,

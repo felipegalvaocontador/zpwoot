@@ -136,8 +136,6 @@ type useCases struct {
 	community  community.UseCase
 }
 
-
-
 // createUseCases creates all use cases
 func createUseCases(config *ContainerConfig, services *domainServices) *useCases {
 	// Create core use cases
@@ -299,5 +297,3 @@ func (c *Container) GetSessionResolver() func(sessionID string) (ports.WameowMan
 		return nil, fmt.Errorf("session resolver not properly implemented")
 	}
 }
-
-

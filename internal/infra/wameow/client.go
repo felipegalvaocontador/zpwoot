@@ -3624,7 +3624,6 @@ func (c *WameowClient) convertStringToMediaType(mediaType string) whatsmeow.Medi
 }
 
 func (c *WameowClient) handleCommunityAction(
-	ctx context.Context,
 	communityJID, groupJID string,
 	actionName string,
 	actionFunc func(parsedCommunityJID, parsedGroupJID types.JID) error,
@@ -3688,7 +3687,6 @@ func (c *WameowClient) handleCommunityAction(
 }
 
 func (c *WameowClient) handleCommunityQuery(
-	ctx context.Context,
 	communityJID string,
 	actionName string,
 	queryFunc func(parsedCommunityJID types.JID) (interface{}, error),
@@ -3744,15 +3742,15 @@ func (c *WameowClient) handleCommunityQuery(
 }
 
 func (c *WameowClient) LinkGroup(ctx context.Context, communityJID, groupJID string) error {
-	return c.handleCommunityAction(ctx, communityJID, groupJID, "linking group to community", c.client.LinkGroup)
+	return c.handleCommunityAction(communityJID, groupJID, "linking group to community", c.client.LinkGroup)
 }
 
 func (c *WameowClient) UnlinkGroup(ctx context.Context, communityJID, groupJID string) error {
-	return c.handleCommunityAction(ctx, communityJID, groupJID, "unlinking group from community", c.client.UnlinkGroup)
+	return c.handleCommunityAction(communityJID, groupJID, "unlinking group from community", c.client.UnlinkGroup)
 }
 
 func (c *WameowClient) GetSubGroups(ctx context.Context, communityJID string) ([]*types.GroupLinkTarget, error) {
-	result, err := c.handleCommunityQuery(ctx, communityJID, "getting community sub-groups", func(parsedCommunityJID types.JID) (interface{}, error) {
+	result, err := c.handleCommunityQuery(communityJID, "getting community sub-groups", func(parsedCommunityJID types.JID) (interface{}, error) {
 		return c.client.GetSubGroups(parsedCommunityJID)
 	})
 	if err != nil {
@@ -3767,7 +3765,7 @@ func (c *WameowClient) GetSubGroups(ctx context.Context, communityJID string) ([
 }
 
 func (c *WameowClient) GetLinkedGroupsParticipants(ctx context.Context, communityJID string) ([]types.JID, error) {
-	result, err := c.handleCommunityQuery(ctx, communityJID, "getting linked groups participants", func(parsedCommunityJID types.JID) (interface{}, error) {
+	result, err := c.handleCommunityQuery(communityJID, "getting linked groups participants", func(parsedCommunityJID types.JID) (interface{}, error) {
 		return c.client.GetLinkedGroupsParticipants(parsedCommunityJID)
 	})
 	if err != nil {

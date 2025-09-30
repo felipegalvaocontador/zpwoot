@@ -154,7 +154,7 @@ func (uc *useCaseImpl) validateSessionAndConnection(ctx context.Context, session
 	return session, nil
 }
 
-func (uc *useCaseImpl) processNewsletterInfoCommon(ctx context.Context, sessionID string, newsletterInfo *newsletter.NewsletterInfo) error {
+func (uc *useCaseImpl) processNewsletterInfoCommon(sessionID string, newsletterInfo *newsletter.NewsletterInfo) error {
 	if err := uc.newsletterService.ProcessNewsletterInfo(newsletterInfo); err != nil {
 		uc.logger.ErrorWithFields("Failed to process newsletter info", map[string]interface{}{
 			"session_id":    sessionID,
@@ -193,7 +193,7 @@ func (uc *useCaseImpl) getNewsletterInfoGeneric(
 		return nil, fmt.Errorf("failed to get newsletter info via %s: %w", identifierType, err)
 	}
 
-	if err := uc.processNewsletterInfoCommon(ctx, sessionID, newsletterInfo); err != nil {
+	if err := uc.processNewsletterInfoCommon(sessionID, newsletterInfo); err != nil {
 		return nil, err
 	}
 

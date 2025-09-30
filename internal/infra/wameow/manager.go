@@ -482,7 +482,7 @@ func (m *Manager) sendMediaMessageAndLog(client *WameowClient, recipientJID type
 func (m *Manager) RegisterEventHandler(sessionID string, handler ports.EventHandler) error {
 	handlerID := m.registerHandlerInRegistry(sessionID, handler)
 
-	m.attachHandlerToClient(sessionID, handlerID, handler)
+	m.attachHandlerToClient(sessionID, handler)
 
 	m.logger.InfoWithFields("Event handler registered", map[string]interface{}{
 		"session_id": sessionID,
@@ -510,7 +510,7 @@ func (m *Manager) registerHandlerInRegistry(sessionID string, handler ports.Even
 	return handlerID
 }
 
-func (m *Manager) attachHandlerToClient(sessionID, handlerID string, handler ports.EventHandler) {
+func (m *Manager) attachHandlerToClient(sessionID string, handler ports.EventHandler) {
 	client := m.getClient(sessionID)
 	if client != nil {
 		client.GetClient().AddEventHandler(func(evt interface{}) {
@@ -1156,12 +1156,12 @@ func (m *Manager) SendTextMessage(sessionID, to, text string, contextInfo *appMe
 
 	messageID, msg := m.createTextMessage(client, text, contextInfo)
 
-	resp, finalJID, err := m.sendTextMessageWithFallback(client, recipientJID, msg, messageID, sessionID, to)
+	resp, _, err := m.sendTextMessageWithFallback(client, recipientJID, msg, messageID, sessionID, to)
 	if err != nil {
 		return nil, err
 	}
 
-	return m.logAndReturnTextResult(sessionID, to, messageID, contextInfo, resp, finalJID)
+	return m.logAndReturnTextResult(sessionID, to, messageID, contextInfo, resp)
 }
 
 func (m *Manager) validateTextMessageRequest(sessionID, to string) (*WameowClient, types.JID, error) {
@@ -1262,7 +1262,7 @@ func (m *Manager) tryBrazilianAlternative(client *WameowClient, msg *waE2E.Messa
 	return resp, altRecipientJID, nil
 }
 
-func (m *Manager) logAndReturnTextResult(sessionID, to, messageID string, contextInfo *appMessage.ContextInfo, resp whatsmeow.SendResponse, recipientJID types.JID) (*TextMessageResult, error) {
+func (m *Manager) logAndReturnTextResult(sessionID, to, messageID string, contextInfo *appMessage.ContextInfo, resp whatsmeow.SendResponse) (*TextMessageResult, error) {
 	m.logger.InfoWithFields("Text message sent", map[string]interface{}{
 		"session_id": sessionID,
 		"to":         to,

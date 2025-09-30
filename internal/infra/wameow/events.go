@@ -69,7 +69,7 @@ func (h *EventHandler) handleEventInternal(evt interface{}, sessionID string) {
 	case *events.LoggedOut:
 		h.handleLoggedOut(v, sessionID)
 	case *events.QR:
-		h.handleQREvent(v, sessionID)
+		h.handleQREvent(sessionID)
 	case *events.PairSuccess:
 		h.handlePairSuccess(v, sessionID)
 	case *events.PairError:
@@ -83,7 +83,7 @@ func (h *EventHandler) handleEventInternal(evt interface{}, sessionID string) {
 	}
 }
 
-func (h *EventHandler) handleQREvent(evt *events.QR, sessionID string) {
+func (h *EventHandler) handleQREvent(sessionID string) {
 	h.logger.DebugWithFields("QR event received but skipped (handled by client channel)", map[string]interface{}{
 		"session_id": sessionID,
 	})
@@ -98,7 +98,7 @@ func (h *EventHandler) handleOtherEvents(evt interface{}, sessionID string) {
 	case *events.HistorySync:
 		h.handleHistorySync(v, sessionID)
 	case *events.AppState:
-		h.handleAppState(v, sessionID)
+		h.handleAppState(v)
 	case *events.AppStateSyncComplete:
 		h.handleAppStateSyncComplete(v, sessionID)
 	case *events.KeepAliveTimeout:
@@ -414,7 +414,7 @@ func (h *EventHandler) handleHistorySync(evt *events.HistorySync, sessionID stri
 	})
 }
 
-func (h *EventHandler) handleAppState(evt *events.AppState, sessionID string) {
+func (h *EventHandler) handleAppState(evt *events.AppState) {
 	_ = evt // Avoid unused parameter warning
 }
 

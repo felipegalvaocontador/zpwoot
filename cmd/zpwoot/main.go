@@ -102,7 +102,7 @@ func main() {
 
 	startBackgroundServices(container, appLogger)
 
-	setupGracefulShutdown(chiHandler, appLogger)
+	setupGracefulShutdown(appLogger)
 
 	startServer(chiHandler, cfg, appLogger)
 }
@@ -574,7 +574,7 @@ func setupHTTPServer(cfg *config.Config, container *app.Container, database *pla
 	return routers.SetupRoutes(cfg, database, appLogger, whatsappManager, container)
 }
 
-func setupGracefulShutdown(handler http.Handler, appLogger *logger.Logger) {
+func setupGracefulShutdown(appLogger *logger.Logger) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 

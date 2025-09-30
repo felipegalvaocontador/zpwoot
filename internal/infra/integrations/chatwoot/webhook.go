@@ -36,11 +36,11 @@ func (h *WebhookHandler) ProcessWebhook(ctx context.Context, webhook *chatwootdo
 	}
 
 	if webhook.Event == "conversation_status_changed" {
-		return h.handleConversationStatusChanged(ctx, webhook, sessionID)
+		return h.handleConversationStatusChanged(webhook, sessionID)
 	}
 
 	if webhook.Event == "message_updated" && h.isMessageDeleted(webhook) {
-		return h.handleMessageDeleted(ctx, webhook, sessionID)
+		return h.handleMessageDeleted(webhook, sessionID)
 	}
 
 	if webhook.Event == "message_created" {
@@ -55,7 +55,7 @@ func (h *WebhookHandler) ProcessWebhook(ctx context.Context, webhook *chatwootdo
 	return nil
 }
 
-func (h *WebhookHandler) handleConversationStatusChanged(ctx context.Context, webhook *chatwootdomain.ChatwootWebhookPayload, sessionID string) error {
+func (h *WebhookHandler) handleConversationStatusChanged(webhook *chatwootdomain.ChatwootWebhookPayload, sessionID string) error {
 	if webhook.Conversation.Status == "resolved" {
 		h.logger.InfoWithFields("Conversation resolved", map[string]interface{}{
 			"conversation_id": webhook.Conversation.ID,
@@ -67,7 +67,7 @@ func (h *WebhookHandler) handleConversationStatusChanged(ctx context.Context, we
 	return nil
 }
 
-func (h *WebhookHandler) handleMessageDeleted(ctx context.Context, webhook *chatwootdomain.ChatwootWebhookPayload, sessionID string) error {
+func (h *WebhookHandler) handleMessageDeleted(webhook *chatwootdomain.ChatwootWebhookPayload, sessionID string) error {
 	h.logger.InfoWithFields("Message deleted", map[string]interface{}{
 		"message_id": webhook.Message.ID,
 		"session_id": sessionID,
@@ -93,10 +93,10 @@ func (h *WebhookHandler) handleMessageCreated(ctx context.Context, webhook *chat
 		return nil
 	}
 
-	return h.sendToWhatsApp(ctx, webhook, sessionID)
+	return h.sendToWhatsApp(webhook, sessionID)
 }
 
-func (h *WebhookHandler) sendToWhatsApp(ctx context.Context, webhook *chatwootdomain.ChatwootWebhookPayload, sessionID string) error {
+func (h *WebhookHandler) sendToWhatsApp(webhook *chatwootdomain.ChatwootWebhookPayload, sessionID string) error {
 	h.logger.InfoWithFields("Sending message to WhatsApp", map[string]interface{}{
 		"message_id":      webhook.Message.ID,
 		"conversation_id": webhook.Conversation.ID,

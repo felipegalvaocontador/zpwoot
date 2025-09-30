@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -317,7 +318,7 @@ func (h *MediaHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session, *fi
 			"path":       c.Path(),
 		})
 
-		if err.Error() == "session not found" {
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			return nil, fiber.NewError(404, "Session not found")
 		}
 

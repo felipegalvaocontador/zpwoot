@@ -1395,13 +1395,13 @@ func (c *WameowClient) SendButtonMessage(ctx context.Context, to, body string, b
 	}
 
 	// Build buttons exactly like
-	var buttonsList []*waE2E.ButtonsMessage_Button
+	buttonsList := make([]*waE2E.ButtonsMessage_Button, 0, len(buttons))
 	for _, button := range buttons {
-		buttonId := button["id"]
+		buttonID := button["id"]
 		buttonText := button["text"]
 
 		buttonsList = append(buttonsList, &waE2E.ButtonsMessage_Button{
-			ButtonID:       &buttonId,
+			ButtonID:       &buttonID,
 			ButtonText:     &waE2E.ButtonsMessage_Button_ButtonText{DisplayText: &buttonText},
 			Type:           waE2E.ButtonsMessage_Button_RESPONSE.Enum(),
 			NativeFlowInfo: &waE2E.ButtonsMessage_Button_NativeFlowInfo{},
@@ -1522,17 +1522,17 @@ func (c *WameowClient) buildListRows(rows []interface{}) []*waE2E.ListMessage_Ro
 			rowDescription = "" // Default empty description if conversion fails
 		}
 
-		rowId, ok := row["id"].(string)
+		rowID, ok := row["id"].(string)
 		if !ok {
-			rowId = "" // Default empty ID if conversion fails
+			rowID = "" // Default empty ID if conversion fails
 		}
 
-		if rowId == "" {
-			rowId = rowTitle // fallback to title
+		if rowID == "" {
+			rowID = rowTitle // fallback to title
 		}
 
 		listRows = append(listRows, &waE2E.ListMessage_Row{
-			RowID:       &rowId,
+			RowID:       &rowID,
 			Title:       &rowTitle,
 			Description: &rowDescription,
 		})
@@ -2409,10 +2409,11 @@ func (c *WameowClient) JoinGroupViaLink(ctx context.Context, inviteLink string) 
 			"group_jid":  groupJID.String(),
 			"error":      err.Error(),
 		})
-		// Return minimal info if we can't get full details
+		// Return minimal info if we can't get full details - this is intentional fallback
+		// The join operation succeeded, but getting detailed info failed
 		return &types.GroupInfo{
 			JID: groupJID,
-		}, nil
+		}, err
 	}
 
 	c.logger.InfoWithFields("Joined group successfully", map[string]interface{}{

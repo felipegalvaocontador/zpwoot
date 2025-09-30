@@ -373,7 +373,7 @@ func (h *EventHandler) processChatwootIntegration(evt *events.Message, sessionID
 			content = "Video"
 		}
 	} else if evt.Message.DocumentMessage != nil {
-		messageType = "document"
+		messageType = MessageTypeDocument
 		if evt.Message.DocumentMessage.Title != nil {
 			content = "Document: " + *evt.Message.DocumentMessage.Title
 		} else {

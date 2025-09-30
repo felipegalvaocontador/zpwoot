@@ -345,7 +345,8 @@ func (im *IntegrationManager) mergeBrazilianContacts(client ports.ChatwootClient
 				"session_id": sessionID,
 				"error":      err.Error(),
 			})
-			return contact14, nil // Return base contact even if merge fails
+			// Return base contact even if merge fails - this is intentional fallback behavior
+			// The merge failure is logged but doesn't prevent using the base contact
 		}
 
 		return contact14, nil

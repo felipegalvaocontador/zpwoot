@@ -67,7 +67,7 @@ func (h *ChatwootHandler) CreateConfig(c *fiber.Ctx) error {
 	// Check if auto-create is requested
 	if req.AutoCreate != nil && *req.AutoCreate {
 		// Generate webhook URL dynamically
-		baseURL := h.getBaseURL(c)
+		baseURL := h.getBaseURL()
 		webhookURL := fmt.Sprintf("%s/chatwoot/webhook/%s", baseURL, sessionID)
 
 		inboxName := "WhatsApp zpwoot"
@@ -507,7 +507,7 @@ func (h *ChatwootHandler) generateInboxConfig(sessionID string, req *chatwoot.Cr
 		inboxName = *req.InboxName
 	}
 
-	serverHost := h.getBaseURL(nil)
+	serverHost := h.getBaseURL()
 	webhookURL := fmt.Sprintf("%s/chatwoot/webhook/%s", serverHost, sessionID)
 
 	return inboxName, webhookURL
@@ -545,7 +545,7 @@ func (h *ChatwootHandler) FindConfig(c *fiber.Ctx) error {
 }
 
 // getBaseURL gets the base URL from server configuration
-func (h *ChatwootHandler) getBaseURL(c *fiber.Ctx) string {
+func (h *ChatwootHandler) getBaseURL() string {
 	// Use SERVER_HOST from environment configuration
 	serverHost := os.Getenv("SERVER_HOST")
 	if serverHost == "" {

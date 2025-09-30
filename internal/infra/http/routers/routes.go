@@ -23,7 +23,7 @@ func SetupRoutes(app *fiber.App, database *db.DB, logger *logger.Logger, wameowM
 
 	setupSessionSpecificRoutes(app, database, logger, wameowManager, container)
 
-	setupGlobalRoutes(app, database, logger, wameowManager, container)
+	setupGlobalRoutes(app, logger, container)
 }
 
 func setupSessionRoutes(app *fiber.App, appLogger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
@@ -191,7 +191,7 @@ func setupSessionSpecificRoutes(app *fiber.App, database *db.DB, appLogger *logg
 	// All core functionality is handled in setupSessionRoutes
 }
 
-func setupGlobalRoutes(app *fiber.App, database *db.DB, appLogger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
+func setupGlobalRoutes(app *fiber.App, appLogger *logger.Logger, container *app.Container) {
 	// Global webhook info routes
 	webhookHandler := handlers.NewWebhookHandler(container.WebhookUseCase, appLogger)
 	app.Get("/webhook/events", webhookHandler.GetSupportedEvents) // GET /webhook/events

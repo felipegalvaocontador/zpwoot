@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/contact"
-	"zpwoot/internal/domain/session"
+	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
 
@@ -32,7 +33,7 @@ func (h *ContactHandler) handleContactAction(
 	c *fiber.Ctx,
 	actionName string,
 	successMessage string,
-	parseFunc func(*fiber.Ctx, *session.Session) (interface{}, error),
+	parseFunc func(*fiber.Ctx, *domainSession.Session) (interface{}, error),
 	actionFunc func(context.Context, interface{}) (interface{}, error),
 ) error {
 	sess, fiberErr := h.resolveSession(c)
@@ -79,7 +80,7 @@ func (h *ContactHandler) CheckWhatsApp(c *fiber.Ctx) error {
 		c,
 		"Checking WhatsApp numbers",
 		"Phone numbers checked successfully",
-		func(c *fiber.Ctx, sess *session.Session) (interface{}, error) {
+		func(c *fiber.Ctx, sess *domainSession.Session) (interface{}, error) {
 			var req contact.CheckWhatsAppRequest
 			if err := c.BodyParser(&req); err != nil {
 				return nil, err
@@ -164,7 +165,7 @@ func (h *ContactHandler) GetUserInfo(c *fiber.Ctx) error {
 		c,
 		"Getting user info",
 		"User information retrieved successfully",
-		func(c *fiber.Ctx, sess *session.Session) (interface{}, error) {
+		func(c *fiber.Ctx, sess *domainSession.Session) (interface{}, error) {
 			var req contact.GetUserInfoRequest
 			if err := c.BodyParser(&req); err != nil {
 				return nil, err
@@ -319,7 +320,7 @@ func (h *ContactHandler) GetBusinessProfile(c *fiber.Ctx) error {
 	return c.JSON(response)
 }
 
-func (h *ContactHandler) resolveSession(c *fiber.Ctx) (*session.Session, *fiber.Error) {
+func (h *ContactHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session, *fiber.Error) {
 	idOrName := c.Params("sessionId")
 
 	sess, err := h.sessionResolver.ResolveSession(c.Context(), idOrName)
@@ -330,7 +331,7 @@ func (h *ContactHandler) resolveSession(c *fiber.Ctx) (*session.Session, *fiber.
 			"path":       c.Path(),
 		})
 
-		if err.Error() == "session not found" {
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			return nil, fiber.NewError(404, "Session not found")
 		}
 

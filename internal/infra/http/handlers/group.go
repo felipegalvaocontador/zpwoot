@@ -36,7 +36,7 @@ func (h *GroupHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session, *fi
 			"path":       c.Path(),
 		})
 
-		if err.Error() == "session not found" || errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			return nil, fiber.NewError(404, "Session not found")
 		}
 
@@ -674,7 +674,7 @@ func (h *GroupHandler) GetGroupInfoFromLink(c *fiber.Ctx) error {
 			"error":       err.Error(),
 		})
 
-		if err.Error() == "session is not connected" {
+		if errors.Is(err, domainSession.ErrSessionNotConnected) {
 			return fiber.NewError(400, "Session is not connected")
 		}
 
@@ -725,7 +725,7 @@ func (h *GroupHandler) GetGroupInfoFromInvite(c *fiber.Ctx) error {
 			"error":      err.Error(),
 		})
 
-		if err.Error() == "session is not connected" {
+		if errors.Is(err, domainSession.ErrSessionNotConnected) {
 			return fiber.NewError(400, "Session is not connected")
 		}
 
@@ -776,7 +776,7 @@ func (h *GroupHandler) JoinGroupWithInvite(c *fiber.Ctx) error {
 			"error":      err.Error(),
 		})
 
-		if err.Error() == "session is not connected" {
+		if errors.Is(err, domainSession.ErrSessionNotConnected) {
 			return fiber.NewError(400, "Session is not connected")
 		}
 

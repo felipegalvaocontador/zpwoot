@@ -67,8 +67,8 @@ type FollowNewsletterRequest struct {
 }
 
 // GetNewsletterJID returns the newsletter JID for interface compliance
-func (r *FollowNewsletterRequest) GetNewsletterJID() string {
-	return r.NewsletterJID
+func (req *FollowNewsletterRequest) GetNewsletterJID() string {
+	return req.NewsletterJID
 }
 
 // UnfollowNewsletterRequest - Request para deixar de seguir newsletter
@@ -77,8 +77,8 @@ type UnfollowNewsletterRequest struct {
 }
 
 // GetNewsletterJID returns the newsletter JID for interface compliance
-func (r *UnfollowNewsletterRequest) GetNewsletterJID() string {
-	return r.NewsletterJID
+func (req *UnfollowNewsletterRequest) GetNewsletterJID() string {
+	return req.NewsletterJID
 }
 
 // SubscribedNewslettersResponse - Response com newsletters seguidos

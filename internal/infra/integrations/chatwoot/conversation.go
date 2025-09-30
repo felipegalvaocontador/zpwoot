@@ -7,6 +7,13 @@ import (
 	"zpwoot/platform/logger"
 )
 
+// Conversation status constants
+const (
+	StatusResolved = "resolved"
+	StatusOpen     = "open"
+	StatusPending  = "pending"
+)
+
 // ConversationManager handles conversation operations between WhatsApp and Chatwoot
 type ConversationManager struct {
 	logger *logger.Logger
@@ -68,7 +75,7 @@ func (cm *ConversationManager) ResolveConversation(conversationID int) error {
 		"conversation_id": conversationID,
 	})
 
-	err := cm.client.UpdateConversationStatus(conversationID, "resolved")
+	err := cm.client.UpdateConversationStatus(conversationID, StatusResolved)
 	if err != nil {
 		return fmt.Errorf("failed to resolve conversation: %w", err)
 	}
@@ -100,7 +107,7 @@ func (cm *ConversationManager) HandleConversationStatusChange(conversationID int
 	})
 
 	switch newStatus {
-	case "resolved":
+	case StatusResolved:
 		if reopenConversation {
 			// If reopen is enabled, reopen the conversation when it gets resolved
 			return cm.ReopenConversation(conversationID)
@@ -142,7 +149,7 @@ func (cm *ConversationManager) GetConversationMessages(conversationID int, befor
 
 // IsConversationActive checks if a conversation is active (not resolved)
 func (cm *ConversationManager) IsConversationActive(conversation *ports.ChatwootConversation) bool {
-	return conversation.Status != "resolved"
+	return conversation.Status != StatusResolved
 }
 
 // GetConversationStats returns statistics about conversations
@@ -156,7 +163,7 @@ func (cm *ConversationManager) GetConversationStats(conversations []ports.Chatwo
 			stats.Open++
 		case "pending":
 			stats.Pending++
-		case "resolved":
+		case StatusResolved:
 			stats.Resolved++
 		default:
 			stats.Other++
@@ -190,7 +197,7 @@ func (cm *ConversationManager) ApplyConversationConfig(conversationID int, confi
 	}
 
 	// Apply status based on config
-	if conversation.Status == "resolved" && config.ReopenConversation {
+	if conversation.Status == StatusResolved && config.ReopenConversation {
 		return cm.ReopenConversation(conversationID)
 	}
 

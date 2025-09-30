@@ -655,7 +655,7 @@ func (h *MessageHandler) handleContactSendError(c *fiber.Ctx, err error) error {
 
 // buildContactListResponse builds the final response for contact list sending
 func (h *MessageHandler) buildContactListResponse(c *fiber.Ctx, result *wameow.ContactListResult, sessionID, remoteJID string, contactCount int) error {
-	var contactResults []message.ContactSendResult
+	contactResults := make([]message.ContactSendResult, 0, len(result.Results))
 	for _, r := range result.Results {
 		contactResults = append(contactResults, message.ContactSendResult{
 			ContactName: r.ContactName,
@@ -875,13 +875,13 @@ func (h *MessageHandler) SendButtonMessage(c *fiber.Ctx) error {
 
 	// Use  format exactly
 	type buttonStruct struct {
-		ButtonId   string `json:"ButtonId"`
+		ButtonID   string `json:"ButtonId"`
 		ButtonText string `json:"ButtonText"`
 	}
 	type buttonRequest struct {
 		RemoteJID string         `json:"remoteJid"`
 		Title     string         `json:"Title"`
-		Id        string         `json:"Id,omitempty"`
+		ID        string         `json:"Id,omitempty"`
 		Buttons   []buttonStruct `json:"Buttons"`
 	}
 
@@ -911,10 +911,10 @@ func (h *MessageHandler) SendButtonMessage(c *fiber.Ctx) error {
 	}
 
 	// Convert to internal format
-	var buttons []map[string]string
+	buttons := make([]map[string]string, 0, len(buttonReq.Buttons))
 	for _, button := range buttonReq.Buttons {
 		buttons = append(buttons, map[string]string{
-			"id":   button.ButtonId,
+			"id":   button.ButtonID,
 			"text": button.ButtonText,
 		})
 	}
@@ -997,7 +997,7 @@ func (h *MessageHandler) SendListMessage(c *fiber.Ctx) error {
 type listItem struct {
 	Title string `json:"title"`
 	Desc  string `json:"desc"`
-	RowId string `json:"RowId"`
+	RowID string `json:"RowId"`
 }
 
 // section represents a section containing multiple list items
@@ -1013,7 +1013,7 @@ type listRequest struct {
 	Desc       string     `json:"Desc"`
 	TopText    string     `json:"TopText"`
 	FooterText string     `json:"FooterText"`
-	Id         string     `json:"Id,omitempty"`
+	ID         string     `json:"Id,omitempty"`
 	Sections   []section  `json:"Sections"`
 	List       []listItem `json:"List"`
 }
@@ -1059,7 +1059,7 @@ func (h *MessageHandler) convertSectionsFormat(reqSections []section) []map[stri
 		var rows []interface{}
 		for _, item := range sec.Rows {
 			rows = append(rows, map[string]interface{}{
-				"id":          item.RowId,
+				"id":          item.RowID,
 				"title":       item.Title,
 				"description": item.Desc,
 			})
@@ -1078,7 +1078,7 @@ func (h *MessageHandler) convertListFormat(list []listItem, topText string) []ma
 	var rows []interface{}
 	for _, item := range list {
 		rows = append(rows, map[string]interface{}{
-			"id":          item.RowId,
+			"id":          item.RowID,
 			"title":       item.Title,
 			"description": item.Desc,
 		})

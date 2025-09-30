@@ -30,6 +30,7 @@ func Load() *Config {
 	if err := godotenv.Load(); err != nil {
 		// .env file is optional, so we just continue without it
 		// This is common in production environments where env vars are set directly
+		_ = err // Explicitly ignore the error as this is expected behavior
 	}
 
 	return &Config{

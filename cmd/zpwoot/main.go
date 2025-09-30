@@ -106,11 +106,11 @@ func main() {
 
 	// Initialize core components
 	repositories := repository.NewRepositories(database.GetDB(), appLogger)
-	managers := initializeManagers(database, repositories, appLogger)
-	container := createContainer(repositories, managers, database, appLogger)
+	managerInstances := initializeManagers(database, repositories, appLogger)
+	container := createContainer(repositories, managerInstances, database, appLogger)
 
 	// Setup and start HTTP server
-	fiberApp := setupHTTPServer(cfg, container, database, managers.whatsapp, appLogger)
+	fiberApp := setupHTTPServer(cfg, container, database, managerInstances.whatsapp, appLogger)
 
 	// Start background services
 	startBackgroundServices(container, appLogger)
@@ -195,7 +195,7 @@ func handleDatabaseOperations(
 		if err != nil {
 			appLogger.Fatal("Failed to get migration status: " + err.Error())
 		}
-		showMigrationStatus(migrations, appLogger)
+		showMigrationStatus(migrations)
 		return true
 	}
 
@@ -484,7 +484,7 @@ func showVersion() {
 	fmt.Printf("OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
 }
 
-func showMigrationStatus(migrations []*db.Migration, logger *logger.Logger) {
+func showMigrationStatus(migrations []*db.Migration) {
 	fmt.Printf("Migration Status:\n")
 	fmt.Printf("================\n\n")
 

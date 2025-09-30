@@ -191,14 +191,14 @@ func (uc *useCaseImpl) UnlinkGroup(ctx context.Context, sessionID string, req *U
 	}
 
 	// Validate unlink request using domain service
-	if err := uc.communityService.ValidateLinkRequest(req.CommunityJID, req.GroupJID); err != nil {
+	if validationErr := uc.communityService.ValidateLinkRequest(req.CommunityJID, req.GroupJID); validationErr != nil {
 		uc.logger.ErrorWithFields("Invalid unlink request", map[string]interface{}{
 			"session_id":    sessionID,
 			"community_jid": req.CommunityJID,
 			"group_jid":     req.GroupJID,
-			"error":         err.Error(),
+			"error":         validationErr.Error(),
 		})
-		return nil, fmt.Errorf("invalid unlink request: %w", err)
+		return nil, fmt.Errorf("invalid unlink request: %w", validationErr)
 	}
 
 	// Format JIDs

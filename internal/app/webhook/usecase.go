@@ -119,7 +119,7 @@ func (uc *useCaseImpl) TestWebhook(ctx context.Context, webhookID string, req *T
 		return &TestWebhookResponse{
 			Success: false,
 			Error:   err.Error(),
-		}, nil
+		}, err
 	}
 
 	response := &TestWebhookResponse{

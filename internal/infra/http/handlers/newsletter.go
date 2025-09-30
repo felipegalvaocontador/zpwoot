@@ -39,7 +39,7 @@ func (h *NewsletterHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session
 			"path":       c.Path(),
 		})
 
-		if err.Error() == "session not found" || errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			return nil, fiber.NewError(404, "Session not found")
 		}
 
@@ -83,7 +83,7 @@ func (h *NewsletterHandler) CreateNewsletter(c *fiber.Ctx) error {
 			"error":      err.Error(),
 		})
 
-		if err.Error() == "session is not connected" {
+		if errors.Is(err, domainSession.ErrSessionNotConnected) {
 			return fiber.NewError(400, "Session is not connected")
 		}
 
@@ -132,7 +132,7 @@ func (h *NewsletterHandler) GetNewsletterInfo(c *fiber.Ctx) error {
 			"error":          err.Error(),
 		})
 
-		if err.Error() == "session is not connected" {
+		if errors.Is(err, domainSession.ErrSessionNotConnected) {
 			return fiber.NewError(400, "Session is not connected")
 		}
 

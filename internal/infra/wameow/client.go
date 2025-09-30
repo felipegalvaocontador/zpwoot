@@ -3213,9 +3213,18 @@ func (c *WameowClient) GetNewsletterMessages(ctx context.Context, jid string, co
 		params.Count = count
 	}
 	if before != "" {
-		// Convert string to MessageServerID
+		// Convert string to MessageServerID with safe conversion
 		if serverID, err := strconv.ParseUint(before, 10, 64); err == nil {
-			params.Before = types.MessageServerID(serverID)
+			// Check if the value fits in an int to prevent overflow
+			if serverID <= uint64(^uint(0)>>1) { // Max int value
+				params.Before = types.MessageServerID(serverID)
+			} else {
+				c.logger.WarnWithFields("Server ID too large, skipping before parameter", map[string]interface{}{
+					"session_id": c.sessionID,
+					"server_id":  before,
+					"max_int":    ^uint(0) >> 1,
+				})
+			}
 		}
 	}
 
@@ -3307,9 +3316,18 @@ func (c *WameowClient) buildNewsletterUpdatesParams(count int, since, after stri
 	}
 
 	if after != "" {
-		// Convert string to MessageServerID
+		// Convert string to MessageServerID with safe conversion
 		if serverID, err := strconv.ParseUint(after, 10, 64); err == nil {
-			params.After = types.MessageServerID(serverID)
+			// Check if the value fits in an int to prevent overflow
+			if serverID <= uint64(^uint(0)>>1) { // Max int value
+				params.After = types.MessageServerID(serverID)
+			} else {
+				c.logger.WarnWithFields("Server ID too large, skipping after parameter", map[string]interface{}{
+					"session_id": c.sessionID,
+					"server_id":  after,
+					"max_int":    ^uint(0) >> 1,
+				})
+			}
 		}
 	}
 
@@ -3394,7 +3412,17 @@ func (c *WameowClient) NewsletterMarkViewed(ctx context.Context, jid string, ser
 	messageServerIDs := make([]types.MessageServerID, 0, len(serverIDs))
 	for _, serverID := range serverIDs {
 		if id, err := strconv.ParseUint(serverID, 10, 64); err == nil {
-			messageServerIDs = append(messageServerIDs, types.MessageServerID(id))
+			// Check if the value fits in an int to prevent overflow
+			if id <= uint64(^uint(0)>>1) { // Max int value
+				messageServerIDs = append(messageServerIDs, types.MessageServerID(id))
+			} else {
+				c.logger.WarnWithFields("Server ID too large, skipping", map[string]interface{}{
+					"session_id": c.sessionID,
+					"server_id":  serverID,
+					"max_int":    ^uint(0) >> 1,
+				})
+				continue
+			}
 		} else {
 			c.logger.WarnWithFields("Invalid server ID, skipping", map[string]interface{}{
 				"session_id": c.sessionID,
@@ -3458,7 +3486,7 @@ func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, s
 		"message_id": messageID,
 	})
 
-	// Convert string server ID to MessageServerID
+	// Convert string server ID to MessageServerID with safe conversion
 	msgServerID, err := strconv.ParseUint(serverID, 10, 64)
 	if err != nil {
 		c.logger.ErrorWithFields("Invalid server ID format", map[string]interface{}{
@@ -3466,9 +3494,17 @@ func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, s
 			"server_id":  serverID,
 			"error":      err.Error(),
 		})
-		// Try to handle non-numeric server IDs by using a hash or default value
-		// For now, we'll return an error but with a more helpful message
 		return fmt.Errorf("server ID must be numeric, got: %s", serverID)
+	}
+
+	// Check if the value fits in an int to prevent overflow
+	if msgServerID > uint64(^uint(0)>>1) { // Max int value
+		c.logger.ErrorWithFields("Server ID too large", map[string]interface{}{
+			"session_id": c.sessionID,
+			"server_id":  serverID,
+			"max_int":    ^uint(0) >> 1,
+		})
+		return fmt.Errorf("server ID too large: %s (max: %d)", serverID, ^uint(0)>>1)
 	}
 
 	// Use messageID directly

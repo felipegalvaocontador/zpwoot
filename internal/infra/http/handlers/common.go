@@ -9,7 +9,15 @@ import (
 	"zpwoot/platform/logger"
 
 	"github.com/google/uuid"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
+
+// titleCase converts a string to title case using the modern Go approach
+func titleCase(s string) string {
+	caser := cases.Title(language.English)
+	return caser.String(s)
+}
 
 type SessionRepository interface {
 	GetByID(ctx context.Context, id string) (*session.Session, error)

@@ -318,10 +318,23 @@ urls: ## Show all service URLs
 fmt: ## Format code
 	@echo "Formatting code..."
 	go fmt ./...
+	goimports -w .
 
 lint: ## Run linter
 	@echo "Running linter..."
 	golangci-lint run
+
+lint-fix: ## Run linter with auto-fix
+	@echo "Running linter with auto-fix..."
+	golangci-lint run --fix
+
+lint-verbose: ## Run linter with verbose output
+	@echo "Running linter with verbose output..."
+	golangci-lint run -v
+
+lint-new: ## Run linter only on new code (git diff)
+	@echo "Running linter on new code..."
+	golangci-lint run --new-from-rev=HEAD~1
 
 # Security
 security-check: ## Run security checks

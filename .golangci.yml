@@ -1,145 +1,275 @@
-# golangci-lint configuration for zpwoot
-# Documentation: https://golangci-lint.run/usage/configuration/
+version: "2"
 
+# Options for analysis running
 run:
+  # Timeout for total work
   timeout: 5m
+  # Exit code when at least one issue was found
   issues-exit-code: 1
+  # Include test files
   tests: true
-  skip-dirs:
-    - vendor
-    - tmp
-    - build
-    - docs/swagger
-
-output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
-  uniq-by-line: true
-  sort-results: true
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-    exclude-functions:
-      - (*os.File).Close
-      - (*database/sql.Rows).Close
-      - (*database/sql.Stmt).Close
-      - (*net/http.Response.Body).Close
-
-  govet:
-    check-shadowing: true
-    enable-all: true
-
-  gocyclo:
-    min-complexity: 15
-
-  dupl:
-    threshold: 200
-
-  goconst:
-    min-len: 5
-    min-occurrences: 5
-
-  misspell:
-    locale: US
-
-  lll:
-    line-length: 150
-
-  goimports:
-    local-prefixes: zpwoot
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - wrapperFunc
-
-  funlen:
-    lines: 120
-    statements: 80
-    ignore-comments: true
-
-  nestif:
-    min-complexity: 4
-
-  staticcheck:
-    go: "1.24"
-    checks: ["all"]
-
-  unused:
-    go: "1.24"
-
+  # Define the Go version limit
+  go: "1.24"
+  # The mode used to evaluate relative paths
+  relative-path-mode: gomod
+# Linters configuration
 linters:
-  enable:
-    # Essential linters (enabled by default)
-    - errcheck      # Check for unchecked errors
-    - govet         # Go vet
-    - ineffassign   # Detect ineffectual assignments
-    - staticcheck   # Static analysis
-    - unused        # Unused code detection
+  # Default set of linters (standard includes: errcheck, govet, ineffassign, staticcheck, unused)
+  default: standard
 
-    # Additional quality linters
-    - dupl          # Code clone detection
-    - gocyclo       # Cyclomatic complexity
-    - goconst       # Repeated strings that could be constants
-    - gocritic      # Comprehensive Go source code linter
-    - misspell      # Spelling mistakes
+  # Enable additional linters beyond the standard set
+  enable:
+    # Code quality and complexity
+    - dupl           # Code clone detection
+    - funlen         # Function length
+    - gocyclo        # Cyclomatic complexity
+    - nestif         # Nested if statements
+    - goconst        # Repeated strings that could be constants
+
+    # Style and formatting
+    - gocritic       # Comprehensive Go source code linter
+    - revive         # Fast, configurable, extensible, flexible linter
+    - misspell       # Spelling mistakes
     - unconvert     # Remove unnecessary type conversions
     - unparam       # Unused function parameters
-    - funlen        # Function length
-    - lll           # Line length
-    - nestif        # Nested if statements
     - whitespace    # Whitespace issues
+    - lll           # Line length
 
-issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - dupl
-        - gosec
-        - funlen
-        - goconst
-        - lll
+    # Security and error handling
+    - gosec         # Security issues
+    - bodyclose     # HTTP response body close
+    - contextcheck  # Context usage
+    - copyloopvar   # Loop variable capture (Go 1.22+)
+    - errname       # Error naming conventions
+    - errorlint     # Error wrapping
+    - nilerr        # Nil error checks
+    - nolintlint    # nolint directive validation
 
-    # Exclude known issues in generated code
-    - path: ".*\\.pb\\.go"
-      linters:
+    # Additional useful linters
+    - asciicheck    # Non-ASCII identifiers
+    - bidichk       # Dangerous unicode sequences
+    - durationcheck # Duration multiplication
+    - makezero      # Slice declarations with non-zero initial length
+    - prealloc      # Slice declarations that could be pre-allocated
+  settings:
+    dupl:
+      threshold: 200
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - (*os.File).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.Stmt).Close
+        - (*net/http.Response.Body).Close
+    funlen:
+      lines: 120
+      statements: 80
+      ignore-comments: true
+    goconst:
+      min-len: 5
+      min-occurrences: 5
+    gocritic:
+      disabled-checks:
+        - dupImport
+        - ifElseChain
+        - octalLiteral
+        - whyNoLint
+        - wrapperFunc
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 15
+    gosec:
+      excludes:
+        - G204
+        - G304
+      severity: low
+      confidence: low
+    govet:
+      enable-all: true
+    lll:
+      line-length: 150
+    misspell:
+      locale: US
+    nestif:
+      min-complexity: 4
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - sayRepetitiveInsteadOfStutters
+          severity: warning
+          disabled: false
+        - name: package-comments
+          severity: warning
+          disabled: false
+        - name: var-naming
+          arguments:
+            - - ID
+          severity: warning
+          disabled: false
+    staticcheck:
+      checks:
         - all
+    nolintlint:
+      allow-unused: false
+      require-explanation: true
+      require-specific: true
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+    asciicheck:
+      # Check for non-ASCII identifiers
+      # Default: false
+      check-generated: false
+    bidichk:
+      # Check for dangerous unicode character sequences
+      # Default: []
+      left-to-right-embedding: false
+      right-to-left-embedding: false
+      pop-directional-formatting: false
+    prealloc:
+      # Report pre-allocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them
+      simple: true
+      range-loops: true
+      for-loops: false
+  # Exclusion rules for linters
+  exclusions:
+    # Mode of the generated files analysis
+    # strict: follows Go generated file convention strictly
+    # lax: excludes files with autogenerated, code generated, do not edit, etc.
+    # disable: disable the generated files exclusion
+    generated: lax
 
-    # Exclude specific issues
-    - text: "Error return value of.*is not checked"
-      linters:
-        - errcheck
-      source: "defer.*\\.Close\\(\\)"
+    # Log a warning if an exclusion rule is unused
+    warn-unused: false
 
-    # Allow long lines in comments
-    - source: "^//.*"
-      linters:
-        - lll
+    # Predefined exclusion rules
+    presets:
+      - comments              # Exclude issues in comments
+      - std-error-handling    # Standard error handling patterns
+      - common-false-positives # Common false positives
 
-    # Allow unused parameters in interface implementations
-    - text: "parameter.*is unused"
-      linters:
-        - unparam
+    # Custom exclusion rules
+    rules:
+      # Exclude some linters from running on test files
+      - path: _test\.go
+        linters:
+          - dupl
+          - errcheck
+          - funlen
+          - goconst
+          - gocyclo
+          - gosec
+          - lll
+          - revive
+          - nolintlint
+          - bodyclose
+          - prealloc
 
-  exclude-use-default: false
+      # Exclude all linters from generated protobuf files
+      - path: .*\.pb\.go
+        linters:
+          - all
+
+      # Allow defer Close() without error checking
+      - linters:
+          - errcheck
+        text: Error return value of.*is not checked
+        source: defer.*\.Close\(\)
+
+      # Allow long lines in comments
+      - linters:
+          - lll
+        source: ^//.*
+
+      # Allow unused parameters in interface implementations
+      - linters:
+          - unparam
+        text: parameter.*is unused
+
+      # Allow some issues in main.go files
+      - path: main\.go
+        linters:
+          - funlen
+          - gocyclo
+          - revive
+
+      # Allow subprocess calls in specific cases
+      - linters:
+          - gosec
+        text: Subprocess launched with.*variable
+
+    # Exclude specific paths from analysis
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - vendor/
+# Issues configuration
+issues:
+  # Maximum issues count per one linter (0 = unlimited)
   max-issues-per-linter: 0
+  # Maximum count of issues with the same text (0 = unlimited)
   max-same-issues: 0
+  # Make issues output unique by line
+  uniq-by-line: true
+  # Show only new issues (useful for large codebases)
   new: false
 
+# Output configuration
+output:
+  # Order to use when sorting results
+  sort-order:
+    - linter
+    - severity
+    - file
+  # Show statistics per linter
+  show-stats: true
+# Severity configuration
 severity:
-  default-severity: error
+  # Set the default severity for issues
+  default: error
+  # Custom severity rules
+  rules:
+    # Set dupl issues as info instead of error
+    - linters:
+        - dupl
+      severity: info
+    # Set style issues as warning
+    - linters:
+        - misspell
+        - whitespace
+      severity: warning
+
+# Formatters configuration
+formatters:
+  # Enable specific formatters
+  enable:
+    - gofmt      # Standard Go formatting
+    - goimports  # Import formatting and organization
+
+  # Formatters settings
+  settings:
+    goimports:
+      # Local prefixes for import organization
+      local-prefixes:
+        - zpwoot
+
+  # Exclusions for formatters
+  exclusions:
+    # Mode of the generated files analysis
+    generated: lax
+    # Exclude specific paths from formatting
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - vendor/

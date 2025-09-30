@@ -180,7 +180,18 @@ func (u *Utils) RetryWithBackoff(operation func() error, maxRetries int, initial
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		if attempt > 0 {
-			delay := time.Duration(1<<uint(attempt-1)) * initialDelay
+			// Safe exponential backoff calculation to prevent integer overflow
+			// Calculate exponent safely without negative values
+			attemptUint := uint(attempt) // attempt is guaranteed > 0 here
+			var exponent uint
+			if attemptUint > 0 {
+				exponent = attemptUint - 1
+			}
+			// Cap the exponent to prevent excessive delays (max 2^10 = 1024x initial delay)
+			if exponent > 10 {
+				exponent = 10
+			}
+			delay := time.Duration(1<<exponent) * initialDelay
 			u.logger.InfoWithFields("Retrying operation", map[string]interface{}{
 				"attempt": attempt,
 				"delay":   delay.String(),

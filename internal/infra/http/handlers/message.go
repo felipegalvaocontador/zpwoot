@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/message"
@@ -15,12 +13,6 @@ import (
 	"zpwoot/internal/infra/wameow"
 	"zpwoot/platform/logger"
 )
-
-// titleCase converts a string to title case using the modern Go approach
-func titleCase(s string) string {
-	caser := cases.Title(language.English)
-	return caser.String(s)
-}
 
 type MessageHandler struct {
 	messageUC       message.UseCase

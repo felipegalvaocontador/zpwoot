@@ -485,8 +485,16 @@ func (s *Service) sendToWhatsApp(ctx context.Context, sessionID string, payload 
 		return fmt.Errorf("failed to send message to WhatsApp: %w", err)
 	}
 
-	// Store message for tracking (non-blocking)
-	_ = s.storeOutgoingMessage(ctx, sessionID, result.MessageID, phoneNumber, formattedContent, result.Timestamp, messageID, payload.Conversation.ID)
+	// Store message for tracking (non-blocking, errors are logged internally)
+	if err := s.storeOutgoingMessage(ctx, sessionID, result.MessageID, phoneNumber, formattedContent, result.Timestamp, messageID, payload.Conversation.ID); err != nil {
+		s.logger.WarnWithFields("Failed to store outgoing message", map[string]interface{}{
+			"session_id":      sessionID,
+			"whatsapp_msg_id": result.MessageID,
+			"chatwoot_msg_id": messageID,
+			"error":           err.Error(),
+		})
+		// Don't fail the main operation for storage issues
+	}
 
 	return nil
 }

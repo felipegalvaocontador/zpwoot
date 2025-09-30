@@ -432,8 +432,13 @@ func (s *serviceImpl) generateFilename(messageID, mimeType, originalFilename str
 	// Generate filename based on message ID and MIME type
 	ext := ""
 	if mimeType != "" {
-		exts, _ := mime.ExtensionsByType(mimeType)
-		if len(exts) > 0 {
+		exts, err := mime.ExtensionsByType(mimeType)
+		if err != nil {
+			s.logger.WarnWithFields("Failed to get extensions for MIME type", map[string]interface{}{
+				"mime_type": mimeType,
+				"error":     err.Error(),
+			})
+		} else if len(exts) > 0 {
 			ext = exts[0]
 		}
 	}

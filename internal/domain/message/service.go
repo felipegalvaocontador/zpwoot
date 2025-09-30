@@ -41,7 +41,12 @@ func (mp *MediaProcessor) ProcessMediaForType(ctx context.Context, file string, 
 	// Apply type-specific validations
 	if err := mp.validateMediaForType(media, messageType); err != nil {
 		if media.Cleanup != nil {
-			_ = media.Cleanup()
+			if cleanupErr := media.Cleanup(); cleanupErr != nil {
+				mp.logger.WarnWithFields("Failed to cleanup media after validation error", map[string]interface{}{
+					"cleanup_error":    cleanupErr.Error(),
+					"validation_error": err.Error(),
+				})
+			}
 		}
 		return nil, err
 	}

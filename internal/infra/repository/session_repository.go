@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -13,7 +14,7 @@ import (
 
 	"zpwoot/internal/domain/session"
 	"zpwoot/internal/ports"
-	"zpwoot/pkg/errors"
+	pkgErrors "zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
 )
 
@@ -66,7 +67,7 @@ func (r *sessionRepository) Create(ctx context.Context, sess *session.Session) e
 
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") &&
 			strings.Contains(err.Error(), "zpSessions_name_key") {
-			return errors.NewWithDetails(409, "Session already exists", fmt.Sprintf("A session with the name '%s' already exists", sess.Name))
+			return pkgErrors.NewWithDetails(409, "Session already exists", fmt.Sprintf("A session with the name '%s' already exists", sess.Name))
 		}
 
 		return fmt.Errorf("failed to create session: %w", err)

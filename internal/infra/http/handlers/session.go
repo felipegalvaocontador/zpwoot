@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 	"zpwoot/internal/app/session"
 	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
-	"zpwoot/pkg/errors"
+	pkgErrors "zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
 
 	"github.com/gofiber/fiber/v2"
@@ -104,7 +105,7 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
 
 		// Handle specific error types
-		appErr := &errors.AppError{}
+		appErr := &pkgErrors.AppError{}
 		if errors.As(err, &appErr) {
 			return c.Status(appErr.Code).JSON(common.NewErrorResponse(appErr.Message))
 		}

@@ -96,8 +96,16 @@ func (s *Service) GetSession(ctx context.Context, id string) (*SessionInfo, erro
 	}
 
 	if session.IsConnected {
-		deviceInfo, _ := s.Wameow.GetDeviceInfo(id)
-		info.DeviceInfo = deviceInfo
+		deviceInfo, err := s.Wameow.GetDeviceInfo(id)
+		if err != nil {
+			s.logger.WarnWithFields("Failed to get device info", map[string]interface{}{
+				"session_id": id,
+				"error":      err.Error(),
+			})
+			// Continue without device info
+		} else {
+			info.DeviceInfo = deviceInfo
+		}
 	}
 
 	return info, nil
@@ -150,11 +158,20 @@ func (s *Service) DeleteSession(ctx context.Context, id string) error {
 		case err := <-done:
 			if err != nil {
 				// Log error but don't fail deletion
-				_ = err // Explicitly ignore error
+				s.logger.WarnWithFields("Error during session disconnect", map[string]interface{}{
+					"session_id": id,
+					"error":      err.Error(),
+				})
 			}
 		case <-disconnectCtx.Done():
 			// Timeout occurred, log warning but continue with deletion
-			_ = disconnectCtx.Err() // Explicitly ignore timeout error
+			if timeoutErr := disconnectCtx.Err(); timeoutErr != nil {
+				s.logger.WarnWithFields("Timeout during session disconnect", map[string]interface{}{
+					"session_id": id,
+					"timeout":    "5s",
+					"error":      timeoutErr.Error(),
+				})
+			}
 		}
 
 		// Give additional time for cleanup

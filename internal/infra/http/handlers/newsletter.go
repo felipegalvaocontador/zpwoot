@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"zpwoot/internal/app/newsletter"
 	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
-	"zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
 
 	"github.com/gofiber/fiber/v2"

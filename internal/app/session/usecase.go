@@ -2,11 +2,12 @@ package session
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"zpwoot/internal/domain/session"
 	"zpwoot/internal/ports"
-	"zpwoot/pkg/errors"
+	pkgErrors "zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
 )
 
@@ -147,7 +148,7 @@ func (uc *useCaseImpl) ConnectSession(ctx context.Context, sessionID string) (*C
 
 	if err != nil {
 		// Check if it's an "already connected" error
-		appErr := &errors.AppError{}
+		appErr := &pkgErrors.AppError{}
 		if errors.As(err, &appErr) {
 			response = &ConnectSessionResponse{
 				Success: true,
@@ -185,7 +186,7 @@ func (uc *useCaseImpl) LogoutSession(ctx context.Context, sessionID string) erro
 	err := uc.sessionService.LogoutSession(ctx, sessionID)
 	if err != nil {
 		// Check if it's an "already disconnected" error
-		appErr := &errors.AppError{}
+		appErr := &pkgErrors.AppError{}
 		if errors.As(err, &appErr) {
 			// Return success for already disconnected sessions
 			return nil

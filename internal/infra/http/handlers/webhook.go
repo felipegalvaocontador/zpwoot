@@ -17,16 +17,18 @@ import (
 )
 
 type WebhookHandler struct {
-	logger          *logger.Logger
-	webhookUC       webhook.UseCase
-	sessionResolver *helpers.SessionResolver
+	*BaseHandler
+	webhookUC webhook.UseCase
 }
 
 func NewWebhookHandler(appLogger *logger.Logger, webhookUC webhook.UseCase, sessionRepo helpers.SessionRepository) *WebhookHandler {
+	sessionResolver := &SessionResolver{
+		logger:      appLogger,
+		sessionRepo: sessionRepo,
+	}
 	return &WebhookHandler{
-		logger:          appLogger,
-		webhookUC:       webhookUC,
-		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
+		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		webhookUC:   webhookUC,
 	}
 }
 
@@ -144,36 +146,15 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/webhook/find [get]
 func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	h.logger.InfoWithFields("Finding webhook configuration", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := h.webhookUC.FindConfig(r.Context(), sess.ID.String())
-	if err != nil {
-		h.logger.Error("Failed to find webhook configuration: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to find webhook configuration"))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, "Webhook configuration retrieved successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.handleSimpleGetRequest(
+		w,
+		r,
+		"Finding webhook configuration",
+		"Webhook configuration retrieved successfully",
+		func(ctx context.Context, sessionID string) (interface{}, error) {
+			return h.webhookUC.FindConfig(ctx, sessionID)
+		},
+	)
 }
 
 // @Summary Test webhook

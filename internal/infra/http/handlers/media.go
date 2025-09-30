@@ -4,11 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
-
-	"github.com/go-chi/chi/v5"
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/media"
@@ -18,86 +15,22 @@ import (
 )
 
 type MediaHandler struct {
-	logger          *logger.Logger
-	mediaUC         media.UseCase
-	sessionResolver *helpers.SessionResolver
+	*BaseHandler
+	mediaUC media.UseCase
 }
 
 func NewMediaHandler(appLogger *logger.Logger, mediaUC media.UseCase, sessionRepo helpers.SessionRepository) *MediaHandler {
+	sessionResolver := &SessionResolver{
+		logger:      appLogger,
+		sessionRepo: sessionRepo,
+	}
 	return &MediaHandler{
-		logger:          appLogger,
-		mediaUC:         mediaUC,
-		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
+		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		mediaUC:     mediaUC,
 	}
 }
 
-// resolveSession resolves session from URL parameter
-func (h *MediaHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
-	idOrName := chi.URLParam(r, "sessionId")
 
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), idOrName)
-	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": idOrName,
-			"error":      err.Error(),
-			"path":       r.URL.Path,
-		})
-
-		return nil, err
-	}
-
-	return sess, nil
-}
-
-// handleMediaAction handles common media action logic
-func (h *MediaHandler) handleMediaAction(
-	w http.ResponseWriter,
-	r *http.Request,
-	actionName string,
-	successMessage string,
-	parseFunc func(*http.Request, *domainSession.Session) (interface{}, error),
-	actionFunc func(context.Context, interface{}) (interface{}, error),
-) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	req, err := parseFunc(r, sess)
-	if err != nil {
-		h.logger.Error("Failed to parse request body: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
-		return
-	}
-
-	h.logger.InfoWithFields(actionName, map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := actionFunc(r.Context(), req)
-	if err != nil {
-		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, successMessage)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
 
 // @Summary Download media from message
 // @Description Download media content from a WhatsApp message
@@ -113,7 +46,7 @@ func (h *MediaHandler) handleMediaAction(
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/media/download [post]
 func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
-	h.handleMediaAction(
+	h.handleActionRequest(
 		w,
 		r,
 		"Downloading media",
@@ -287,7 +220,7 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/media/clear-cache [post]
 func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
-	h.handleMediaAction(
+	h.handleActionRequest(
 		w,
 		r,
 		"Clearing media cache",

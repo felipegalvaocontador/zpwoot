@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -31,8 +30,17 @@ func NewContactHandler(appLogger *logger.Logger, contactUC contact.UseCase, sess
 	}
 }
 
-// handleContactAction handles common contact action logic
-func (h *ContactHandler) handleContactAction(
+// resolveSession resolves session using the helpers.SessionResolver
+func (h *ContactHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
+	if sessionIdentifier == "" {
+		return nil, domainSession.ErrSessionNotFound
+	}
+	return h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+}
+
+// handleActionRequest is a simplified version for contact actions
+func (h *ContactHandler) handleActionRequest(
 	w http.ResponseWriter,
 	r *http.Request,
 	actionName string,
@@ -68,10 +76,78 @@ func (h *ContactHandler) handleContactAction(
 
 	result, err := actionFunc(r.Context(), req)
 	if err != nil {
-		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
+		h.logger.Error("Failed to " + actionName + ": " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName))
+		return
+	}
+
+	response := common.NewSuccessResponse(result, successMessage)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+// handleListRequest handles list requests with pagination
+func (h *ContactHandler) handleListRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	listFunc func(context.Context, *domainSession.Session, int, int, string) (interface{}, error),
+) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	// Parse query parameters
+	limit := 50
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, parseErr := strconv.Atoi(limitStr); parseErr == nil {
+			limit = parsedLimit
+		}
+	}
+
+	offset := 0
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if parsedOffset, parseErr := strconv.Atoi(offsetStr); parseErr == nil {
+			offset = parsedOffset
+		}
+	}
+
+	search := r.URL.Query().Get("search")
+
+	// Validate parameters
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+		"limit":        limit,
+		"offset":       offset,
+		"search":       search,
+	})
+
+	result, err := listFunc(r.Context(), sess, limit, offset, search)
+	if err != nil {
+		h.logger.Error("Failed to " + actionName + ": " + err.Error())
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName))
 		return
 	}
 
@@ -95,7 +171,7 @@ func (h *ContactHandler) handleContactAction(
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts/check [post]
 func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
-	h.handleContactAction(
+	h.handleActionRequest(
 		w,
 		r,
 		"Checking WhatsApp numbers",
@@ -109,7 +185,6 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
-			//nolint:errcheck // Error is handled by handleContactAction wrapper
 			return h.contactUC.CheckWhatsApp(ctx, req.(*contact.CheckWhatsAppRequest))
 		},
 	)
@@ -199,7 +274,7 @@ func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Reques
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts/info [post]
 func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
-	h.handleContactAction(
+	h.handleActionRequest(
 		w,
 		r,
 		"Getting user info",
@@ -213,7 +288,6 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
-			//nolint:errcheck // Error is handled by handleContactAction wrapper
 			return h.contactUC.GetUserInfo(ctx, req.(*contact.GetUserInfoRequest))
 		},
 	)
@@ -234,71 +308,21 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts [get]
 func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	// Parse query parameters
-	limit := 50
-	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-		if parsedLimit, err := strconv.Atoi(limitStr); err == nil {
-			limit = parsedLimit
-		}
-	}
-
-	offset := 0
-	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
-		if parsedOffset, err := strconv.Atoi(offsetStr); err == nil {
-			offset = parsedOffset
-		}
-	}
-
-	search := r.URL.Query().Get("search")
-
-	if limit <= 0 || limit > 100 {
-		limit = 50
-	}
-
-	if offset < 0 {
-		offset = 0
-	}
-
-	h.logger.InfoWithFields("Listing contacts", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-		"limit":        limit,
-		"offset":       offset,
-		"search":       search,
-	})
-
-	req := &contact.ListContactsRequest{
-		SessionID: sess.ID.String(),
-		Limit:     limit,
-		Offset:    offset,
-		Search:    search,
-	}
-
-	result, err := h.contactUC.ListContacts(r.Context(), req)
-	if err != nil {
-		h.logger.Error("Failed to list contacts: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to list contacts"))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, "Contacts retrieved successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.handleListRequest(
+		w,
+		r,
+		"Listing contacts",
+		"Contacts retrieved successfully",
+		func(ctx context.Context, sess *domainSession.Session, limit, offset int, search string) (interface{}, error) {
+			req := &contact.ListContactsRequest{
+				SessionID: sess.ID.String(),
+				Limit:     limit,
+				Offset:    offset,
+				Search:    search,
+			}
+			return h.contactUC.ListContacts(ctx, req)
+		},
+	)
 }
 
 // @Summary Sync contacts
@@ -313,40 +337,20 @@ func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts/sync [post]
 func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	h.logger.InfoWithFields("Syncing contacts", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	req := &contact.SyncContactsRequest{
-		SessionID: sess.ID.String(),
-	}
-
-	result, err := h.contactUC.SyncContacts(r.Context(), req)
-	if err != nil {
-		h.logger.Error("Failed to sync contacts: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to sync contacts"))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, "Contacts synchronized successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.handleActionRequest(
+		w,
+		r,
+		"Syncing contacts",
+		"Contacts synchronized successfully",
+		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
+			return &contact.SyncContactsRequest{
+				SessionID: sess.ID.String(),
+			}, nil
+		},
+		func(ctx context.Context, req interface{}) (interface{}, error) {
+			return h.contactUC.SyncContacts(ctx, req.(*contact.SyncContactsRequest))
+		},
+	)
 }
 
 // @Summary Get business profile
@@ -414,23 +418,6 @@ func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *ContactHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
-	idOrName := chi.URLParam(r, "sessionId")
-
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), idOrName)
-	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": idOrName,
-			"error":      err.Error(),
-			"path":       r.URL.Path,
-		})
-
-		return nil, err
-	}
-
-	return sess, nil
-}
-
 // IsOnWhatsApp checks if phone numbers are registered on WhatsApp
 func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
@@ -479,9 +466,9 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 	results := make([]map[string]interface{}, len(req.PhoneNumbers))
 	for i, phone := range req.PhoneNumbers {
 		results[i] = map[string]interface{}{
-			"phoneNumber": phone,
+			"phoneNumber":  phone,
 			"isOnWhatsApp": true, // placeholder
-			"jid":         phone + "@s.whatsapp.net",
+			"jid":          phone + "@s.whatsapp.net",
 		}
 	}
 
@@ -616,10 +603,10 @@ func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Requ
 	results := make([]map[string]interface{}, len(req.JIDs))
 	for i, jid := range req.JIDs {
 		results[i] = map[string]interface{}{
-			"jid":         jid,
-			"name":        "Placeholder Name",
-			"status":      "Available",
-			"pictureId":   "placeholder-pic-id",
+			"jid":          jid,
+			"name":         "Placeholder Name",
+			"status":       "Available",
+			"pictureId":    "placeholder-pic-id",
 			"isOnWhatsApp": true,
 		}
 	}
@@ -633,7 +620,3 @@ func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Detailed user info retrieved successfully"))
 }
-
-
-
-

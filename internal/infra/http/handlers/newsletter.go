@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
-
-	"github.com/go-chi/chi/v5"
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/newsletter"
@@ -17,86 +14,22 @@ import (
 )
 
 type NewsletterHandler struct {
-	logger          *logger.Logger
-	newsletterUC    newsletter.UseCase
-	sessionResolver *helpers.SessionResolver
+	*BaseHandler
+	newsletterUC newsletter.UseCase
 }
 
 func NewNewsletterHandler(appLogger *logger.Logger, newsletterUC newsletter.UseCase, sessionRepo helpers.SessionRepository) *NewsletterHandler {
+	sessionResolver := &SessionResolver{
+		logger:      appLogger,
+		sessionRepo: sessionRepo,
+	}
 	return &NewsletterHandler{
-		logger:          appLogger,
-		newsletterUC:    newsletterUC,
-		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
+		BaseHandler:  NewBaseHandler(appLogger, sessionResolver),
+		newsletterUC: newsletterUC,
 	}
 }
 
-// resolveSession resolves session from URL parameter
-func (h *NewsletterHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
-	idOrName := chi.URLParam(r, "sessionId")
 
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), idOrName)
-	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": idOrName,
-			"error":      err.Error(),
-			"path":       r.URL.Path,
-		})
-
-		return nil, err
-	}
-
-	return sess, nil
-}
-
-// handleNewsletterAction handles common newsletter action logic
-func (h *NewsletterHandler) handleNewsletterAction(
-	w http.ResponseWriter,
-	r *http.Request,
-	actionName string,
-	successMessage string,
-	parseFunc func(*http.Request, *domainSession.Session) (interface{}, error),
-	actionFunc func(context.Context, interface{}) (interface{}, error),
-) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	req, err := parseFunc(r, sess)
-	if err != nil {
-		h.logger.Error("Failed to parse request body: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
-		return
-	}
-
-	h.logger.InfoWithFields(actionName, map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := actionFunc(r.Context(), req)
-	if err != nil {
-		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, successMessage)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
 
 // @Summary Create a new newsletter
 // @Description Create a new WhatsApp newsletter/channel
@@ -112,7 +45,30 @@ func (h *NewsletterHandler) handleNewsletterAction(
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/newsletters/create [post]
 func (h *NewsletterHandler) CreateNewsletter(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	h.handleNewsletterAction(
+		w,
+		r,
+		"Creating newsletter",
+		"Newsletter created successfully",
+		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
+			return h.newsletterUC.CreateNewsletter(ctx, sessionID, req.(*newsletter.CreateNewsletterRequest))
+		},
+		func() interface{} {
+			return &newsletter.CreateNewsletterRequest{}
+		},
+	)
+}
+
+// handleNewsletterAction handles common newsletter action logic
+func (h *NewsletterHandler) handleNewsletterAction(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	actionFunc func(context.Context, string, interface{}) (interface{}, error),
+	requestFactory func() interface{},
+) {
+	sess, err := h.resolveSessionFromChi(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -124,8 +80,8 @@ func (h *NewsletterHandler) CreateNewsletter(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var req newsletter.CreateNewsletterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	req := requestFactory()
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		h.logger.Error("Failed to parse request body: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -133,21 +89,21 @@ func (h *NewsletterHandler) CreateNewsletter(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	h.logger.InfoWithFields("Creating newsletter", map[string]interface{}{
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
 		"session_id":   sess.ID.String(),
 		"session_name": sess.Name,
 	})
 
-	result, err := h.newsletterUC.CreateNewsletter(r.Context(), sess.ID.String(), &req)
+	result, err := actionFunc(r.Context(), sess.ID.String(), req)
 	if err != nil {
-		h.logger.Error("Failed to create newsletter: " + err.Error())
+		h.logger.Error("Failed to " + actionName + ": " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to create newsletter"))
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName))
 		return
 	}
 
-	response := common.NewSuccessResponse(result, "Newsletter created successfully")
+	response := common.NewSuccessResponse(result, successMessage)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -225,45 +181,18 @@ func (h *NewsletterHandler) GetNewsletterInfo(w http.ResponseWriter, r *http.Req
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/newsletters/info-from-invite [post]
 func (h *NewsletterHandler) GetNewsletterInfoWithInvite(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	var req newsletter.GetNewsletterInfoWithInviteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Error("Failed to parse request body: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
-		return
-	}
-
-	h.logger.InfoWithFields("Getting newsletter info with invite", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := h.newsletterUC.GetNewsletterInfoWithInvite(r.Context(), sess.ID.String(), &req)
-	if err != nil {
-		h.logger.Error("Failed to get newsletter info with invite: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get newsletter info with invite"))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, "Newsletter information retrieved successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.handleNewsletterAction(
+		w,
+		r,
+		"Getting newsletter info with invite",
+		"Newsletter information retrieved successfully",
+		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
+			return h.newsletterUC.GetNewsletterInfoWithInvite(ctx, sessionID, req.(*newsletter.GetNewsletterInfoWithInviteRequest))
+		},
+		func() interface{} {
+			return &newsletter.GetNewsletterInfoWithInviteRequest{}
+		},
+	)
 }
 
 // @Summary Follow newsletter
@@ -280,45 +209,18 @@ func (h *NewsletterHandler) GetNewsletterInfoWithInvite(w http.ResponseWriter, r
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/newsletters/follow [post]
 func (h *NewsletterHandler) FollowNewsletter(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	var req newsletter.FollowNewsletterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Error("Failed to parse request body: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
-		return
-	}
-
-	h.logger.InfoWithFields("Following newsletter", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := h.newsletterUC.FollowNewsletter(r.Context(), sess.ID.String(), &req)
-	if err != nil {
-		h.logger.Error("Failed to follow newsletter: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to follow newsletter"))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, "Newsletter followed successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.handleNewsletterAction(
+		w,
+		r,
+		"Following newsletter",
+		"Newsletter followed successfully",
+		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
+			return h.newsletterUC.FollowNewsletter(ctx, sessionID, req.(*newsletter.FollowNewsletterRequest))
+		},
+		func() interface{} {
+			return &newsletter.FollowNewsletterRequest{}
+		},
+	)
 }
 
 // @Summary Unfollow newsletter
@@ -335,45 +237,18 @@ func (h *NewsletterHandler) FollowNewsletter(w http.ResponseWriter, r *http.Requ
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/newsletters/unfollow [post]
 func (h *NewsletterHandler) UnfollowNewsletter(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	var req newsletter.UnfollowNewsletterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Error("Failed to parse request body: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
-		return
-	}
-
-	h.logger.InfoWithFields("Unfollowing newsletter", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := h.newsletterUC.UnfollowNewsletter(r.Context(), sess.ID.String(), &req)
-	if err != nil {
-		h.logger.Error("Failed to unfollow newsletter: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to unfollow newsletter"))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, "Newsletter unfollowed successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.handleNewsletterAction(
+		w,
+		r,
+		"Unfollowing newsletter",
+		"Newsletter unfollowed successfully",
+		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
+			return h.newsletterUC.UnfollowNewsletter(ctx, sessionID, req.(*newsletter.UnfollowNewsletterRequest))
+		},
+		func() interface{} {
+			return &newsletter.UnfollowNewsletterRequest{}
+		},
+	)
 }
 
 // @Summary Get subscribed newsletters
@@ -388,34 +263,13 @@ func (h *NewsletterHandler) UnfollowNewsletter(w http.ResponseWriter, r *http.Re
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/newsletters [get]
 func (h *NewsletterHandler) GetSubscribedNewsletters(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	h.logger.InfoWithFields("Getting subscribed newsletters", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := h.newsletterUC.GetSubscribedNewsletters(r.Context(), sess.ID.String())
-	if err != nil {
-		h.logger.Error("Failed to get subscribed newsletters: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get subscribed newsletters"))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, "Subscribed newsletters retrieved successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.handleSimpleGetRequest(
+		w,
+		r,
+		"Getting subscribed newsletters",
+		"Subscribed newsletters retrieved successfully",
+		func(ctx context.Context, sessionID string) (interface{}, error) {
+			return h.newsletterUC.GetSubscribedNewsletters(ctx, sessionID)
+		},
+	)
 }

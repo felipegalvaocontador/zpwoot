@@ -42,6 +42,84 @@ func NewMessageHandler(
 	}
 }
 
+// handleMessageActionWithTwoFields handles message actions with two field validation
+func (h *MessageHandler) handleMessageActionWithTwoFields(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	field1Name, field1ValidationMessage string,
+	field2Name, field2ValidationMessage string,
+	requestBuilder func(string, string) *message.SendMessageRequest,
+	logFields func(string, string) map[string]interface{},
+) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
+	if sessionIdentifier == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
+	}
+
+	var reqData map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		return
+	}
+
+	field1Value := reqData[field1Name]
+	if field1Value == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(field1ValidationMessage))
+		return
+	}
+
+	field2Value := reqData[field2Name]
+	if field2Value == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(field2ValidationMessage))
+		return
+	}
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
+	}
+
+	req := requestBuilder(field1Value, field2Value)
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
+	if err != nil {
+		logFieldsMap := logFields(field1Value, field2Value)
+		logFieldsMap["session_id"] = sess.ID.String()
+		logFieldsMap["error"] = err.Error()
+		h.logger.ErrorWithFields("Failed to "+actionName, logFieldsMap)
+
+		if strings.Contains(err.Error(), "not connected") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, successMessage))
+}
+
 // handleMediaMessage handles common media message logic for Chi
 func (h *MessageHandler) handleMediaMessage(
 	w http.ResponseWriter,
@@ -1049,80 +1127,31 @@ func (h *MessageHandler) buildContactListResponse(w http.ResponseWriter, result 
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/profile/business [post]
 func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Request) {
-	sessionIdentifier := chi.URLParam(r, "sessionId")
-	if sessionIdentifier == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
-		return
-	}
 
-	var businessReq struct {
-		RemoteJID   string `json:"Phone"`
-		BusinessJID string `json:"businessJid"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&businessReq); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid business profile message format"))
-		return
-	}
 
-	if businessReq.RemoteJID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
-		return
-	}
-
-	if businessReq.BusinessJID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'businessJid' field is required"))
-		return
-	}
-
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
-		return
-	}
-
-	req := &message.SendMessageRequest{
-		RemoteJID: businessReq.RemoteJID,
-		Type:      "business_profile",
-		// BusinessJID is not supported in SendMessageRequest
-		Body:      fmt.Sprintf("Business Profile: %s", businessReq.BusinessJID),
-	}
-
-	ctx := r.Context()
-	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
-	if err != nil {
-		h.logger.ErrorWithFields("Failed to send business profile message", map[string]interface{}{
-			"session_id":   sess.ID.String(),
-			"to":           req.RemoteJID,
-			"business_jid": businessReq.BusinessJID,
-			"error":        err.Error(),
-		})
-
-		if strings.Contains(err.Error(), "not connected") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send business profile message"))
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Business profile sent successfully"))
+	h.handleMessageActionWithTwoFields(
+		w,
+		r,
+		"send business profile message",
+		"Business profile sent successfully",
+		"Phone",
+		"'Phone' field is required",
+		"businessJid",
+		"'businessJid' field is required",
+		func(phone, businessJid string) *message.SendMessageRequest {
+			return &message.SendMessageRequest{
+				RemoteJID: phone,
+				Type:      "business_profile",
+				Body:      fmt.Sprintf("Business Profile: %s", businessJid),
+			}
+		},
+		func(phone, businessJid string) map[string]interface{} {
+			return map[string]interface{}{
+				"to":           phone,
+				"business_jid": businessJid,
+			}
+		},
+	)
 }
 
 // @Summary Send button message
@@ -1962,79 +1991,29 @@ func (h *MessageHandler) returnPollSuccess(w http.ResponseWriter, sessionID stri
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/messages/revoke [post]
 func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
-	sessionIdentifier := chi.URLParam(r, "sessionId")
-	if sessionIdentifier == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
-		return
-	}
-
-	var revokeReq struct {
-		RemoteJID string `json:"remoteJid"`
-		MessageID string `json:"messageId"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&revokeReq); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid revoke message format"))
-		return
-	}
-
-	if revokeReq.RemoteJID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
-		return
-	}
-
-	if revokeReq.MessageID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'messageId' field is required"))
-		return
-	}
-
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
-		return
-	}
-
-	req := &message.SendMessageRequest{
-		RemoteJID: revokeReq.RemoteJID,
-		Type:      "text",
-		Body:      fmt.Sprintf("Revoke message: %s", revokeReq.MessageID),
-	}
-
-	ctx := r.Context()
-	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
-	if err != nil {
-		h.logger.ErrorWithFields("Failed to revoke message", map[string]interface{}{
-			"session_id": sess.ID.String(),
-			"to":         req.RemoteJID,
-			"message_id": revokeReq.MessageID,
-			"error":      err.Error(),
-		})
-
-		if strings.Contains(err.Error(), "not connected") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to revoke message"))
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Message revoked successfully"))
+	h.handleMessageActionWithTwoFields(
+		w,
+		r,
+		"revoke message",
+		"Message revoked successfully",
+		"remoteJid",
+		"'Phone' field is required",
+		"messageId",
+		"'messageId' field is required",
+		func(remoteJid, messageId string) *message.SendMessageRequest {
+			return &message.SendMessageRequest{
+				RemoteJID: remoteJid,
+				Type:      "text",
+				Body:      fmt.Sprintf("Revoke message: %s", messageId),
+			}
+		},
+		func(remoteJid, messageId string) map[string]interface{} {
+			return map[string]interface{}{
+				"to":         remoteJid,
+				"message_id": messageId,
+			}
+		},
+	)
 }
 
 // @Summary Get poll results

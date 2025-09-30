@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/group"
 	domainSession "zpwoot/internal/domain/session"
@@ -17,39 +15,115 @@ import (
 )
 
 type GroupHandler struct {
-	logger          *logger.Logger
-	groupUC         group.UseCase
-	sessionResolver *helpers.SessionResolver
+	*BaseHandler
+	groupUC group.UseCase
 }
 
 func NewGroupHandler(appLogger *logger.Logger, groupUC group.UseCase, sessionRepo helpers.SessionRepository) *GroupHandler {
+	sessionResolver := &SessionResolver{
+		logger:      appLogger,
+		sessionRepo: sessionRepo,
+	}
 	return &GroupHandler{
-		logger:          appLogger,
-		groupUC:         groupUC,
-		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
+		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		groupUC:     groupUC,
 	}
 }
 
-func (h *GroupHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
-	idOrName := chi.URLParam(r, "sessionId")
-
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), idOrName)
+// handleGroupActionWithValidation handles group actions with field validation
+func (h *GroupHandler) handleGroupActionWithValidation(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	fieldName string,
+	fieldValidationMessage string,
+	responseBuilder func(string) map[string]interface{},
+) {
+	sess, err := h.resolveSessionFromChi(r)
 	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": idOrName,
-			"error":      err.Error(),
-			"path":       r.URL.Path,
-		})
-
-		return nil, err
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		h.writeErrorResponse(w, statusCode, err.Error())
+		return
 	}
 
-	return sess, nil
+	var reqData map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+
+	fieldValue := reqData[fieldName]
+	if fieldValue == "" {
+		h.writeErrorResponse(w, http.StatusBadRequest, fieldValidationMessage)
+		return
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+		fieldName:      fieldValue,
+	})
+
+	response := responseBuilder(fieldValue)
+	h.writeSuccessResponse(w, response, successMessage)
+}
+
+// handleGroupActionWithTwoFields handles group actions with two field validation
+func (h *GroupHandler) handleGroupActionWithTwoFields(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	field1Name, field1ValidationMessage string,
+	field2Name, field2ValidationMessage string,
+	responseBuilder func(string, string) map[string]interface{},
+) {
+	sess, err := h.resolveSessionFromChi(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		h.writeErrorResponse(w, statusCode, err.Error())
+		return
+	}
+
+	var reqData map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+
+	field1Value := reqData[field1Name]
+	if field1Value == "" {
+		h.writeErrorResponse(w, http.StatusBadRequest, field1ValidationMessage)
+		return
+	}
+
+	field2Value := reqData[field2Name]
+	if field2Value == "" {
+		h.writeErrorResponse(w, http.StatusBadRequest, field2ValidationMessage)
+		return
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+		field1Name:     field1Value,
+		field2Name:     field2Value,
+	})
+
+	response := responseBuilder(field1Value, field2Value)
+	h.writeSuccessResponse(w, response, successMessage)
 }
 
 // GetGroupInviteLink gets the invite link for a group
 func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.resolveSessionFromChi(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -90,100 +164,40 @@ func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request
 
 // JoinGroupViaLink joins a group using an invite link
 func (h *GroupHandler) JoinGroupViaLink(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	var req struct {
-		InviteLink string `json:"inviteLink"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
-		return
-	}
-
-	if req.InviteLink == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invite link is required"))
-		return
-	}
-
-	h.logger.InfoWithFields("Joining group via link", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-		"invite_link":  req.InviteLink,
-	})
-
-	// For now, return a placeholder response until the use case is implemented
-	response := map[string]interface{}{
-		"inviteLink": req.InviteLink,
-		"status":     "pending",
-		"message":    "Join group via link functionality needs to be implemented in use case",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Join group request processed"))
+	h.handleGroupActionWithValidation(
+		w,
+		r,
+		"Joining group via link",
+		"Join group request processed",
+		"inviteLink",
+		"Invite link is required",
+		func(inviteLink string) map[string]interface{} {
+			return map[string]interface{}{
+				"inviteLink": inviteLink,
+				"status":     "pending",
+				"message":    "Join group via link functionality needs to be implemented in use case",
+			}
+		},
+	)
 }
 
 // LeaveGroup leaves a group
 func (h *GroupHandler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	var req struct {
-		GroupJID string `json:"groupJid"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
-		return
-	}
-
-	if req.GroupJID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required"))
-		return
-	}
-
-	h.logger.InfoWithFields("Leaving group", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-		"group_jid":    req.GroupJID,
-	})
-
-	// For now, return a placeholder response until the use case is implemented
-	response := map[string]interface{}{
-		"groupJid": req.GroupJID,
-		"status":   "left",
-		"message":  "Leave group functionality needs to be implemented in use case",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Left group successfully"))
+	h.handleGroupActionWithValidation(
+		w,
+		r,
+		"Leaving group",
+		"Left group successfully",
+		"groupJid",
+		"Group JID is required",
+		func(groupJid string) map[string]interface{} {
+			return map[string]interface{}{
+				"groupJid": groupJid,
+				"status":   "left",
+				"message":  "Leave group functionality needs to be implemented in use case",
+			}
+		},
+	)
 }
 
 // UpdateGroupSettings updates group settings (announce, locked, etc.)
@@ -352,120 +366,46 @@ func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *
 
 // SetGroupJoinApprovalMode sets the group join approval mode
 func (h *GroupHandler) SetGroupJoinApprovalMode(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	var req struct {
-		GroupJID     string `json:"groupJid"`
-		ApprovalMode string `json:"approvalMode"` // "on" or "off"
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
-		return
-	}
-
-	if req.GroupJID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required"))
-		return
-	}
-
-	if req.ApprovalMode == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Approval mode is required (on or off)"))
-		return
-	}
-
-	h.logger.InfoWithFields("Setting group join approval mode", map[string]interface{}{
-		"session_id":    sess.ID.String(),
-		"session_name":  sess.Name,
-		"group_jid":     req.GroupJID,
-		"approval_mode": req.ApprovalMode,
-	})
-
-	// For now, return a placeholder response until the use case is implemented
-	response := map[string]interface{}{
-		"groupJid":     req.GroupJID,
-		"approvalMode": req.ApprovalMode,
-		"status":       "updated",
-		"message":      "Set group join approval mode functionality needs to be implemented in use case",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group join approval mode updated successfully"))
+	h.handleGroupActionWithTwoFields(
+		w,
+		r,
+		"Setting group join approval mode",
+		"Group join approval mode updated successfully",
+		"groupJid",
+		"Group JID is required",
+		"approvalMode",
+		"Approval mode is required (on or off)",
+		func(groupJid, approvalMode string) map[string]interface{} {
+			return map[string]interface{}{
+				"groupJid":     groupJid,
+				"approvalMode": approvalMode,
+				"status":       "updated",
+				"message":      "Set group join approval mode functionality needs to be implemented in use case",
+			}
+		},
+	)
 }
 
 // SetGroupMemberAddMode sets the group member add mode
 func (h *GroupHandler) SetGroupMemberAddMode(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	var req struct {
-		GroupJID string `json:"groupJid"`
-		AddMode  string `json:"addMode"` // "all_members" or "only_admins"
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
-		return
-	}
-
-	if req.GroupJID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required"))
-		return
-	}
-
-	if req.AddMode == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Add mode is required (all_members or only_admins)"))
-		return
-	}
-
-	h.logger.InfoWithFields("Setting group member add mode", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-		"group_jid":    req.GroupJID,
-		"add_mode":     req.AddMode,
-	})
-
-	// For now, return a placeholder response until the use case is implemented
-	response := map[string]interface{}{
-		"groupJid": req.GroupJID,
-		"addMode":  req.AddMode,
-		"status":   "updated",
-		"message":  "Set group member add mode functionality needs to be implemented in use case",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group member add mode updated successfully"))
+	h.handleGroupActionWithTwoFields(
+		w,
+		r,
+		"Setting group member add mode",
+		"Group member add mode updated successfully",
+		"groupJid",
+		"Group JID is required",
+		"addMode",
+		"Add mode is required (all_members or only_admins)",
+		func(groupJid, addMode string) map[string]interface{} {
+			return map[string]interface{}{
+				"groupJid": groupJid,
+				"addMode":  addMode,
+				"status":   "updated",
+				"message":  "Set group member add mode functionality needs to be implemented in use case",
+			}
+		},
+	)
 }
 
 // GetGroupInfoFromLink gets group information from an invite link

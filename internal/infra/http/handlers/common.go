@@ -2,12 +2,19 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
+	"zpwoot/internal/app/common"
 	"zpwoot/internal/domain/session"
 	"zpwoot/platform/logger"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -212,4 +219,262 @@ func (sr *SessionResolver) ResolveSession(ctx context.Context, idOrName string) 
 	})
 
 	return sess, nil
+}
+
+// BaseHandler provides common functionality for all handlers
+type BaseHandler struct {
+	logger          *logger.Logger
+	sessionResolver *SessionResolver
+}
+
+// NewBaseHandler creates a new base handler
+func NewBaseHandler(logger *logger.Logger, sessionResolver *SessionResolver) *BaseHandler {
+	return &BaseHandler{
+		logger:          logger,
+		sessionResolver: sessionResolver,
+	}
+}
+
+// resolveSession resolves a session from URL parameter using chi router
+func (h *BaseHandler) resolveSession(r *http.Request) (*session.Session, error) {
+	// Try to get session from context first (set by middleware)
+	if sess, ok := r.Context().Value("session").(*session.Session); ok {
+		return sess, nil
+	}
+
+	// Get session identifier from URL parameter
+	sessionIdentifier := r.URL.Query().Get("sessionId")
+	if sessionIdentifier == "" {
+		// Try chi URL param as fallback
+		if urlParam := r.Context().Value("sessionId"); urlParam != nil {
+			if sessionID, ok := urlParam.(string); ok {
+				sessionIdentifier = sessionID
+			}
+		}
+	}
+
+	if sessionIdentifier == "" {
+		return nil, session.ErrSessionNotFound
+	}
+
+	return h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+}
+
+// resolveSessionFromChi resolves session from chi URL parameter (for handlers using chi router)
+func (h *BaseHandler) resolveSessionFromChi(r *http.Request) (*session.Session, error) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
+	if sessionIdentifier == "" {
+		return nil, session.ErrSessionNotFound
+	}
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	if err != nil {
+		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
+			"identifier": sessionIdentifier,
+			"error":      err.Error(),
+			"path":       r.URL.Path,
+		})
+		return nil, err
+	}
+
+	return sess, nil
+}
+
+// handleActionRequest handles action requests with simple JSON body parsing
+func (h *BaseHandler) handleActionRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	parseFunc func(*http.Request, *session.Session) (interface{}, error),
+	actionFunc func(context.Context, interface{}) (interface{}, error),
+) {
+	sess, err := h.resolveSessionFromChi(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, session.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		h.writeErrorResponse(w, statusCode, err.Error())
+		return
+	}
+
+	req, err := parseFunc(r, sess)
+	if err != nil {
+		h.logger.Error("Failed to parse request body: " + err.Error())
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	result, err := actionFunc(r.Context(), req)
+	if err != nil {
+		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to %s", actionName))
+		return
+	}
+
+	h.writeSuccessResponse(w, result, successMessage)
+}
+
+// handleSimpleGetRequest handles GET requests that only need session resolution
+func (h *BaseHandler) handleSimpleGetRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	actionFunc func(context.Context, string) (interface{}, error),
+) {
+	sess, err := h.resolveSessionFromChi(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, session.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		h.writeErrorResponse(w, statusCode, err.Error())
+		return
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	result, err := actionFunc(r.Context(), sess.ID.String())
+	if err != nil {
+		h.logger.Error("Failed to " + actionName + ": " + err.Error())
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
+		return
+	}
+
+	h.writeSuccessResponse(w, result, successMessage)
+}
+
+
+
+// handleStructActionRequest handles action requests with struct validation
+func (h *BaseHandler) handleStructActionRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	requestStruct interface{},
+	validateFunc func(interface{}) error,
+	actionFunc func(context.Context, interface{}) (interface{}, error),
+) {
+	sess, err := h.resolveSessionFromChi(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, session.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		h.writeErrorResponse(w, statusCode, err.Error())
+		return
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(requestStruct); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+
+	if validateFunc != nil {
+		if err := validateFunc(requestStruct); err != nil {
+			h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	result, err := actionFunc(r.Context(), requestStruct)
+	if err != nil {
+		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to %s", actionName))
+		return
+	}
+
+	h.writeSuccessResponse(w, result, successMessage)
+}
+
+
+
+// handleListRequest is a generic handler for list requests with pagination
+func (h *BaseHandler) handleListRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	listFunc func(context.Context, *session.Session, int, int, string) (interface{}, error),
+) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, session.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		h.writeErrorResponse(w, statusCode, err.Error())
+		return
+	}
+
+	// Parse query parameters
+	limit := h.parseIntParam(r, "limit", 50)
+	offset := h.parseIntParam(r, "offset", 0)
+	search := r.URL.Query().Get("search")
+
+	// Validate parameters
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+		"limit":        limit,
+		"offset":       offset,
+		"search":       search,
+	})
+
+	result, err := listFunc(r.Context(), sess, limit, offset, search)
+	if err != nil {
+		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to %s", actionName))
+		return
+	}
+
+	h.writeSuccessResponse(w, result, successMessage)
+}
+
+// parseIntParam parses an integer parameter from query string with default value
+func (h *BaseHandler) parseIntParam(r *http.Request, param string, defaultValue int) int {
+	if valueStr := r.URL.Query().Get(param); valueStr != "" {
+		if value, err := strconv.Atoi(valueStr); err == nil {
+			return value
+		}
+	}
+	return defaultValue
+}
+
+// writeErrorResponse writes an error response
+func (h *BaseHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(common.NewErrorResponse(message))
+}
+
+// writeSuccessResponse writes a success response
+func (h *BaseHandler) writeSuccessResponse(w http.ResponseWriter, data interface{}, message string) {
+	response := common.NewSuccessResponse(data, message)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }

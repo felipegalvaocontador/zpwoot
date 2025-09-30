@@ -44,7 +44,7 @@ func (h *WebhookHandler) ProcessWebhook(ctx context.Context, webhook *chatwootdo
 	}
 
 	if webhook.Event == "message_created" {
-		return h.handleMessageCreated(ctx, webhook, sessionID)
+		return h.handleMessageCreated(webhook, sessionID)
 	}
 
 	h.logger.DebugWithFields("Unhandled webhook event", map[string]interface{}{
@@ -76,7 +76,7 @@ func (h *WebhookHandler) handleMessageDeleted(webhook *chatwootdomain.ChatwootWe
 	return nil
 }
 
-func (h *WebhookHandler) handleMessageCreated(ctx context.Context, webhook *chatwootdomain.ChatwootWebhookPayload, sessionID string) error {
+func (h *WebhookHandler) handleMessageCreated(webhook *chatwootdomain.ChatwootWebhookPayload, sessionID string) error {
 	if webhook.Message == nil {
 		return fmt.Errorf("message is nil in webhook payload")
 	}

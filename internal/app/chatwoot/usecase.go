@@ -136,8 +136,8 @@ func (uc *useCaseImpl) SyncConversation(ctx context.Context, req *SyncConversati
 	response := &SyncConversationResponse{
 		ID:          conversation.ID,
 		ContactID:   conversation.ContactID,
-		SessionID:   req.SessionID, // Use from request since domain doesn't have it
-		PhoneNumber: "",            // This would need to be retrieved from contact
+		SessionID:   req.SessionID,
+		PhoneNumber: "",
 		Status:      conversation.Status,
 		CreatedAt:   conversation.CreatedAt,
 		UpdatedAt:   conversation.UpdatedAt,
@@ -252,7 +252,7 @@ func (uc *useCaseImpl) resolveSenderPhoneNumber(ctx context.Context, domainPaylo
 		return nil
 	}
 
-	sessionID := "default" // TODO: Get sessionID from context or payload
+	sessionID := "default"
 	client, err := uc.chatwootManager.GetClient(sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to get chatwoot client: %w", err)

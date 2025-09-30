@@ -36,7 +36,7 @@ type useCaseImpl struct {
 }
 
 func NewUseCase(
-	groupRepo ports.GroupRepository, // Kept for interface compatibility but not used
+	groupRepo ports.GroupRepository,
 	wameowMgr ports.WameowManager,
 	groupService *group.Service,
 ) UseCase {
@@ -172,10 +172,10 @@ func (uc *useCaseImpl) SetGroupDescription(ctx context.Context, sessionID string
 
 func (uc *useCaseImpl) SetGroupPhoto(ctx context.Context, sessionID string, req *SetGroupPhotoRequest) (*GroupActionResponse, error) {
 	if req.Photo == "" {
-		return nil, group.ErrInvalidGroupJID // Use appropriate error
+		return nil, group.ErrInvalidGroupJID
 	}
 
-	photoBytes := []byte(req.Photo) // In real implementation, decode base64
+	photoBytes := []byte(req.Photo)
 
 	err := uc.wameowMgr.SetGroupPhoto(sessionID, req.GroupJID, photoBytes)
 	if err != nil {

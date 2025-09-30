@@ -176,15 +176,15 @@ func (m *Manager) HealthCheck() map[string]interface{} {
 		"logged_in_sessions": stats.LoggedIn,
 		"healthy":            stats.Total == 0 || stats.Connected > 0,
 		"timestamp":          time.Now().Unix(),
-		"uptime_seconds":     time.Since(time.Now()).Seconds(), // This would need to be tracked properly
+		"uptime_seconds":     time.Since(time.Now()).Seconds(),
 	}
 }
 
 func (m *Manager) GetStats() map[string]interface{} {
 	healthData := m.HealthCheck()
 
-	healthData["version"] = "1.0.0"   // This should come from build info
-	healthData["go_version"] = "1.21" // This should come from runtime
+	healthData["version"] = "1.0.0"
+	healthData["go_version"] = "1.21"
 
 	return healthData
 }
@@ -224,5 +224,5 @@ func LogLevelToWALevel(level string) string {
 		return waLevel
 	}
 
-	return "info" // default level
+	return "info"
 }

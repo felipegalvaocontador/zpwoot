@@ -290,8 +290,8 @@ type NewsletterMarkViewedRequest struct {
 type NewsletterSendReactionRequest struct {
 	JID       string `json:"jid" validate:"required"`
 	ServerID  string `json:"serverId" validate:"required"`
-	Reaction  string `json:"reaction"`            // Empty string to remove reaction
-	MessageID string `json:"messageId,omitempty"` // Optional, will be generated if empty
+	Reaction  string `json:"reaction"`
+	MessageID string `json:"messageId,omitempty"`
 }
 
 type NewsletterToggleMuteRequest struct {
@@ -304,7 +304,7 @@ type NewsletterSubscribeLiveUpdatesRequest struct {
 }
 
 type NewsletterSubscribeLiveUpdatesResponse struct {
-	Duration int64 `json:"duration"` // Duration in seconds
+	Duration int64 `json:"duration"`
 }
 
 type AcceptTOSNoticeRequest struct {

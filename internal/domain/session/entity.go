@@ -106,7 +106,7 @@ func (s *Session) SetConnected(connected bool) {
 		now := time.Now()
 		s.ConnectedAt = &now
 		s.LastSeen = &now
-		s.ConnectionError = nil // Clear any previous error
+		s.ConnectionError = nil
 	}
 }
 

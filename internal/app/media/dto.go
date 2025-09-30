@@ -5,7 +5,7 @@ import "time"
 type DownloadMediaRequest struct {
 	SessionID string `json:"sessionId" validate:"required" example:"session-123"`
 	MessageID string `json:"messageId" validate:"required" example:"3EB0C431C26A1916E07E"`
-	MediaType string `json:"mediaType,omitempty" example:"image"` // Optional filter by media type
+	MediaType string `json:"mediaType,omitempty" example:"image"`
 }
 
 type DownloadMediaResponse struct {
@@ -58,7 +58,7 @@ type ListCachedMediaResponse struct {
 	Limit     int               `json:"limit" example:"50"`
 	Offset    int               `json:"offset" example:"0"`
 	HasMore   bool              `json:"hasMore" example:"true"`
-	TotalSize int64             `json:"totalSize" example:"52428800"` // Total size in bytes
+	TotalSize int64             `json:"totalSize" example:"52428800"`
 }
 
 type ClearCacheRequest struct {

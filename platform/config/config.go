@@ -10,8 +10,8 @@ type Config struct {
 	Port       string
 	ServerHost string
 	LogLevel   string
-	LogFormat  string // "json" or "console"
-	LogOutput  string // "stdout", "stderr", "file", or file path
+	LogFormat  string
+	LogOutput  string
 
 	DatabaseURL string
 
@@ -27,7 +27,7 @@ type Config struct {
 
 func Load() *Config {
 	if err := godotenv.Load(); err != nil {
-		_ = err // Explicitly ignore the error as this is expected behavior
+		_ = err
 	}
 
 	return &Config{

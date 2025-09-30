@@ -299,7 +299,7 @@ func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *
 
 	var req struct {
 		GroupJID     string   `json:"groupJid"`
-		Action       string   `json:"action"` // "approve" or "reject"
+		Action       string   `json:"action"`
 		Participants []string `json:"participants"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

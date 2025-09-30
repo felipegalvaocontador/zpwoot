@@ -68,7 +68,7 @@ type MediaInfo struct {
 	FileSize int64  `json:"fileSize"`
 	Width    int    `json:"width,omitempty"`
 	Height   int    `json:"height,omitempty"`
-	Duration int    `json:"duration,omitempty"` // for audio/video in seconds
+	Duration int    `json:"duration,omitempty"`
 }
 
 type LocationMessage struct {

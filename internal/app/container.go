@@ -206,7 +206,7 @@ func createBusinessUseCases(config *ContainerConfig, services *domainServices) *
 			config.Logger,
 		),
 		group: group.NewUseCase(
-			nil, // No repository needed for groups
+			nil,
 			config.WameowManager,
 			services.group,
 		),

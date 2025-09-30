@@ -191,8 +191,8 @@ func (s *Service) ConnectSession(ctx context.Context, id string) error {
 		return errors.NewWithDetails(409, "Session already connected", "session is already connected and active")
 	}
 
-	session.SetConnected(false)   // Ensure it starts as disconnected during QR process
-	session.ConnectionError = nil // Clear any previous errors
+	session.SetConnected(false)
+	session.ConnectionError = nil
 	if err := s.repo.Update(ctx, session); err != nil {
 		return errors.Wrap(err, "failed to update session status to connecting")
 	}
@@ -200,7 +200,7 @@ func (s *Service) ConnectSession(ctx context.Context, id string) error {
 	if err := s.Wameow.ConnectSession(id); err != nil {
 		session.SetConnectionError(err.Error())
 		if updateErr := s.repo.Update(ctx, session); updateErr != nil {
-			_ = updateErr // Explicitly ignore update error
+			_ = updateErr
 		}
 		return errors.Wrap(err, "failed to connect to Wameow")
 	}

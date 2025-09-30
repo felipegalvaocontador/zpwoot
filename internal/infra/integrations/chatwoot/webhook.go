@@ -13,7 +13,7 @@ import (
 type WebhookHandler struct {
 	logger        *logger.Logger
 	manager       ports.ChatwootManager
-	wameowManager ports.WameowManager // For sending messages to WhatsApp
+	wameowManager ports.WameowManager
 }
 
 func NewWebhookHandler(logger *logger.Logger, manager ports.ChatwootManager, wameowManager ports.WameowManager) *WebhookHandler {

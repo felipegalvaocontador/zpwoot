@@ -175,11 +175,11 @@ type ContactMessageRequest struct {
 type ContactInfo struct {
 	Name         string `json:"name" validate:"required" example:"João Santos"`
 	Phone        string `json:"phone" validate:"required" example:"+5511987654321"`
-	Email        string `json:"email,omitempty" example:"joao.santos@email.com"`                 // Not displayed in WhatsApp
-	Organization string `json:"organization,omitempty" example:"Tech Solutions Ltda"`            // Displayed in WhatsApp
-	Title        string `json:"title,omitempty" example:"Software Engineer"`                     // Not displayed in WhatsApp
-	Website      string `json:"website,omitempty" example:"https://joaosantos.dev"`              // Not displayed in WhatsApp
-	Address      string `json:"address,omitempty" example:"Rua das Flores, 123 - São Paulo, SP"` // Not displayed in WhatsApp
+	Email        string `json:"email,omitempty" example:"joao.santos@email.com"`
+	Organization string `json:"organization,omitempty" example:"Tech Solutions Ltda"`
+	Title        string `json:"title,omitempty" example:"Software Engineer"`
+	Website      string `json:"website,omitempty" example:"https://joaosantos.dev"`
+	Address      string `json:"address,omitempty" example:"Rua das Flores, 123 - São Paulo, SP"`
 } // @name ContactInfo
 
 type ContactListMessageRequest struct {

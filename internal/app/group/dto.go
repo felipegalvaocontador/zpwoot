@@ -45,8 +45,8 @@ type GroupParticipant struct {
 } // @name GroupParticipant
 
 type GroupSettings struct {
-	Announce bool `json:"announce" example:"false"` // Only admins can send messages
-	Locked   bool `json:"locked" example:"false"`   // Only admins can edit group info
+	Announce bool `json:"announce" example:"false"`
+	Locked   bool `json:"locked" example:"false"`
 } // @name GroupSettings
 
 type ListGroupsResponse struct {

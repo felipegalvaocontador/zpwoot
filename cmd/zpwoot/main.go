@@ -29,7 +29,7 @@ import (
 	"syscall"
 	"time"
 
-	_ "zpwoot/docs/swagger" // Import generated swagger docs
+	_ "zpwoot/docs/swagger"
 	"zpwoot/internal/app"
 	sessionApp "zpwoot/internal/app/session"
 	domainChatwoot "zpwoot/internal/domain/chatwoot"
@@ -348,7 +348,7 @@ func createContainerConfig(repositories *repository.Repositories, managers manag
 		ChatwootMessageRepo: repositories.GetChatwootMessageRepository(),
 
 		WameowManager:         managers.whatsapp,
-		ChatwootIntegration:   nil, // IntegrationManager doesn't implement this interface
+		ChatwootIntegration:   nil,
 		ChatwootManager:       managers.chatwootManager,
 		ChatwootMessageMapper: adapters.chatwootMessageMapper,
 		JIDValidator:          adapters.jidValidator,

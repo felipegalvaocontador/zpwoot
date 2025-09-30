@@ -253,7 +253,7 @@ func (c *Client) SendMessage(conversationID int, content string) (*ports.Chatwoo
 func (c *Client) SendMessageWithType(conversationID int, content string, messageType string) (*ports.ChatwootMessage, error) {
 	payload := map[string]interface{}{
 		"content":      content,
-		"message_type": messageType, // incoming (from client) or outgoing (from agent)
+		"message_type": messageType,
 	}
 
 	var message ports.ChatwootMessage

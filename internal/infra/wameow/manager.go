@@ -1055,7 +1055,7 @@ func (m *Manager) SendPoll(sessionID, to, name string, options []string, selecta
 	}
 
 	if selectableCount < 1 {
-		selectableCount = 1 // Default to single selection
+		selectableCount = 1
 	}
 
 	if selectableCount > len(options) {
@@ -1601,13 +1601,13 @@ func convertToPortsGroupInfo(groupInfo interface{}) *ports.GroupInfo {
 
 		return &ports.GroupInfo{
 			GroupJID:     gi.JID.String(),
-			Name:         gi.Name,  // Usar gi.GroupName.Name
-			Description:  gi.Topic, // Usar gi.GroupTopic.Topic
+			Name:         gi.Name,
+			Description:  gi.Topic,
 			Owner:        gi.OwnerJID.String(),
 			Participants: participants,
 			Settings: ports.GroupSettings{
-				Announce: gi.IsAnnounce, // Usar gi.GroupAnnounce.IsAnnounce
-				Locked:   gi.IsLocked,   // Usar gi.IsLocked
+				Announce: gi.IsAnnounce,
+				Locked:   gi.IsLocked,
 			},
 			CreatedAt: gi.GroupCreated,
 			UpdatedAt: time.Now(),

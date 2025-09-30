@@ -93,7 +93,7 @@ func NewValidationErrorResponse(errors []ValidationError) *ValidationErrorRespon
 
 func NewPaginationResponse(total, limit, offset int) *PaginationResponse {
 	page := (offset / limit) + 1
-	pages := (total + limit - 1) / limit // Ceiling division
+	pages := (total + limit - 1) / limit
 
 	return &PaginationResponse{
 		Total:   total,

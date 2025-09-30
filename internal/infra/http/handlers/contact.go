@@ -449,7 +449,7 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 	for i, phone := range req.PhoneNumbers {
 		results[i] = map[string]interface{}{
 			"phoneNumber":  phone,
-			"isOnWhatsApp": true, // placeholder
+			"isOnWhatsApp": true,
 			"jid":          phone + "@s.whatsapp.net",
 		}
 	}

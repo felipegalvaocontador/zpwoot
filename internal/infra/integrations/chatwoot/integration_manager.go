@@ -137,7 +137,7 @@ func (im *IntegrationManager) getInboxID(ctx context.Context, sessionID, message
 		return 0, fmt.Errorf("failed to get Chatwoot config: %w", err)
 	}
 
-	inboxID := 1 // Default fallback
+	inboxID := 1
 	if config.InboxID != nil {
 		if id, err := strconv.Atoi(*config.InboxID); err == nil {
 			inboxID = id
@@ -178,9 +178,9 @@ func (im *IntegrationManager) setupContactAndConversation(ctx context.Context, c
 func (im *IntegrationManager) sendMessageToChatwoot(client ports.ChatwootClient, conversationID int, content, messageType string, fromMe bool, ctx context.Context, sessionID, messageID string) (*ports.ChatwootMessage, error) {
 	formattedContent := im.formatContentForChatwoot(content, messageType)
 
-	chatwootMessageType := "incoming" // default for client messages
+	chatwootMessageType := "incoming"
 	if fromMe {
-		chatwootMessageType = "outgoing" // messages sent by agent/phone
+		chatwootMessageType = "outgoing"
 	}
 
 	chatwootMessage, err := client.SendMessageWithType(conversationID, formattedContent, chatwootMessageType)
@@ -255,10 +255,10 @@ func (im *IntegrationManager) getBrazilianNumbers(query string) []string {
 	numbers := []string{query}
 
 	if strings.HasPrefix(query, "+55") {
-		if len(query) == 14 { // +55 XX 9XXXXXXXX (14 digits)
+		if len(query) == 14 {
 			withoutNine := query[:5] + query[6:]
 			numbers = append(numbers, withoutNine)
-		} else if len(query) == 13 { // +55 XX XXXXXXXX (13 digits)
+		} else if len(query) == 13 {
 			withNine := query[:5] + "9" + query[5:]
 			numbers = append(numbers, withNine)
 		}
@@ -275,9 +275,9 @@ func (im *IntegrationManager) mergeBrazilianContacts(client ports.ChatwootClient
 	var contact14, contact13 *ports.ChatwootContact
 
 	for _, contact := range contacts {
-		if len(contact.PhoneNumber) == 14 { // +55 XX 9XXXXXXXX
+		if len(contact.PhoneNumber) == 14 {
 			contact14 = contact
-		} else if len(contact.PhoneNumber) == 13 { // +55 XX XXXXXXXX
+		} else if len(contact.PhoneNumber) == 13 {
 			contact13 = contact
 		}
 	}
@@ -373,7 +373,7 @@ func (im *IntegrationManager) getOrCreateContact(client ports.ChatwootClient, ph
 		return contact, nil
 	}
 
-	contactName := phoneNumber // Use phone as name initially
+	contactName := phoneNumber
 	contact, err := client.CreateContact(phoneNumber, contactName, inboxID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create contact: %w", err)

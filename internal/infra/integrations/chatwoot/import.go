@@ -167,7 +167,7 @@ type ImportResult struct {
 	SessionID            string        `json:"session_id"`
 	InboxID              int           `json:"inbox_id"`
 	DaysLimit            int           `json:"days_limit"`
-	Status               string        `json:"status"` // running, completed, failed, canceled
+	Status               string        `json:"status"`
 	StartTime            time.Time     `json:"start_time"`
 	EndTime              time.Time     `json:"end_time"`
 	Duration             time.Duration `json:"duration"`
@@ -181,7 +181,7 @@ type ContactImportSummary struct {
 	SessionID           string        `json:"session_id"`
 	InboxID             int           `json:"inbox_id"`
 	MergeBrazilContacts bool          `json:"merge_brazil_contacts"`
-	Status              string        `json:"status"` // running, completed, failed, canceled
+	Status              string        `json:"status"`
 	StartTime           time.Time     `json:"start_time"`
 	EndTime             time.Time     `json:"end_time"`
 	Duration            time.Duration `json:"duration"`
@@ -193,11 +193,11 @@ type ContactImportSummary struct {
 
 type ImportProgress struct {
 	SessionID         string `json:"session_id"`
-	Status            string `json:"status"` // running, completed, failed, canceled, not_found
+	Status            string `json:"status"`
 	ProgressPercent   int    `json:"progress_percent"`
 	MessagesProcessed int    `json:"messages_processed"`
 	TotalMessages     int    `json:"total_messages"`
-	EstimatedTimeLeft int    `json:"estimated_time_left"` // seconds
+	EstimatedTimeLeft int    `json:"estimated_time_left"`
 	CurrentOperation  string `json:"current_operation"`
 }
 
@@ -207,7 +207,7 @@ type WhatsAppMessage struct {
 	FromName  string    `json:"from_name"`
 	To        string    `json:"to"`
 	Content   string    `json:"content"`
-	Type      string    `json:"type"` // text, image, video, audio, document, contact, location
+	Type      string    `json:"type"`
 	Timestamp time.Time `json:"timestamp"`
 	IsFromMe  bool      `json:"is_from_me"`
 

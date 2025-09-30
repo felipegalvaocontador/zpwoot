@@ -61,7 +61,7 @@ func NewWebhookDeliveryService(
 	workers int,
 ) *WebhookDeliveryService {
 	if workers <= 0 {
-		workers = 5 // Default number of workers
+		workers = 5
 	}
 
 	return &WebhookDeliveryService{
@@ -72,7 +72,7 @@ func NewWebhookDeliveryService(
 		},
 		maxRetries:    3,
 		retryDelay:    2 * time.Second,
-		deliveryQueue: make(chan *DeliveryTask, 1000), // Buffer for 1000 tasks
+		deliveryQueue: make(chan *DeliveryTask, 1000),
 		workers:       workers,
 	}
 }

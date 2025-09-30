@@ -161,7 +161,7 @@ func (u *Utils) RetryWithBackoff(operation func() error, maxRetries int, initial
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		if attempt > 0 {
-			attemptUint := uint(attempt) // attempt is guaranteed > 0 here
+			attemptUint := uint(attempt)
 			var exponent uint
 			if attemptUint > 0 {
 				exponent = attemptUint - 1
@@ -199,9 +199,9 @@ func (u *Utils) RetryWithBackoff(operation func() error, maxRetries int, initial
 
 func (u *Utils) IsValidJID(jid string) bool {
 	patterns := []string{
-		`^\d+@s\.whatsapp\.net$`, // Individual chat
-		`^\d+-\d+@g\.us$`,        // Group chat
-		`^status@broadcast$`,     // Status broadcast
+		`^\d+@s\.whatsapp\.net$`,
+		`^\d+-\d+@g\.us$`,
+		`^status@broadcast$`,
 	}
 
 	for _, pattern := range patterns {

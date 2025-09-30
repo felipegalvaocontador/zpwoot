@@ -22,7 +22,7 @@ type Service interface {
 
 type WhatsAppClient interface {
 	IsLoggedIn() bool
-	DownloadMedia(ctx context.Context, messageID string) ([]byte, string, error) // returns data, mimeType, error
+	DownloadMedia(ctx context.Context, messageID string) ([]byte, string, error)
 	GetMessageInfo(ctx context.Context, messageID string) (*MessageInfo, error)
 }
 
@@ -61,7 +61,7 @@ func NewService(whatsappClient WhatsAppClient, cacheManager CacheManager, logger
 		cacheManager:   cacheManager,
 		logger:         logger,
 		cacheDir:       cacheDir,
-		maxFileSize:    100 * 1024 * 1024, // 100MB default
+		maxFileSize:    100 * 1024 * 1024,
 	}
 }
 
@@ -317,7 +317,7 @@ func (s *serviceImpl) buildCachedMediaItem(ctx context.Context, filePath string)
 		FileSize:   info.Size(),
 		Filename:   filename,
 		CachedAt:   info.ModTime(),
-		LastAccess: info.ModTime(), // Simplified
+		LastAccess: info.ModTime(),
 		ExpiresAt:  info.ModTime().Add(24 * time.Hour),
 		FilePath:   filePath,
 	}
@@ -366,7 +366,7 @@ func (s *serviceImpl) GetMediaStats(ctx context.Context, req *GetMediaStatsReque
 		AudioFiles:    0,
 		DocumentFiles: 0,
 		CacheHitRate:  0.85,
-		AvgFileSize:   524288, // 512KB
+		AvgFileSize:   524288,
 	}
 
 	return &GetMediaStatsResponse{

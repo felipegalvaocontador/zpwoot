@@ -273,10 +273,10 @@ func GetBrazilianAlternativeNumber(phoneNumber string) string {
 	cleaned = strings.ReplaceAll(cleaned, ")", "")
 
 	if len(cleaned) == 13 && strings.HasPrefix(cleaned, "55") {
-		countryCode := cleaned[:2] // "55"
-		ddd := cleaned[2:4]        // Area code (DDD)
-		joker := cleaned[4:5]      // The "joker" digit (usually 9)
-		number := cleaned[5:]      // The 8-digit number
+		countryCode := cleaned[:2]
+		ddd := cleaned[2:4]
+		joker := cleaned[4:5]
+		number := cleaned[5:]
 
 		if countryCode == "55" {
 			dddInt := 0
@@ -300,9 +300,9 @@ func GetBrazilianAlternativeNumber(phoneNumber string) string {
 	}
 
 	if len(cleaned) == 12 && strings.HasPrefix(cleaned, "55") {
-		countryCode := cleaned[:2] // "55"
-		ddd := cleaned[2:4]        // Area code (DDD)
-		number := cleaned[4:]      // The 8-digit number
+		countryCode := cleaned[:2]
+		ddd := cleaned[2:4]
+		number := cleaned[4:]
 
 		return "+" + countryCode + ddd + "9" + number
 	}
@@ -330,10 +330,10 @@ func ParseJIDWithBrazilianFallback(phoneNumber string) ([]waTypes.JID, error) {
 			var alternativeNumber string
 
 			if len(number) == 9 && strings.HasPrefix(number, "9") {
-				alternativeNumber = "+55" + areaCode + number[1:] // Remove the 9
+				alternativeNumber = "+55" + areaCode + number[1:]
 			}
 			if len(number) == 8 {
-				alternativeNumber = "+55" + areaCode + "9" + number // Add the 9
+				alternativeNumber = "+55" + areaCode + "9" + number
 			}
 
 			if alternativeNumber != "" && alternativeNumber != phoneNumber {
@@ -521,12 +521,12 @@ func (t *TextNormalizer) NormalizeText(text string) string {
 
 func (t *TextNormalizer) IsEmojiText(text string) bool {
 	for _, r := range text {
-		if (r >= 0x1F600 && r <= 0x1F64F) || // Emoticons
-			(r >= 0x1F300 && r <= 0x1F5FF) || // Misc Symbols
-			(r >= 0x1F680 && r <= 0x1F6FF) || // Transport
-			(r >= 0x1F1E0 && r <= 0x1F1FF) || // Flags
-			(r >= 0x2600 && r <= 0x26FF) || // Misc symbols
-			(r >= 0x2700 && r <= 0x27BF) { // Dingbats
+		if (r >= 0x1F600 && r <= 0x1F64F) ||
+			(r >= 0x1F300 && r <= 0x1F5FF) ||
+			(r >= 0x1F680 && r <= 0x1F6FF) ||
+			(r >= 0x1F1E0 && r <= 0x1F1FF) ||
+			(r >= 0x2600 && r <= 0x26FF) ||
+			(r >= 0x2700 && r <= 0x27BF) {
 			return true
 		}
 	}

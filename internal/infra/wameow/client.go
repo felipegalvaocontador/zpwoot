@@ -142,7 +142,7 @@ func NewWameowClient(
 		logger:       logger,
 		sessionMgr:   NewSessionManager(sessionRepo, logger),
 		qrGenerator:  NewQRCodeGenerator(logger),
-		eventHandler: nil, // Will be set by manager
+		eventHandler: nil,
 		status:       "disconnected",
 		lastActivity: time.Now(),
 		qrState: QRState{
@@ -1153,7 +1153,7 @@ func (c *WameowClient) SendAudioMessageWithContext(ctx context.Context, to, file
 		return nil, fmt.Errorf("failed to upload audio: %w", err)
 	}
 
-	mimetype := "audio/ogg; codecs=opus" // Default mimetype
+	mimetype := "audio/ogg; codecs=opus"
 	message := &waE2E.Message{
 		AudioMessage: &waE2E.AudioMessage{
 			URL:           &uploaded.URL,
@@ -1237,7 +1237,7 @@ func (c *WameowClient) SendDocumentMessageWithContext(ctx context.Context, to, f
 		return nil, fmt.Errorf("failed to upload document: %w", err)
 	}
 
-	mimetype := "application/octet-stream" // Default mimetype
+	mimetype := "application/octet-stream"
 	message := &waE2E.Message{
 		DocumentMessage: &waE2E.DocumentMessage{
 			Title:         &filename,
@@ -1299,12 +1299,12 @@ func (c *WameowClient) SendStickerMessage(ctx context.Context, to, filePath stri
 		return nil, fmt.Errorf("failed to read sticker file: %w", err)
 	}
 
-	uploaded, err := c.client.Upload(ctx, data, whatsmeow.MediaImage) // Stickers use image media type
+	uploaded, err := c.client.Upload(ctx, data, whatsmeow.MediaImage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload sticker: %w", err)
 	}
 
-	mimetype := "image/webp" // Stickers are typically WebP
+	mimetype := "image/webp"
 	message := &waE2E.Message{
 		StickerMessage: &waE2E.StickerMessage{
 			URL:           &uploaded.URL,
@@ -1435,12 +1435,12 @@ func (c *WameowClient) buildListSections(sections []map[string]interface{}) []*w
 	for _, section := range sections {
 		title, ok := section["title"].(string)
 		if !ok {
-			title = "Section" // Default title if conversion fails
+			title = "Section"
 		}
 
 		rows, ok := section["rows"].([]interface{})
 		if !ok {
-			rows = []interface{}{} // Default empty rows if conversion fails
+			rows = []interface{}{}
 		}
 
 		listRows := c.buildListRows(rows)
@@ -1465,21 +1465,21 @@ func (c *WameowClient) buildListRows(rows []interface{}) []*waE2E.ListMessage_Ro
 
 		rowTitle, ok := row["title"].(string)
 		if !ok {
-			rowTitle = "Row" // Default title if conversion fails
+			rowTitle = "Row"
 		}
 
 		rowDescription, ok := row["description"].(string)
 		if !ok {
-			rowDescription = "" // Default empty description if conversion fails
+			rowDescription = ""
 		}
 
 		rowID, ok := row["id"].(string)
 		if !ok {
-			rowID = "" // Default empty ID if conversion fails
+			rowID = ""
 		}
 
 		if rowID == "" {
-			rowID = rowTitle // fallback to title
+			rowID = rowTitle
 		}
 
 		listRows = append(listRows, &waE2E.ListMessage_Row{
@@ -1828,14 +1828,14 @@ func (c *WameowClient) GetUserInfo(ctx context.Context, jids []string) ([]map[st
 		userInfo := map[string]interface{}{
 			"jid":           jid.String(),
 			"phone_number":  jid.User,
-			"name":          "", // Not available in UserInfo
+			"name":          "",
 			"status":        result.Status,
 			"picture_id":    result.PictureID,
 			"is_business":   result.VerifiedName != nil,
 			"verified_name": getVerifiedNameString(result.VerifiedName),
-			"is_contact":    true,  // Assume true if we have info
-			"last_seen":     nil,   // Not available in whatsmeow
-			"is_online":     false, // Not available in whatsmeow
+			"is_contact":    true,
+			"last_seen":     nil,
+			"is_online":     false,
 		}
 		userInfos = append(userInfos, userInfo)
 	}
@@ -1870,13 +1870,13 @@ func (c *WameowClient) GetBusinessProfile(ctx context.Context, jid string) (map[
 
 	return map[string]interface{}{
 		"jid":         jid,
-		"name":        "", // Not available in BusinessProfile
+		"name":        "",
 		"category":    getCategoriesString(result.Categories),
-		"description": "", // Not available in BusinessProfile
-		"website":     "", // Not available in BusinessProfile
+		"description": "",
+		"website":     "",
 		"email":       result.Email,
 		"address":     result.Address,
-		"verified":    len(result.Categories) > 0, // Assume verified if has categories
+		"verified":    len(result.Categories) > 0,
 	}, nil
 }
 
@@ -1891,7 +1891,7 @@ func getCategoriesString(categories []types.Category) string {
 	if len(categories) == 0 {
 		return ""
 	}
-	return categories[0].Name // Return first category name
+	return categories[0].Name
 }
 
 func (c *WameowClient) GetAllContacts(ctx context.Context) (map[string]interface{}, error) {
@@ -1929,9 +1929,9 @@ func (c *WameowClient) GetAllContacts(ctx context.Context) (map[string]interface
 			"pushName":    contactInfo.PushName,
 			"isBusiness":  contactInfo.BusinessName != "",
 			"isContact":   true,
-			"isBlocked":   false, // Not available in ContactInfo
-			"addedAt":     nil,   // Not available in ContactInfo
-			"updatedAt":   nil,   // Not available in ContactInfo
+			"isBlocked":   false,
+			"addedAt":     nil,
+			"updatedAt":   nil,
 		}
 		contactList = append(contactList, contact)
 	}
@@ -2434,7 +2434,7 @@ func (c *WameowClient) CreatePoll(ctx context.Context, to, name string, options 
 	}
 
 	if selectableCount < 1 {
-		selectableCount = 1 // Default to single selection
+		selectableCount = 1
 	}
 
 	if selectableCount > len(options) {
@@ -3083,7 +3083,7 @@ func (c *WameowClient) GetNewsletterMessages(ctx context.Context, jid string, co
 	}
 	if before != "" {
 		if serverID, err := strconv.ParseUint(before, 10, 64); err == nil {
-			if serverID <= uint64(^uint(0)>>1) { // Max int value
+			if serverID <= uint64(^uint(0)>>1) {
 				params.Before = types.MessageServerID(serverID)
 			} else {
 				c.logger.WarnWithFields("Server ID too large, skipping before parameter", map[string]interface{}{
@@ -3174,7 +3174,7 @@ func (c *WameowClient) buildNewsletterUpdatesParams(count int, since, after stri
 
 	if after != "" {
 		if serverID, err := strconv.ParseUint(after, 10, 64); err == nil {
-			if serverID <= uint64(^uint(0)>>1) { // Max int value
+			if serverID <= uint64(^uint(0)>>1) {
 				params.After = types.MessageServerID(serverID)
 			} else {
 				c.logger.WarnWithFields("Server ID too large, skipping after parameter", map[string]interface{}{
@@ -3260,7 +3260,7 @@ func (c *WameowClient) NewsletterMarkViewed(ctx context.Context, jid string, ser
 	messageServerIDs := make([]types.MessageServerID, 0, len(serverIDs))
 	for _, serverID := range serverIDs {
 		if id, err := strconv.ParseUint(serverID, 10, 64); err == nil {
-			if id <= uint64(^uint(0)>>1) { // Max int value
+			if id <= uint64(^uint(0)>>1) {
 				messageServerIDs = append(messageServerIDs, types.MessageServerID(id))
 			} else {
 				c.logger.WarnWithFields("Server ID too large, skipping", map[string]interface{}{
@@ -3340,7 +3340,7 @@ func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, s
 		return fmt.Errorf("server ID must be numeric, got: %s", serverID)
 	}
 
-	if msgServerID > uint64(^uint(0)>>1) { // Max int value
+	if msgServerID > uint64(^uint(0)>>1) {
 		c.logger.ErrorWithFields("Server ID too large", map[string]interface{}{
 			"session_id": c.sessionID,
 			"server_id":  serverID,
@@ -3619,7 +3619,7 @@ func (c *WameowClient) convertStringToMediaType(mediaType string) whatsmeow.Medi
 	case "document":
 		return whatsmeow.MediaDocument
 	default:
-		return whatsmeow.MediaImage // Default fallback
+		return whatsmeow.MediaImage
 	}
 }
 

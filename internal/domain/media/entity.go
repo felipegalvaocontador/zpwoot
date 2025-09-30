@@ -17,7 +17,7 @@ const (
 type DownloadMediaRequest struct {
 	SessionID string
 	MessageID string
-	MediaType string // Optional filter
+	MediaType string
 }
 
 type DownloadMediaResponse struct {

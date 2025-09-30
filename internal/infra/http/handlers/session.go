@@ -36,7 +36,7 @@ func NewSessionHandler(appLogger *logger.Logger, sessionUC session.UseCase, sess
 func NewSessionHandlerWithoutUseCase(appLogger *logger.Logger, sessionRepo helpers.SessionRepository) *SessionHandler {
 	return &SessionHandler{
 		logger:          appLogger,
-		sessionUC:       nil, // Will be nil until properly wired
+		sessionUC:       nil,
 		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
 	}
 }
@@ -600,7 +600,7 @@ func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request)
 		"messagesReceived": 0,
 		"messagesSent":     0,
 		"uptime":           "0h 0m 0s",
-		"status":           "active", // placeholder
+		"status":           "active",
 		"message":          "Session stats functionality needs to be implemented in use case",
 	}
 

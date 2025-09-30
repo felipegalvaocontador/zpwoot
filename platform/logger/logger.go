@@ -87,7 +87,7 @@ func NewWithConfig(config *LogConfig) *Logger {
 	}
 
 	if config.Caller {
-		ctx = ctx.CallerWithSkipFrameCount(3) // Skip wrapper functions
+		ctx = ctx.CallerWithSkipFrameCount(3)
 	}
 
 	logger := ctx.Logger()

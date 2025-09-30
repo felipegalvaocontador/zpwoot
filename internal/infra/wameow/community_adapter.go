@@ -74,10 +74,10 @@ func (ca *CommunityAdapter) GetCommunityInfo(ctx context.Context, sessionID stri
 		Name:             groupInfo.Name,
 		Description:      groupInfo.Topic,
 		ParticipantCount: len(groupInfo.Participants),
-		GroupCount:       0,     // Would need to be calculated from linked groups
-		IsOwner:          false, // Would need to be determined from user's role
-		IsAdmin:          false, // Would need to be determined from user's role
-		IsMuted:          false, // Would need to be determined from user's settings
+		GroupCount:       0,
+		IsOwner:          false,
+		IsAdmin:          false,
+		IsMuted:          false,
 		IsAnnouncement:   groupInfo.IsAnnounce,
 	}
 
@@ -119,11 +119,11 @@ func convertToLinkedGroupFromTarget(groupTarget *types.GroupLinkTarget) *communi
 	return &community.LinkedGroup{
 		JID:              groupTarget.JID.String(),
 		Name:             groupTarget.Name,
-		Description:      "",         // GroupLinkTarget doesn't have description
-		ParticipantCount: 0,          // GroupLinkTarget doesn't have participant count
-		IsOwner:          false,      // Would need to be determined from user's role
-		IsAdmin:          false,      // Would need to be determined from user's role
-		LinkedAt:         time.Now(), // Use current time since GroupLinkTarget doesn't have creation time
+		Description:      "",
+		ParticipantCount: 0,
+		IsOwner:          false,
+		IsAdmin:          false,
+		LinkedAt:         time.Now(),
 	}
 }
 

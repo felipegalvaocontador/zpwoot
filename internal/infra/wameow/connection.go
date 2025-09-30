@@ -158,10 +158,10 @@ func (q *QRCodeGenerator) DisplayQRCodeInTerminal(qrCode, sessionID string) {
 
 	q.logger.InfoWithFields("QR code generated", map[string]interface{}{
 		"session_id": sessionID,
-		"qr_code":    qrCode, // Log the actual QR string for debugging
+		"qr_code":    qrCode,
 	})
 
-	fmt.Print("\033[2J\033[H") // Clear screen and move cursor to top
+	fmt.Print("\033[2J\033[H")
 
 	fmt.Println("Scan this QR code with WhatsApp:")
 	qrterminal.GenerateHalfBlock(qrCode, qrterminal.L, os.Stdout)

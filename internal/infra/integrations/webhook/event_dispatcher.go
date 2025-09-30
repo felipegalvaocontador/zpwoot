@@ -185,7 +185,7 @@ func (d *EventDispatcher) enrichReceiptEvent(v *events.Receipt, eventMap map[str
 
 func (d *EventDispatcher) enrichQREvent(v *events.QR, eventMap map[string]interface{}) {
 	eventMap["codes_count"] = len(v.Codes)
-	delete(eventMap, "codes") // Remove for security
+	delete(eventMap, "codes")
 }
 
 func (d *EventDispatcher) enrichGroupInfoEvent(v *events.GroupInfo, eventMap map[string]interface{}) {

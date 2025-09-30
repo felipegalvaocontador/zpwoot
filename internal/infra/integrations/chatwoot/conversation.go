@@ -167,7 +167,7 @@ type ConversationStats struct {
 type ConversationConfig struct {
 	ReopenConversation  bool `json:"reopen_conversation"`
 	ConversationPending bool `json:"conversation_pending"`
-	AutoResolveTimeout  int  `json:"auto_resolve_timeout"` // minutes
+	AutoResolveTimeout  int  `json:"auto_resolve_timeout"`
 }
 
 func (cm *ConversationManager) ApplyConversationConfig(conversationID int, config ConversationConfig) error {

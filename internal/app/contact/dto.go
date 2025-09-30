@@ -91,7 +91,7 @@ type ListContactsResponse struct {
 
 type SyncContactsRequest struct {
 	SessionID string `json:"sessionId,omitempty"`
-	Force     bool   `json:"force" example:"false"` // Force full sync even if recently synced
+	Force     bool   `json:"force" example:"false"`
 }
 
 type SyncContactsResponse struct {

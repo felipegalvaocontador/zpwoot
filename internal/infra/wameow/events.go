@@ -33,7 +33,7 @@ type EventHandler struct {
 	qrGen           *QRCodeGenerator
 	logger          *logger.Logger
 	webhookHandler  WebhookEventHandler
-	chatwootManager ChatwootManager // Interface for Chatwoot integration
+	chatwootManager ChatwootManager
 }
 
 type ChatwootManager interface {
@@ -297,13 +297,13 @@ func (h *EventHandler) processChatwootIntegration(evt *events.Message, sessionID
 
 	messageID := evt.Info.ID
 	from := evt.Info.Sender.String()
-	chat := evt.Info.Chat.String() // This is the actual recipient/chat
+	chat := evt.Info.Chat.String()
 	timestamp := evt.Info.Timestamp
 	fromMe := evt.Info.IsFromMe
 
 	contactNumber := from
 	if fromMe {
-		contactNumber = chat // Use the recipient (who we sent the message to)
+		contactNumber = chat
 	}
 
 	if fromMe {
@@ -410,12 +410,12 @@ func (h *EventHandler) handleChatPresence(evt *events.ChatPresence, sessionID st
 func (h *EventHandler) handleHistorySync(evt *events.HistorySync, sessionID string) {
 	h.logger.InfoWithFields("History sync", map[string]interface{}{
 		"session_id": sessionID,
-		"data_size":  len(evt.Data.String()), // Just log the data size for now
+		"data_size":  len(evt.Data.String()),
 	})
 }
 
 func (h *EventHandler) handleAppState(evt *events.AppState) {
-	_ = evt // Avoid unused parameter warning
+	_ = evt
 }
 
 func (h *EventHandler) handleAppStateSyncComplete(evt *events.AppStateSyncComplete, sessionID string) {
@@ -429,14 +429,14 @@ func (h *EventHandler) handleKeepAliveTimeout(evt *events.KeepAliveTimeout, sess
 	h.logger.DebugWithFields("Keep alive timeout", map[string]interface{}{
 		"session_id": sessionID,
 	})
-	_ = evt // Avoid unused parameter warning
+	_ = evt
 }
 
 func (h *EventHandler) handleKeepAliveRestored(evt *events.KeepAliveRestored, sessionID string) {
 	h.logger.DebugWithFields("Keep alive restored", map[string]interface{}{
 		"session_id": sessionID,
 	})
-	_ = evt // Avoid unused parameter warning
+	_ = evt
 }
 
 func (h *EventHandler) handleContact(evt *events.Contact, sessionID string) {
@@ -499,7 +499,7 @@ func (h *EventHandler) handleStar(evt *events.Star, sessionID string) {
 	h.logger.DebugWithFields("Star update", map[string]interface{}{
 		"session_id": sessionID,
 	})
-	_ = evt // Avoid unused parameter warning
+	_ = evt
 }
 
 func (h *EventHandler) handleDeleteForMe(evt *events.DeleteForMe, sessionID string) {
@@ -551,7 +551,7 @@ func (h *EventHandler) updateSessionQRCode(sessionID, qrCode string) {
 	}
 
 	sess.QRCode = qrCode
-	expiresAt := time.Now().Add(2 * time.Minute) // QR code expires in 2 minutes
+	expiresAt := time.Now().Add(2 * time.Minute)
 	sess.QRCodeExpiresAt = &expiresAt
 	sess.UpdatedAt = time.Now()
 

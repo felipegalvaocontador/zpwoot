@@ -285,7 +285,7 @@ func NewGetNewsletterMessagesResponse(messages []*newsletter.NewsletterMessage) 
 	return &GetNewsletterMessagesResponse{
 		Messages: dtoMessages,
 		Total:    len(messages),
-		HasMore:  len(messages) > 0, // Simple logic, can be improved
+		HasMore:  len(messages) > 0,
 	}
 }
 
@@ -323,7 +323,7 @@ func NewGetNewsletterMessageUpdatesResponse(updates []*newsletter.NewsletterMess
 	return &GetNewsletterMessageUpdatesResponse{
 		Updates: dtoUpdates,
 		Total:   len(updates),
-		HasMore: len(updates) > 0, // Simple logic, can be improved
+		HasMore: len(updates) > 0,
 	}
 }
 
@@ -344,9 +344,9 @@ func (req *NewsletterMarkViewedRequest) Validate() error {
 
 type NewsletterSendReactionRequest struct {
 	NewsletterJID string `json:"newsletterJid" validate:"required"`
-	ServerID      string `json:"serverId,omitempty"`            // Optional - will be looked up from MessageID if not provided
-	Reaction      string `json:"reaction"`                      // Empty string to remove reaction
-	MessageID     string `json:"messageId" validate:"required"` // Required - used to find ServerID if not provided
+	ServerID      string `json:"serverId,omitempty"`
+	Reaction      string `json:"reaction"`
+	MessageID     string `json:"messageId" validate:"required"`
 }
 
 func (req *NewsletterSendReactionRequest) Validate() error {
@@ -383,7 +383,7 @@ func (req *NewsletterSubscribeLiveUpdatesRequest) Validate() error {
 }
 
 type NewsletterSubscribeLiveUpdatesResponse struct {
-	Duration int64 `json:"duration"` // Duration in seconds
+	Duration int64 `json:"duration"`
 }
 
 type AcceptTOSNoticeRequest struct {

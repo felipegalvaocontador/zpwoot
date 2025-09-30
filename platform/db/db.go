@@ -58,12 +58,12 @@ func (db *DB) Transaction(fn func(*sqlx.Tx) error) error {
 	defer func() {
 		if p := recover(); p != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				_ = rollbackErr // Explicitly ignore rollback error
+				_ = rollbackErr
 			}
 			panic(p)
 		} else if err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				_ = rollbackErr // Explicitly ignore rollback error
+				_ = rollbackErr
 			}
 		} else {
 			err = tx.Commit()

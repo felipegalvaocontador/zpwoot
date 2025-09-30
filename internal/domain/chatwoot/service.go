@@ -15,7 +15,7 @@ type Service struct {
 	logger        *logger.Logger
 	repository    ports.ChatwootRepository
 	wameowManager ports.WameowManager
-	messageMapper ports.ChatwootMessageMapper // Optional - for storing outgoing messages
+	messageMapper ports.ChatwootMessageMapper
 }
 
 func NewService(logger *logger.Logger, repository ports.ChatwootRepository, wameowManager ports.WameowManager) *Service {
@@ -260,7 +260,7 @@ func (s *Service) DeleteConfig(ctx context.Context) error {
 
 func (s *Service) SyncContact(ctx context.Context, req *SyncContactRequest) (*ChatwootContact, error) {
 	contact := &ChatwootContact{
-		ID:               1, // This would be assigned by Chatwoot
+		ID:               1,
 		Name:             req.Name,
 		PhoneNumber:      req.PhoneNumber,
 		Email:            req.Email,
@@ -274,7 +274,7 @@ func (s *Service) SyncContact(ctx context.Context, req *SyncContactRequest) (*Ch
 
 func (s *Service) SyncConversation(ctx context.Context, req *SyncConversationRequest) (*ChatwootConversation, error) {
 	conversation := &ChatwootConversation{
-		ID:        1, // This would be assigned by Chatwoot
+		ID:        1,
 		ContactID: req.ContactID,
 		Status:    "open",
 		CreatedAt: time.Now(),
@@ -286,7 +286,7 @@ func (s *Service) SyncConversation(ctx context.Context, req *SyncConversationReq
 
 func (s *Service) SendMessage(ctx context.Context, req *SendMessageToChatwootRequest) (*ChatwootMessage, error) {
 	message := &ChatwootMessage{
-		ID:             1, // This would be assigned by Chatwoot
+		ID:             1,
 		ConversationID: req.ConversationID,
 		Content:        req.Content,
 		MessageType:    req.MessageType,
@@ -437,7 +437,7 @@ func (s *Service) sendToWhatsApp(ctx context.Context, sessionID string, payload 
 }
 
 func (s *Service) extractRecipientPhone(payload *ChatwootWebhookPayload) (string, error) {
-	messageType := "outgoing" // Default assumption
+	messageType := "outgoing"
 	if payload.Message != nil {
 		messageType = payload.Message.MessageType
 	}

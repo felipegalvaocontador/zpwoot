@@ -2009,7 +2009,7 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 
 	ctx := r.Context()
 	pollReq := &message.GetPollResultsRequest{
-		RemoteJID:     sess.ID.String(), // Using session ID as remote JID for now
+		RemoteJID:     sess.ID.String(),
 		PollMessageID: messageID,
 	}
 	response, err := h.messageUC.GetPollResults(ctx, pollReq)

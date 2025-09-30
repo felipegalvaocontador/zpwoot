@@ -312,8 +312,8 @@ func convertNewsletterMessage(msg *types.NewsletterMessage) *newsletter.Newslett
 
 	domainMsg := &newsletter.NewsletterMessage{
 		ID:        msg.MessageID,
-		ServerID:  fmt.Sprintf("%d", msg.MessageServerID), // Convert numeric ID to string properly
-		FromJID:   "",                                     // Newsletter messages don't have a specific sender JID
+		ServerID:  fmt.Sprintf("%d", msg.MessageServerID),
+		FromJID:   "",
 		Timestamp: msg.Timestamp,
 		Type:      msg.Type,
 	}
@@ -343,7 +343,7 @@ func convertNewsletterMetadata(metadata *types.NewsletterMetadata) *newsletter.N
 	info := &newsletter.NewsletterInfo{
 		ID:              metadata.ID.String(),
 		CreationTime:    metadata.ThreadMeta.CreationTime.Time,
-		UpdateTime:      time.Now(), // WhatsApp doesn't provide update time, use current time
+		UpdateTime:      time.Now(),
 		SubscriberCount: metadata.ThreadMeta.SubscriberCount,
 	}
 

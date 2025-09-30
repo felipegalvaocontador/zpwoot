@@ -18,7 +18,7 @@ import (
 type MediaProcessor struct {
 	logger  *logger.Logger
 	tempDir string
-	maxSize int64 // Maximum file size in bytes
+	maxSize int64
 	timeout time.Duration
 }
 
@@ -26,8 +26,8 @@ func NewMediaProcessor(logger *logger.Logger) *MediaProcessor {
 	return &MediaProcessor{
 		logger:  logger,
 		tempDir: os.TempDir(),
-		maxSize: 100 * 1024 * 1024, // 100MB default
-		timeout: 60 * time.Second,  // Increased timeout to 60 seconds
+		maxSize: 100 * 1024 * 1024,
+		timeout: 60 * time.Second,
 	}
 }
 
@@ -58,7 +58,7 @@ func (mp *MediaProcessor) validateMediaForType(media *ProcessedMedia, messageTyp
 		if !strings.Contains(media.MimeType, "webp") {
 			return fmt.Errorf("stickers must be WebP format, got: %s", media.MimeType)
 		}
-		if media.FileSize > 100*1024 { // 100KB
+		if media.FileSize > 100*1024 {
 			return fmt.Errorf("sticker size exceeds 100KB limit: %d bytes", media.FileSize)
 		}
 		mp.logger.InfoWithFields("Sticker validation passed", map[string]interface{}{
@@ -66,13 +66,13 @@ func (mp *MediaProcessor) validateMediaForType(media *ProcessedMedia, messageTyp
 			"file_size": media.FileSize,
 		})
 	case MessageTypeImage:
-		if media.FileSize > 10*1024*1024 { // 10MB
+		if media.FileSize > 10*1024*1024 {
 			mp.logger.WarnWithFields("Large image file", map[string]interface{}{
 				"file_size": media.FileSize,
 			})
 		}
 	case MessageTypeVideo:
-		if media.FileSize > 50*1024*1024 { // 50MB
+		if media.FileSize > 50*1024*1024 {
 			mp.logger.WarnWithFields("Large video file", map[string]interface{}{
 				"file_size": media.FileSize,
 			})

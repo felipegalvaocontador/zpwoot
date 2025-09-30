@@ -32,7 +32,7 @@ type UpdateWebhookRequest struct {
 
 type ListWebhooksRequest struct {
 	SessionID *string `json:"sessionId,omitempty" query:"sessionId" example:"1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"`
-	Enabled   *bool   `json:"enabled,omitempty" query:"enabled" example:"true"` // Filter by enabled status
+	Enabled   *bool   `json:"enabled,omitempty" query:"enabled" example:"true"`
 	Limit     int     `json:"limit,omitempty" query:"limit" validate:"omitempty,min=1,max=100" example:"20"`
 	Offset    int     `json:"offset,omitempty" query:"offset" validate:"omitempty,min=0" example:"0"`
 } // @name ListWebhooksRequest

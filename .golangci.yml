@@ -1,8 +1,6 @@
 # golangci-lint configuration for zpwoot
 # Documentation: https://golangci-lint.run/usage/configuration/
 
-version: 2
-
 run:
   timeout: 5m
   issues-exit-code: 1
@@ -12,9 +10,6 @@ run:
     - tmp
     - build
     - docs/swagger
-  skip-files:
-    - ".*_test.go"
-    - ".*\\.pb\\.go"
 
 output:
   format: colored-line-number
@@ -73,6 +68,7 @@ linters-settings:
   funlen:
     lines: 120
     statements: 80
+    ignore-comments: true
 
   nestif:
     min-complexity: 4

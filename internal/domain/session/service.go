@@ -6,6 +6,7 @@ import (
 
 	"zpwoot/pkg/errors"
 	"zpwoot/pkg/uuid"
+	"zpwoot/platform/logger"
 )
 
 type Service struct {
@@ -13,6 +14,7 @@ type Service struct {
 	Wameow      WameowManager
 	generator   *uuid.Generator
 	qrGenerator QRGenerator
+	logger      *logger.Logger
 }
 
 type QRGenerator interface {
@@ -41,12 +43,13 @@ type WameowManager interface {
 	GetProxy(sessionID string) (*ProxyConfig, error)
 }
 
-func NewService(repo Repository, wameow WameowManager, qrGenerator QRGenerator) *Service {
+func NewService(repo Repository, wameow WameowManager, qrGenerator QRGenerator, logger *logger.Logger) *Service {
 	return &Service{
 		repo:        repo,
 		Wameow:      wameow,
 		generator:   uuid.New(),
 		qrGenerator: qrGenerator,
+		logger:      logger,
 	}
 }
 
@@ -69,6 +72,10 @@ func (s *Service) CreateSession(ctx context.Context, req *CreateSessionRequest) 
 		if err := s.Wameow.ConnectSession(session.ID.String()); err != nil {
 			// Don't fail session creation if QR code generation fails
 			// Just log the error
+			s.logger.WarnWithFields("Failed to initiate QR code generation", map[string]interface{}{
+				"session_id": session.ID.String(),
+				"error":      err.Error(),
+			})
 		}
 	}
 

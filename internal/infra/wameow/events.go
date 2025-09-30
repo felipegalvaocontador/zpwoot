@@ -63,6 +63,10 @@ func (h *EventHandler) HandleEvent(evt interface{}, sessionID string) {
 	h.deliverToWebhook(evt, sessionID)
 
 	// Then handle the event internally
+	h.handleEventInternal(evt, sessionID)
+}
+
+func (h *EventHandler) handleEventInternal(evt interface{}, sessionID string) {
 	switch v := evt.(type) {
 	case *events.Connected:
 		h.handleConnected(v, sessionID)
@@ -71,11 +75,7 @@ func (h *EventHandler) HandleEvent(evt interface{}, sessionID string) {
 	case *events.LoggedOut:
 		h.handleLoggedOut(v, sessionID)
 	case *events.QR:
-		// QR events are handled by client QR channel to avoid duplication
-		// All QR code processing is done through client.handleQREvent()
-		h.logger.DebugWithFields("QR event received but skipped (handled by client channel)", map[string]interface{}{
-			"session_id": sessionID,
-		})
+		h.handleQREvent(v, sessionID)
 	case *events.PairSuccess:
 		h.handlePairSuccess(v, sessionID)
 	case *events.PairError:
@@ -84,6 +84,21 @@ func (h *EventHandler) HandleEvent(evt interface{}, sessionID string) {
 		h.handleMessage(v, sessionID)
 	case *events.Receipt:
 		h.handleReceipt(v, sessionID)
+	default:
+		h.handleOtherEvents(evt, sessionID)
+	}
+}
+
+func (h *EventHandler) handleQREvent(evt *events.QR, sessionID string) {
+	// QR events are handled by client QR channel to avoid duplication
+	// All QR code processing is done through client.handleQREvent()
+	h.logger.DebugWithFields("QR event received but skipped (handled by client channel)", map[string]interface{}{
+		"session_id": sessionID,
+	})
+}
+
+func (h *EventHandler) handleOtherEvents(evt interface{}, sessionID string) {
+	switch v := evt.(type) {
 	case *events.Presence:
 		h.handlePresence(v, sessionID)
 	case *events.ChatPresence:

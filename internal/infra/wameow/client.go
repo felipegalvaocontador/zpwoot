@@ -16,6 +16,8 @@ import (
 	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store"
@@ -23,6 +25,12 @@ import (
 	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
 )
+
+// titleCase converts a string to title case using the modern Go approach
+func titleCase(s string) string {
+	caser := cases.Title(language.English)
+	return caser.String(s)
+}
 
 // VCard constants
 const (
@@ -1134,7 +1142,7 @@ func (c *WameowClient) sendMediaMessageWithContext(
 		return nil, err
 	}
 
-	c.logger.InfoWithFields(fmt.Sprintf("%s message sent successfully", strings.Title(messageType)), map[string]interface{}{
+	c.logger.InfoWithFields(fmt.Sprintf("%s message sent successfully", titleCase(messageType)), map[string]interface{}{
 		"session_id": c.sessionID,
 		"to":         to,
 		"message_id": resp.ID,
@@ -3811,7 +3819,7 @@ func (c *WameowClient) handleCommunityAction(
 		return fmt.Errorf("failed to %s: %w", actionName, err)
 	}
 
-	c.logger.InfoWithFields(fmt.Sprintf("%s successfully", strings.Title(actionName)), map[string]interface{}{
+	c.logger.InfoWithFields(fmt.Sprintf("%s successfully", titleCase(actionName)), map[string]interface{}{
 		"session_id":    c.sessionID,
 		"community_jid": communityJID,
 		"group_jid":     groupJID,
@@ -3876,7 +3884,7 @@ func (c *WameowClient) handleCommunityQuery(
 		logFields["count"] = len(v)
 	}
 
-	c.logger.InfoWithFields(fmt.Sprintf("%s successfully", strings.Title(actionName)), logFields)
+	c.logger.InfoWithFields(fmt.Sprintf("%s successfully", titleCase(actionName)), logFields)
 
 	return result, nil
 }
@@ -3946,7 +3954,7 @@ func (c *WameowClient) GetGroupInfoFromLink(ctx context.Context, inviteLink stri
 	c.logger.InfoWithFields("Group info retrieved from link successfully", map[string]interface{}{
 		"session_id": c.sessionID,
 		"group_jid":  groupInfo.JID.String(),
-		"group_name": groupInfo.GroupName.Name,
+		"group_name": groupInfo.Name,
 	})
 
 	return groupInfo, nil
@@ -4003,7 +4011,7 @@ func (c *WameowClient) GetGroupInfoFromInvite(ctx context.Context, jid, inviter,
 	c.logger.InfoWithFields("Group info retrieved from invite successfully", map[string]interface{}{
 		"session_id": c.sessionID,
 		"group_jid":  groupInfo.JID.String(),
-		"group_name": groupInfo.GroupName.Name,
+		"group_name": groupInfo.Name,
 	})
 
 	return groupInfo, nil

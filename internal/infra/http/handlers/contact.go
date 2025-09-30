@@ -6,7 +6,6 @@ import (
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/contact"
 	"zpwoot/internal/domain/session"
-	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
 
@@ -317,7 +316,7 @@ func (h *ContactHandler) GetBusinessProfile(c *fiber.Ctx) error {
 	return c.JSON(response)
 }
 
-func (h *ContactHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session, *fiber.Error) {
+func (h *ContactHandler) resolveSession(c *fiber.Ctx) (*session.Session, *fiber.Error) {
 	idOrName := c.Params("sessionId")
 
 	sess, err := h.sessionResolver.ResolveSession(c.Context(), idOrName)

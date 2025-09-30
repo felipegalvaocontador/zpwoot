@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/session"
 	domainSession "zpwoot/internal/domain/session"
@@ -14,6 +16,12 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
+// titleCase converts a string to title case using the modern Go approach
+func titleCase(s string) string {
+	caser := cases.Title(language.English)
+	return caser.String(s)
+}
 
 type SessionHandler struct {
 	logger          *logger.Logger
@@ -79,7 +87,7 @@ func (h *SessionHandler) handleSessionAction(
 		return c.Status(500).JSON(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
 	}
 
-	response := common.NewSuccessResponse(result, fmt.Sprintf("%s retrieved successfully", strings.Title(actionName)))
+	response := common.NewSuccessResponse(result, fmt.Sprintf("%s retrieved successfully", titleCase(actionName)))
 	return c.JSON(response)
 }
 

@@ -68,7 +68,7 @@ func (ut *UnixTime) UnmarshalJSON(data []byte) error {
 
 // MarshalJSON implements json.Marshaler for UnixTime
 func (ut UnixTime) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ut.Time.Unix())
+	return json.Marshal(ut.Unix())
 }
 
 // Errors

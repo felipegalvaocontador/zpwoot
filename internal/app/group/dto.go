@@ -278,11 +278,11 @@ type GroupInfoFromLinkResponse struct {
 func NewGroupInfoFromLinkResponse(groupInfo *types.GroupInfo) *GroupInfoFromLinkResponse {
 	return &GroupInfoFromLinkResponse{
 		JID:              groupInfo.JID.String(),
-		Name:             groupInfo.GroupName.Name,
-		Description:      groupInfo.GroupTopic.Topic,
+		Name:             groupInfo.Name,
+		Description:      groupInfo.Topic,
 		ParticipantCount: len(groupInfo.Participants),
-		IsAnnouncement:   groupInfo.GroupAnnounce.IsAnnounce,
-		IsLocked:         groupInfo.GroupLocked.IsLocked,
+		IsAnnouncement:   groupInfo.IsAnnounce,
+		IsLocked:         groupInfo.IsLocked,
 		CreatedAt:        groupInfo.GroupCreated.Format(time.RFC3339),
 	}
 }
@@ -304,11 +304,11 @@ type GroupInfoFromInviteResponse struct {
 func NewGroupInfoFromInviteResponse(groupInfo *types.GroupInfo, code, inviter string) *GroupInfoFromInviteResponse {
 	return &GroupInfoFromInviteResponse{
 		JID:              groupInfo.JID.String(),
-		Name:             groupInfo.GroupName.Name,
-		Description:      groupInfo.GroupTopic.Topic,
+		Name:             groupInfo.Name,
+		Description:      groupInfo.Topic,
 		ParticipantCount: len(groupInfo.Participants),
-		IsAnnouncement:   groupInfo.GroupAnnounce.IsAnnounce,
-		IsLocked:         groupInfo.GroupLocked.IsLocked,
+		IsAnnouncement:   groupInfo.IsAnnounce,
+		IsLocked:         groupInfo.IsLocked,
 		CreatedAt:        groupInfo.GroupCreated.Format(time.RFC3339),
 		InviteCode:       code,
 		Inviter:          inviter,

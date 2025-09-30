@@ -16,6 +16,7 @@ require (
 	github.com/swaggo/fiber-swagger v1.3.0
 	github.com/swaggo/swag v1.16.6
 	go.mau.fi/whatsmeow v0.0.0-20250922112717-258fd9454b95
+	golang.org/x/text v0.29.0
 	google.golang.org/protobuf v1.36.9
 )
 
@@ -61,7 +62,6 @@ require (
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/term v0.35.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
 	rsc.io/qr v0.2.0 // indirect
 )

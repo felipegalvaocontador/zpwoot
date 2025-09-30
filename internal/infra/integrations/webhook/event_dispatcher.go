@@ -111,138 +111,158 @@ func (d *EventDispatcher) convertEventToMap(evt interface{}) (map[string]interfa
 func (d *EventDispatcher) enrichEventData(evt interface{}, eventMap map[string]interface{}) map[string]interface{} {
 	switch v := evt.(type) {
 	case *events.Message:
-		// Add message metadata
-		eventMap["message_id"] = v.Info.ID
-		eventMap["from_me"] = v.Info.IsFromMe
-		eventMap["chat"] = v.Info.Chat.String()
-		eventMap["sender"] = v.Info.Sender.String()
-		eventMap["timestamp"] = v.Info.Timestamp.Unix()
-
-		// Add message type
-		if v.Message.Conversation != nil {
-			eventMap["message_type"] = "text"
-			eventMap["text"] = *v.Message.Conversation
-		} else if v.Message.ImageMessage != nil {
-			eventMap["message_type"] = "image"
-			if v.Message.ImageMessage.Caption != nil {
-				eventMap["caption"] = *v.Message.ImageMessage.Caption
-			}
-		} else if v.Message.AudioMessage != nil {
-			eventMap["message_type"] = "audio"
-		} else if v.Message.VideoMessage != nil {
-			eventMap["message_type"] = "video"
-			if v.Message.VideoMessage.Caption != nil {
-				eventMap["caption"] = *v.Message.VideoMessage.Caption
-			}
-		} else if v.Message.DocumentMessage != nil {
-			eventMap["message_type"] = "document"
-			if v.Message.DocumentMessage.FileName != nil {
-				eventMap["filename"] = *v.Message.DocumentMessage.FileName
-			}
-		} else if v.Message.StickerMessage != nil {
-			eventMap["message_type"] = "sticker"
-		} else if v.Message.LocationMessage != nil {
-			eventMap["message_type"] = "location"
-		} else if v.Message.ContactMessage != nil {
-			eventMap["message_type"] = "contact"
-		} else {
-			eventMap["message_type"] = "unknown"
-		}
-
+		d.enrichMessageEvent(v, eventMap)
 	case *events.Receipt:
-		// Add receipt metadata
-		eventMap["message_ids"] = v.MessageIDs
-		eventMap["chat"] = v.Chat.String()
-		eventMap["sender"] = v.Sender.String()
-		eventMap["timestamp"] = v.Timestamp.Unix()
-		eventMap["receipt_type"] = string(v.Type)
-
+		d.enrichReceiptEvent(v, eventMap)
 	case *events.Connected:
-		// Add connection metadata
 		eventMap["connected_at"] = time.Now().Unix()
-
 	case *events.Disconnected:
-		// Add disconnection metadata
 		eventMap["disconnected_at"] = time.Now().Unix()
-
 	case *events.QR:
-		// Add QR code metadata (but don't include the actual codes for security)
-		eventMap["codes_count"] = len(v.Codes)
-		// Remove the actual QR codes for security
-		delete(eventMap, "codes")
-
+		d.enrichQREvent(v, eventMap)
 	case *events.GroupInfo:
-		// Add group metadata
-		eventMap["group_jid"] = v.JID.String()
-		if v.Name != nil {
-			eventMap["group_name"] = *v.Name
-		}
-		if v.Topic != nil {
-			eventMap["group_topic"] = *v.Topic
-		}
-
+		d.enrichGroupInfoEvent(v, eventMap)
 	case *events.Presence:
-		// Add presence metadata
-		eventMap["from"] = v.From.String()
-		eventMap["unavailable"] = v.Unavailable
-		if !v.LastSeen.IsZero() {
-			eventMap["last_seen"] = v.LastSeen.Unix()
-		}
-
+		d.enrichPresenceEvent(v, eventMap)
 	case *events.ChatPresence:
-		// Add chat presence metadata
-		eventMap["chat"] = v.Chat.String()
-		eventMap["state"] = string(v.State)
-		if v.Media != "" {
-			eventMap["media"] = string(v.Media)
-		}
-
+		d.enrichChatPresenceEvent(v, eventMap)
 	case *events.PairSuccess:
-		// Add pair success metadata
-		eventMap["paired_at"] = time.Now().Unix()
-		eventMap["device_id"] = v.ID.String()
-
+		d.enrichPairSuccessEvent(v, eventMap)
 	case *events.PairError:
-		// Add pair error metadata
-		eventMap["error_at"] = time.Now().Unix()
-		eventMap["error_message"] = v.Error.Error()
-
+		d.enrichPairErrorEvent(v, eventMap)
 	case *events.LoggedOut:
-		// Add logout metadata
-		eventMap["logged_out_at"] = time.Now().Unix()
-		eventMap["reason"] = fmt.Sprintf("%d", v.Reason)
-
+		d.enrichLoggedOutEvent(v, eventMap)
 	case *events.KeepAliveTimeout:
-		// Add keepalive timeout metadata
 		eventMap["timeout_at"] = time.Now().Unix()
-
 	case *events.KeepAliveRestored:
-		// Add keepalive restored metadata
 		eventMap["restored_at"] = time.Now().Unix()
-
 	case *events.UndecryptableMessage:
-		// Add undecryptable message metadata
-		eventMap["message_id"] = v.Info.ID
-		eventMap["chat"] = v.Info.Chat.String()
-		eventMap["sender"] = v.Info.Sender.String()
-		eventMap["timestamp"] = v.Info.Timestamp.Unix()
-		eventMap["is_unavailable"] = v.IsUnavailable
-
+		d.enrichUndecryptableMessageEvent(v, eventMap)
 	case *events.Picture:
-		// Add picture metadata
-		eventMap["jid"] = v.JID.String()
-		eventMap["author"] = v.Author.String()
-		eventMap["timestamp"] = v.Timestamp.Unix()
-		eventMap["remove"] = v.Remove
-
+		d.enrichPictureEvent(v, eventMap)
 	case *events.JoinedGroup:
-		// Add joined group metadata
-		eventMap["group_jid"] = v.JID.String()
-		eventMap["reason"] = v.Reason
-		eventMap["type"] = v.Type
+		d.enrichJoinedGroupEvent(v, eventMap)
 	}
 
 	return eventMap
+}
+
+func (d *EventDispatcher) enrichMessageEvent(v *events.Message, eventMap map[string]interface{}) {
+	eventMap["message_id"] = v.Info.ID
+	eventMap["from_me"] = v.Info.IsFromMe
+	eventMap["chat"] = v.Info.Chat.String()
+	eventMap["sender"] = v.Info.Sender.String()
+	eventMap["timestamp"] = v.Info.Timestamp.Unix()
+
+	d.setMessageType(v, eventMap)
+}
+
+func (d *EventDispatcher) setMessageType(v *events.Message, eventMap map[string]interface{}) {
+	switch {
+	case v.Message.Conversation != nil:
+		eventMap["message_type"] = "text"
+		eventMap["text"] = *v.Message.Conversation
+	case v.Message.ImageMessage != nil:
+		eventMap["message_type"] = "image"
+		if v.Message.ImageMessage.Caption != nil {
+			eventMap["caption"] = *v.Message.ImageMessage.Caption
+		}
+	case v.Message.AudioMessage != nil:
+		eventMap["message_type"] = "audio"
+	case v.Message.VideoMessage != nil:
+		eventMap["message_type"] = "video"
+		if v.Message.VideoMessage.Caption != nil {
+			eventMap["caption"] = *v.Message.VideoMessage.Caption
+		}
+	case v.Message.DocumentMessage != nil:
+		eventMap["message_type"] = "document"
+		if v.Message.DocumentMessage.FileName != nil {
+			eventMap["filename"] = *v.Message.DocumentMessage.FileName
+		}
+	case v.Message.StickerMessage != nil:
+		eventMap["message_type"] = "sticker"
+	case v.Message.LocationMessage != nil:
+		eventMap["message_type"] = "location"
+	case v.Message.ContactMessage != nil:
+		eventMap["message_type"] = "contact"
+	default:
+		eventMap["message_type"] = "unknown"
+	}
+}
+
+func (d *EventDispatcher) enrichReceiptEvent(v *events.Receipt, eventMap map[string]interface{}) {
+	eventMap["message_ids"] = v.MessageIDs
+	eventMap["chat"] = v.Chat.String()
+	eventMap["sender"] = v.Sender.String()
+	eventMap["timestamp"] = v.Timestamp.Unix()
+	eventMap["receipt_type"] = string(v.Type)
+}
+
+func (d *EventDispatcher) enrichQREvent(v *events.QR, eventMap map[string]interface{}) {
+	eventMap["codes_count"] = len(v.Codes)
+	delete(eventMap, "codes") // Remove for security
+}
+
+func (d *EventDispatcher) enrichGroupInfoEvent(v *events.GroupInfo, eventMap map[string]interface{}) {
+	eventMap["group_jid"] = v.JID.String()
+	if v.Name != nil {
+		eventMap["group_name"] = *v.Name
+	}
+	if v.Topic != nil {
+		eventMap["group_topic"] = *v.Topic
+	}
+}
+
+func (d *EventDispatcher) enrichPresenceEvent(v *events.Presence, eventMap map[string]interface{}) {
+	eventMap["from"] = v.From.String()
+	eventMap["unavailable"] = v.Unavailable
+	if !v.LastSeen.IsZero() {
+		eventMap["last_seen"] = v.LastSeen.Unix()
+	}
+}
+
+func (d *EventDispatcher) enrichChatPresenceEvent(v *events.ChatPresence, eventMap map[string]interface{}) {
+	eventMap["chat"] = v.Chat.String()
+	eventMap["state"] = string(v.State)
+	if v.Media != "" {
+		eventMap["media"] = string(v.Media)
+	}
+}
+
+func (d *EventDispatcher) enrichPairSuccessEvent(v *events.PairSuccess, eventMap map[string]interface{}) {
+	eventMap["paired_at"] = time.Now().Unix()
+	eventMap["device_id"] = v.ID.String()
+}
+
+func (d *EventDispatcher) enrichPairErrorEvent(v *events.PairError, eventMap map[string]interface{}) {
+	eventMap["error_at"] = time.Now().Unix()
+	eventMap["error_message"] = v.Error.Error()
+}
+
+func (d *EventDispatcher) enrichLoggedOutEvent(v *events.LoggedOut, eventMap map[string]interface{}) {
+	eventMap["logged_out_at"] = time.Now().Unix()
+	eventMap["reason"] = fmt.Sprintf("%d", v.Reason)
+}
+
+func (d *EventDispatcher) enrichUndecryptableMessageEvent(v *events.UndecryptableMessage, eventMap map[string]interface{}) {
+	eventMap["message_id"] = v.Info.ID
+	eventMap["chat"] = v.Info.Chat.String()
+	eventMap["sender"] = v.Info.Sender.String()
+	eventMap["timestamp"] = v.Info.Timestamp.Unix()
+	eventMap["is_unavailable"] = v.IsUnavailable
+}
+
+func (d *EventDispatcher) enrichPictureEvent(v *events.Picture, eventMap map[string]interface{}) {
+	eventMap["jid"] = v.JID.String()
+	eventMap["author"] = v.Author.String()
+	eventMap["timestamp"] = v.Timestamp.Unix()
+	eventMap["remove"] = v.Remove
+}
+
+func (d *EventDispatcher) enrichJoinedGroupEvent(v *events.JoinedGroup, eventMap map[string]interface{}) {
+	eventMap["group_jid"] = v.JID.String()
+	eventMap["reason"] = v.Reason
+	eventMap["type"] = v.Type
 }
 
 // Event type mapping for whatsmeow events to webhook event names

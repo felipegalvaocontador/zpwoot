@@ -83,14 +83,14 @@ func (ca *CommunityAdapter) GetCommunityInfo(ctx context.Context, sessionID stri
 	communityInfo := &community.CommunityInfo{
 		ID:               extractIDFromJID(communityJID),
 		JID:              communityJID,
-		Name:             groupInfo.GroupName.Name,
-		Description:      groupInfo.GroupTopic.Topic,
+		Name:             groupInfo.Name,
+		Description:      groupInfo.Topic,
 		ParticipantCount: len(groupInfo.Participants),
 		GroupCount:       0,     // Would need to be calculated from linked groups
 		IsOwner:          false, // Would need to be determined from user's role
 		IsAdmin:          false, // Would need to be determined from user's role
 		IsMuted:          false, // Would need to be determined from user's settings
-		IsAnnouncement:   groupInfo.GroupAnnounce.IsAnnounce,
+		IsAnnouncement:   groupInfo.IsAnnounce,
 	}
 
 	return communityInfo, nil

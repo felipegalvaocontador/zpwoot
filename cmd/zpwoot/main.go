@@ -326,6 +326,7 @@ func createDomainServices(repositories *repository.Repositories, managers manage
 		repositories.GetSessionRepository(),
 		managers.whatsapp,
 		adapters.qrGenerator,
+		appLogger,
 	)
 
 	webhookService := domainWebhook.NewService(

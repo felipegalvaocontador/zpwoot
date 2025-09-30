@@ -1689,7 +1689,7 @@ func convertToPortsGroupInfo(groupInfo interface{}) *ports.GroupInfo {
 			Participants: participants,
 			Settings: ports.GroupSettings{
 				Announce: gi.GroupAnnounce.IsAnnounce, // Usar gi.GroupAnnounce.IsAnnounce
-				Locked:   gi.GroupLocked.IsLocked,     // Usar gi.GroupLocked.IsLocked
+				Locked:   gi.IsLocked,     // Usar gi.IsLocked
 			},
 			CreatedAt: gi.GroupCreated,
 			UpdatedAt: time.Now(),

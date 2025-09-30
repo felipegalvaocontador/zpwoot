@@ -280,7 +280,7 @@ func (h *ChatwootHandler) validateSessionID(sessionID string) error {
 			"session_id": sessionID,
 			"error":      err.Error(),
 		})
-		return fmt.Errorf("Invalid session ID format")
+		return fmt.Errorf("invalid session ID format")
 	}
 	return nil
 }
@@ -296,7 +296,7 @@ func (h *ChatwootHandler) parseWebhookPayload(c *fiber.Ctx, sessionID string) (*
 			"error":      err.Error(),
 			"raw_body":   string(rawBody),
 		})
-		return nil, fmt.Errorf("Invalid webhook payload")
+		return nil, fmt.Errorf("invalid webhook payload")
 	}
 
 	// Log parsed payload for debugging
@@ -319,7 +319,7 @@ func (h *ChatwootHandler) validateEventType(sessionID, event string, rawBody []b
 			"event":      event,
 			"raw_body":   string(rawBody),
 		})
-		return fmt.Errorf("Invalid event type")
+		return fmt.Errorf("invalid event type")
 	}
 	return nil
 }
@@ -425,58 +425,36 @@ func (h *ChatwootHandler) SetConfig(c *fiber.Ctx) error {
 	}
 
 	ctx := c.Context()
+	sessionID := c.Params("sessionId")
 
 	_, err := h.chatwootUC.GetConfig(ctx)
-
 	if err != nil {
-		sessionID := c.Params("sessionId")
-		result, createErr := h.chatwootUC.CreateConfig(ctx, sessionID, &req)
-		if createErr != nil {
-			return c.Status(500).JSON(fiber.Map{
-				"success": false,
-				"message": "Failed to create Chatwoot configuration",
-				"error":   createErr.Error(),
-			})
-		}
+		return h.handleCreateConfig(ctx, sessionID, &req, c)
+	}
 
-		// Auto-create inbox if requested
-		if req.AutoCreate != nil && *req.AutoCreate {
-			h.logger.InfoWithFields("Auto-creating Chatwoot inbox", map[string]interface{}{
-				"session_id":  sessionID,
-				"auto_create": true,
-			})
+	return h.handleUpdateConfig(ctx, sessionID, &req, c)
+}
 
-			// Generate inbox name (use provided name or default to session name)
-			inboxName := "WhatsApp zpwoot"
-			if req.InboxName != nil && *req.InboxName != "" {
-				inboxName = *req.InboxName
-			}
-
-			// Generate webhook URL automatically using server configuration
-			serverHost := os.Getenv("SERVER_HOST")
-			if serverHost == "" {
-				serverHost = "http://localhost:8080" // fallback
-			}
-			webhookURL := fmt.Sprintf("%s/chatwoot/webhook/%s", serverHost, sessionID)
-
-			// Call auto-creation logic (this would need to be implemented in the use case)
-			autoCreateErr := h.chatwootUC.AutoCreateInbox(ctx, sessionID, inboxName, webhookURL)
-			if autoCreateErr != nil {
-				h.logger.WarnWithFields("Failed to auto-create inbox", map[string]interface{}{
-					"session_id": sessionID,
-					"error":      autoCreateErr.Error(),
-				})
-				// Don't fail the entire request, just log the warning
-			}
-		}
-
-		return c.Status(201).JSON(fiber.Map{
-			"success": true,
-			"message": "Chatwoot configuration created successfully",
-			"data":    result,
+func (h *ChatwootHandler) handleCreateConfig(ctx context.Context, sessionID string, req *chatwoot.CreateChatwootConfigRequest, c *fiber.Ctx) error {
+	result, createErr := h.chatwootUC.CreateConfig(ctx, sessionID, req)
+	if createErr != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"success": false,
+			"message": "Failed to create Chatwoot configuration",
+			"error":   createErr.Error(),
 		})
 	}
 
+	h.handleAutoCreateInbox(ctx, sessionID, req)
+
+	return c.Status(201).JSON(fiber.Map{
+		"success": true,
+		"message": "Chatwoot configuration created successfully",
+		"data":    result,
+	})
+}
+
+func (h *ChatwootHandler) handleUpdateConfig(ctx context.Context, sessionID string, req *chatwoot.CreateChatwootConfigRequest, c *fiber.Ctx) error {
 	updateReq := chatwoot.UpdateChatwootConfigRequest{
 		URL:       &req.URL,
 		Token:     &req.Token,
@@ -493,43 +471,46 @@ func (h *ChatwootHandler) SetConfig(c *fiber.Ctx) error {
 		})
 	}
 
-	// Auto-create inbox if requested (also for updates)
-	if req.AutoCreate != nil && *req.AutoCreate {
-		sessionID := c.Params("sessionId")
-		h.logger.InfoWithFields("Auto-creating Chatwoot inbox", map[string]interface{}{
-			"session_id":  sessionID,
-			"auto_create": true,
-		})
-
-		// Generate inbox name (use provided name or default to session name)
-		inboxName := "WhatsApp zpwoot"
-		if req.InboxName != nil && *req.InboxName != "" {
-			inboxName = *req.InboxName
-		}
-
-		// Generate webhook URL automatically using server configuration
-		serverHost := os.Getenv("SERVER_HOST")
-		if serverHost == "" {
-			serverHost = "http://localhost:8080" // fallback
-		}
-		webhookURL := fmt.Sprintf("%s/chatwoot/webhook/%s", serverHost, sessionID)
-
-		// Call auto-creation logic
-		autoCreateErr := h.chatwootUC.AutoCreateInbox(ctx, sessionID, inboxName, webhookURL)
-		if autoCreateErr != nil {
-			h.logger.WarnWithFields("Failed to auto-create inbox", map[string]interface{}{
-				"session_id": sessionID,
-				"error":      autoCreateErr.Error(),
-			})
-			// Don't fail the entire request, just log the warning
-		}
-	}
+	h.handleAutoCreateInbox(ctx, sessionID, req)
 
 	return c.JSON(fiber.Map{
 		"success": true,
 		"message": "Chatwoot configuration updated successfully",
 		"data":    result,
 	})
+}
+
+func (h *ChatwootHandler) handleAutoCreateInbox(ctx context.Context, sessionID string, req *chatwoot.CreateChatwootConfigRequest) {
+	if req.AutoCreate == nil || !*req.AutoCreate {
+		return
+	}
+
+	h.logger.InfoWithFields("Auto-creating Chatwoot inbox", map[string]interface{}{
+		"session_id":  sessionID,
+		"auto_create": true,
+	})
+
+	inboxName, webhookURL := h.generateInboxConfig(sessionID, req)
+
+	autoCreateErr := h.chatwootUC.AutoCreateInbox(ctx, sessionID, inboxName, webhookURL)
+	if autoCreateErr != nil {
+		h.logger.WarnWithFields("Failed to auto-create inbox", map[string]interface{}{
+			"session_id": sessionID,
+			"error":      autoCreateErr.Error(),
+		})
+	}
+}
+
+func (h *ChatwootHandler) generateInboxConfig(sessionID string, req *chatwoot.CreateChatwootConfigRequest) (string, string) {
+	inboxName := "WhatsApp zpwoot"
+	if req.InboxName != nil && *req.InboxName != "" {
+		inboxName = *req.InboxName
+	}
+
+	serverHost := h.getBaseURL(nil)
+	webhookURL := fmt.Sprintf("%s/chatwoot/webhook/%s", serverHost, sessionID)
+
+	return inboxName, webhookURL
 }
 
 // @Summary Get Chatwoot configuration

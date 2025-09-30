@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"errors"
+	"fmt"
 
 	"zpwoot/internal/app/newsletter"
 	domainSession "zpwoot/internal/domain/session"
@@ -50,8 +52,108 @@ func (h *NewsletterHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session
 }
 
 // handleNewsletterAction handles common newsletter action logic
+func (h *NewsletterHandler) handleNewsletterAction(
+	c *fiber.Ctx,
+	actionName string,
+	parseFunc func(*fiber.Ctx) (interface{}, error),
+	actionFunc func(context.Context, string, interface{}) (interface{}, error),
+) error {
+	sess, fiberErr := h.resolveSession(c)
+	if fiberErr != nil {
+		return fiberErr
+	}
 
+	req, err := parseFunc(c)
+	if err != nil {
+		h.logger.WarnWithFields(fmt.Sprintf("Failed to parse %s request", actionName), map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"error":      err.Error(),
+		})
+		return fiber.NewError(400, "Invalid request body")
+	}
 
+	// Extract NewsletterJID for logging if available
+	var newsletterJID string
+	if reqWithJID, ok := req.(interface{ GetNewsletterJID() string }); ok {
+		newsletterJID = reqWithJID.GetNewsletterJID()
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id":     sess.ID.String(),
+		"newsletter_jid": newsletterJID,
+	})
+
+	response, err := actionFunc(c.Context(), sess.ID.String(), req)
+	if err != nil {
+		h.logger.ErrorWithFields(fmt.Sprintf("Failed to %s", actionName), map[string]interface{}{
+			"session_id":     sess.ID.String(),
+			"newsletter_jid": newsletterJID,
+			"error":          err.Error(),
+		})
+
+		if errors.Is(err, domainSession.ErrSessionNotConnected) {
+			return fiber.NewError(400, "Session is not connected")
+		}
+
+		if err.Error() == "validation failed" {
+			return fiber.NewError(400, "Invalid request data")
+		}
+
+		return fiber.NewError(500, err.Error())
+	}
+
+	return c.JSON(response)
+}
+
+// handleNewsletterActionWithFiberMap handles newsletter actions that return fiber.Map responses
+func (h *NewsletterHandler) handleNewsletterActionWithFiberMap(
+	c *fiber.Ctx,
+	actionName string,
+	parseFunc func(*fiber.Ctx) (interface{}, error),
+	actionFunc func(context.Context, string, interface{}) (interface{}, error),
+) error {
+	sess, fiberErr := h.resolveSession(c)
+	if fiberErr != nil {
+		return fiberErr
+	}
+
+	req, err := parseFunc(c)
+	if err != nil {
+		h.logger.WarnWithFields(fmt.Sprintf("Failed to parse %s request", actionName), map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"error":      err.Error(),
+		})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Invalid request body",
+		})
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id": sess.ID.String(),
+	})
+
+	response, err := actionFunc(c.Context(), sess.ID.String(), req)
+	if err != nil {
+		h.logger.ErrorWithFields(fmt.Sprintf("Failed to %s", actionName), map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"error":      err.Error(),
+		})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   fmt.Sprintf("Failed to %s", actionName),
+		})
+	}
+
+	h.logger.InfoWithFields(fmt.Sprintf("%s successfully", actionName), map[string]interface{}{
+		"session_id": sess.ID.String(),
+	})
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"data":    response,
+	})
+}
 
 // CreateNewsletter creates a new WhatsApp newsletter/channel
 // POST /sessions/:sessionId/newsletters/create

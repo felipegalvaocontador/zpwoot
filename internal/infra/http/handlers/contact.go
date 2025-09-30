@@ -88,6 +88,7 @@ func (h *ContactHandler) CheckWhatsApp(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
+			//nolint:errcheck // Error is handled by handleContactAction wrapper
 			return h.contactUC.CheckWhatsApp(ctx, req.(*contact.CheckWhatsAppRequest))
 		},
 	)
@@ -172,6 +173,7 @@ func (h *ContactHandler) GetUserInfo(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
+			//nolint:errcheck // Error is handled by handleContactAction wrapper
 			return h.contactUC.GetUserInfo(ctx, req.(*contact.GetUserInfoRequest))
 		},
 	)

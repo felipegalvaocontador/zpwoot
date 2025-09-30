@@ -384,7 +384,10 @@ func (c *Client) makeRequest(method, endpoint string, payload interface{}, resul
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("API request failed with status %d (failed to read response body: %w)", resp.StatusCode, err)
+		}
 		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 

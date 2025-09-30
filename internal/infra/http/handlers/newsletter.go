@@ -324,7 +324,9 @@ func (h *NewsletterHandler) FollowNewsletter(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.newsletterUC.FollowNewsletter(ctx, sessionID, req.(*newsletter.FollowNewsletterRequest))
+			//nolint:errcheck // Error is handled by handleNewsletterAction wrapper
+
+			return h.newsletterUC.FollowNewsletter(ctx, sessionID, req.(*newsletter.FollowNewsletterRequest)) //nolint:errcheck // Error is handled by handleNewsletterAction wrapper
 		},
 	)
 }
@@ -343,7 +345,9 @@ func (h *NewsletterHandler) UnfollowNewsletter(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.newsletterUC.UnfollowNewsletter(ctx, sessionID, req.(*newsletter.UnfollowNewsletterRequest))
+			//nolint:errcheck // Error is handled by handleNewsletterAction wrapper
+
+			return h.newsletterUC.UnfollowNewsletter(ctx, sessionID, req.(*newsletter.UnfollowNewsletterRequest)) //nolint:errcheck // Error is handled by handleNewsletterAction wrapper
 		},
 	)
 }
@@ -675,7 +679,9 @@ func (h *NewsletterHandler) NewsletterToggleMute(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.newsletterUC.NewsletterToggleMute(ctx, sessionID, req.(*newsletter.NewsletterToggleMuteRequest))
+			//nolint:errcheck // Error is handled by handleNewsletterAction wrapper
+
+			return h.newsletterUC.NewsletterToggleMute(ctx, sessionID, req.(*newsletter.NewsletterToggleMuteRequest)) //nolint:errcheck // Error is handled by handleNewsletterAction wrapper
 		},
 	)
 }
@@ -693,7 +699,9 @@ func (h *NewsletterHandler) AcceptTOSNotice(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.newsletterUC.AcceptTOSNotice(ctx, sessionID, req.(*newsletter.AcceptTOSNoticeRequest))
+			//nolint:errcheck // Error is handled by handleNewsletterAction wrapper
+
+			return h.newsletterUC.AcceptTOSNotice(ctx, sessionID, req.(*newsletter.AcceptTOSNoticeRequest)) //nolint:errcheck // Error is handled by handleNewsletterAction wrapper
 		},
 	)
 }
@@ -711,7 +719,9 @@ func (h *NewsletterHandler) UploadNewsletter(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.newsletterUC.UploadNewsletter(ctx, sessionID, req.(*newsletter.UploadNewsletterRequest))
+			//nolint:errcheck // Error is handled by handleNewsletterAction wrapper
+
+			return h.newsletterUC.UploadNewsletter(ctx, sessionID, req.(*newsletter.UploadNewsletterRequest)) //nolint:errcheck // Error is handled by handleNewsletterAction wrapper
 		},
 	)
 }
@@ -729,7 +739,9 @@ func (h *NewsletterHandler) UploadNewsletterReader(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.newsletterUC.UploadNewsletterReader(ctx, sessionID, req.(*newsletter.UploadNewsletterRequest))
+			//nolint:errcheck // Error is handled by handleNewsletterAction wrapper
+
+			return h.newsletterUC.UploadNewsletterReader(ctx, sessionID, req.(*newsletter.UploadNewsletterRequest)) //nolint:errcheck // Error is handled by handleNewsletterAction wrapper
 		},
 	)
 }

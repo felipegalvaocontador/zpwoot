@@ -151,7 +151,10 @@ func (u *Utils) ValidateToken(token string) error {
 	}
 
 	// Basic format validation - tokens are usually alphanumeric
-	matched, _ := regexp.MatchString(`^[a-zA-Z0-9]+$`, token)
+	matched, err := regexp.MatchString(`^[a-zA-Z0-9]+$`, token)
+	if err != nil {
+		return fmt.Errorf("regex validation failed: %w", err)
+	}
 	if !matched {
 		return fmt.Errorf("token contains invalid characters")
 	}
@@ -166,7 +169,10 @@ func (u *Utils) ValidateAccountID(accountID string) error {
 	}
 
 	// Account ID should be numeric
-	matched, _ := regexp.MatchString(`^\d+$`, accountID)
+	matched, err := regexp.MatchString(`^\d+$`, accountID)
+	if err != nil {
+		return fmt.Errorf("regex validation failed: %w", err)
+	}
 	if !matched {
 		return fmt.Errorf("account ID must be numeric")
 	}
@@ -229,7 +235,11 @@ func (u *Utils) IsValidJID(jid string) bool {
 	}
 
 	for _, pattern := range patterns {
-		matched, _ := regexp.MatchString(pattern, jid)
+		matched, err := regexp.MatchString(pattern, jid)
+		if err != nil {
+			// If regex fails, continue to next pattern
+			continue
+		}
 		if matched {
 			return true
 		}
@@ -303,7 +313,10 @@ func (u *Utils) ParseChatwootURL(urlStr string) (*ChatwootURLInfo, error) {
 		return nil, err
 	}
 
-	parsedURL, _ := url.Parse(urlStr)
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse URL: %w", err)
+	}
 
 	info := &ChatwootURLInfo{
 		BaseURL: fmt.Sprintf("%s://%s", parsedURL.Scheme, parsedURL.Host),

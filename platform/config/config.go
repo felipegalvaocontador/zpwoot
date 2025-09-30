@@ -26,7 +26,11 @@ type Config struct {
 }
 
 func Load() *Config {
-	_ = godotenv.Load()
+	// Load .env file if it exists (optional, so we don't fail if it doesn't exist)
+	if err := godotenv.Load(); err != nil {
+		// .env file is optional, so we just continue without it
+		// This is common in production environments where env vars are set directly
+	}
 
 	return &Config{
 		Port:       getEnv("PORT", "8080"),

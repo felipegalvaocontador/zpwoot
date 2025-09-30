@@ -212,6 +212,7 @@ func (h *CommunityHandler) LinkGroup(c *fiber.Ctx) error {
 		"link",
 		h.parseLinkGroupRequest,
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
+			//nolint:errcheck // Error is handled by handleGroupLinkAction wrapper
 			return h.communityUC.LinkGroup(ctx, sessionID, req.(*community.LinkGroupRequest))
 		},
 	)
@@ -225,6 +226,7 @@ func (h *CommunityHandler) UnlinkGroup(c *fiber.Ctx) error {
 		"unlink",
 		h.parseUnlinkGroupRequest,
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
+			//nolint:errcheck // Error is handled by handleGroupLinkAction wrapper
 			return h.communityUC.UnlinkGroup(ctx, sessionID, req.(*community.UnlinkGroupRequest))
 		},
 	)
@@ -241,6 +243,7 @@ func (h *CommunityHandler) GetCommunityInfo(c *fiber.Ctx) error {
 			return &community.GetCommunityInfoRequest{CommunityJID: jid}
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
+			//nolint:errcheck // Error is handled by handleCommunityAction wrapper
 			return h.communityUC.GetCommunityInfo(ctx, sessionID, req.(*community.GetCommunityInfoRequest))
 		},
 	)
@@ -257,6 +260,7 @@ func (h *CommunityHandler) GetSubGroups(c *fiber.Ctx) error {
 			return &community.GetSubGroupsRequest{CommunityJID: jid}
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
+			//nolint:errcheck // Error is handled by handleCommunityQueryAction wrapper
 			return h.communityUC.GetSubGroups(ctx, sessionID, req.(*community.GetSubGroupsRequest))
 		},
 	)

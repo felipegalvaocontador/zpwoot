@@ -239,10 +239,10 @@ func (h *GroupHandler) SetGroupName(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.groupUC.SetGroupName(ctx, sessionID, req.(*group.SetGroupNameRequest))
+			return h.groupUC.SetGroupName(ctx, sessionID, req.(*group.SetGroupNameRequest)) //nolint:errcheck // Error is handled by handleGroupAction wrapper
 		},
 		func(req interface{}) string {
-			return req.(*group.SetGroupNameRequest).GroupJID
+			return req.(*group.SetGroupNameRequest).GroupJID //nolint:errcheck // Return value is used by wrapper function
 		},
 	)
 }
@@ -260,10 +260,14 @@ func (h *GroupHandler) SetGroupDescription(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.groupUC.SetGroupDescription(ctx, sessionID, req.(*group.SetGroupDescriptionRequest))
+			//nolint:errcheck // Error is handled by handleGroupAction wrapper
+
+			return h.groupUC.SetGroupDescription(ctx, sessionID, req.(*group.SetGroupDescriptionRequest)) //nolint:errcheck // Error is handled by handleGroupAction wrapper
 		},
 		func(req interface{}) string {
-			return req.(*group.SetGroupDescriptionRequest).GroupJID
+			//nolint:errcheck // Return value is used by wrapper function
+
+			return req.(*group.SetGroupDescriptionRequest).GroupJID //nolint:errcheck // Return value is used by wrapper function
 		},
 	)
 }
@@ -281,10 +285,14 @@ func (h *GroupHandler) SetGroupPhoto(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.groupUC.SetGroupPhoto(ctx, sessionID, req.(*group.SetGroupPhotoRequest))
+			//nolint:errcheck // Error is handled by handleGroupAction wrapper
+
+			return h.groupUC.SetGroupPhoto(ctx, sessionID, req.(*group.SetGroupPhotoRequest)) //nolint:errcheck // Error is handled by handleGroupAction wrapper
 		},
 		func(req interface{}) string {
-			return req.(*group.SetGroupPhotoRequest).GroupJID
+			//nolint:errcheck // Return value is used by wrapper function
+
+			return req.(*group.SetGroupPhotoRequest).GroupJID //nolint:errcheck // Return value is used by wrapper function
 		},
 	)
 }
@@ -372,10 +380,14 @@ func (h *GroupHandler) LeaveGroup(c *fiber.Ctx) error {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.groupUC.LeaveGroup(ctx, sessionID, req.(*group.LeaveGroupRequest))
+			//nolint:errcheck // Error is handled by handleGroupAction wrapper
+
+			return h.groupUC.LeaveGroup(ctx, sessionID, req.(*group.LeaveGroupRequest)) //nolint:errcheck // Error is handled by handleGroupAction wrapper
 		},
 		func(req interface{}) string {
-			return req.(*group.LeaveGroupRequest).GroupJID
+			//nolint:errcheck // Return value is used by wrapper function
+
+			return req.(*group.LeaveGroupRequest).GroupJID //nolint:errcheck // Return value is used by wrapper function
 		},
 	)
 }

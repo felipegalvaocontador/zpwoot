@@ -187,7 +187,13 @@ func getExistingDeviceJID(sessionRepo ports.SessionRepository, sessionID string)
 
 func createWhatsAppClient(deviceStore interface{}, logger *logger.Logger) (*whatsmeow.Client, error) {
 	waLogger := NewWameowLogger(logger)
-	client := whatsmeow.NewClient(deviceStore.(*store.Device), waLogger)
+
+	device, ok := deviceStore.(*store.Device)
+	if !ok {
+		return nil, fmt.Errorf("deviceStore is not of type *store.Device, got %T", deviceStore)
+	}
+
+	client := whatsmeow.NewClient(device, waLogger)
 	if client == nil {
 		return nil, fmt.Errorf("whatsmeow.NewClient returned nil")
 	}
@@ -1475,8 +1481,15 @@ func (c *WameowClient) buildListSections(sections []map[string]interface{}) []*w
 	var listSections []*waE2E.ListMessage_Section
 
 	for _, section := range sections {
-		title, _ := section["title"].(string)
-		rows, _ := section["rows"].([]interface{})
+		title, ok := section["title"].(string)
+		if !ok {
+			title = "Section" // Default title if conversion fails
+		}
+
+		rows, ok := section["rows"].([]interface{})
+		if !ok {
+			rows = []interface{}{} // Default empty rows if conversion fails
+		}
 
 		listRows := c.buildListRows(rows)
 
@@ -1499,9 +1512,20 @@ func (c *WameowClient) buildListRows(rows []interface{}) []*waE2E.ListMessage_Ro
 			continue
 		}
 
-		rowTitle, _ := row["title"].(string)
-		rowDescription, _ := row["description"].(string)
-		rowId, _ := row["id"].(string)
+		rowTitle, ok := row["title"].(string)
+		if !ok {
+			rowTitle = "Row" // Default title if conversion fails
+		}
+
+		rowDescription, ok := row["description"].(string)
+		if !ok {
+			rowDescription = "" // Default empty description if conversion fails
+		}
+
+		rowId, ok := row["id"].(string)
+		if !ok {
+			rowId = "" // Default empty ID if conversion fails
+		}
 
 		if rowId == "" {
 			rowId = rowTitle // fallback to title
@@ -3933,7 +3957,12 @@ func (c *WameowClient) GetSubGroups(ctx context.Context, communityJID string) ([
 	if err != nil {
 		return nil, err
 	}
-	return result.([]*types.GroupLinkTarget), nil
+
+	linkTargets, ok := result.([]*types.GroupLinkTarget)
+	if !ok {
+		return nil, fmt.Errorf("unexpected result type: expected []*types.GroupLinkTarget, got %T", result)
+	}
+	return linkTargets, nil
 }
 
 // GetLinkedGroupsParticipants gets participants from all linked groups in a community
@@ -3944,7 +3973,12 @@ func (c *WameowClient) GetLinkedGroupsParticipants(ctx context.Context, communit
 	if err != nil {
 		return nil, err
 	}
-	return result.([]types.JID), nil
+
+	jids, ok := result.([]types.JID)
+	if !ok {
+		return nil, fmt.Errorf("unexpected result type: expected []types.JID, got %T", result)
+	}
+	return jids, nil
 }
 
 // ============================================================================

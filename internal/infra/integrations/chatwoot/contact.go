@@ -181,7 +181,11 @@ func (cs *ContactSync) ValidatePhoneNumber(phone string) bool {
 	}
 
 	// Should contain only digits
-	matched, _ := regexp.MatchString(`^\d+$`, normalized)
+	matched, err := regexp.MatchString(`^\d+$`, normalized)
+	if err != nil {
+		// If regex fails, assume invalid phone number
+		return false
+	}
 	return matched
 }
 

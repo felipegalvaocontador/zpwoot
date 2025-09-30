@@ -75,7 +75,10 @@ func (w *httpLogWriter) Write(p []byte) (int, error) {
 			errorMsg = parts[6]
 		}
 
-		statusCode, _ := strconv.Atoi(status)
+		statusCode, err := strconv.Atoi(status)
+		if err != nil {
+			statusCode = 0 // Default to 0 if conversion fails
+		}
 
 		fields := map[string]interface{}{
 			"component":   "http",

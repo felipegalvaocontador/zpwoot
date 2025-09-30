@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -17,21 +18,16 @@ import (
 )
 
 type ContactHandler struct {
-	*BaseHandler
+	logger          *logger.Logger
 	contactUC       contact.UseCase
 	sessionResolver *helpers.SessionResolver
 }
 
 func NewContactHandler(appLogger *logger.Logger, contactUC contact.UseCase, sessionRepo helpers.SessionRepository) *ContactHandler {
-	sessionResolver := helpers.NewSessionResolver(appLogger, sessionRepo)
-	baseSessionResolver := &SessionResolver{
-		logger:      appLogger,
-		sessionRepo: sessionRepo,
-	}
 	return &ContactHandler{
-		BaseHandler:     NewBaseHandler(appLogger, baseSessionResolver),
+		logger:          appLogger,
 		contactUC:       contactUC,
-		sessionResolver: sessionResolver,
+		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
 	}
 }
 
@@ -57,14 +53,22 @@ func (h *ContactHandler) handleActionRequest(
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		h.writeErrorResponse(w, statusCode, err.Error())
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
 	req, err := parseFunc(r, sess)
 	if err != nil {
 		h.logger.Error("Failed to parse request body: " + err.Error())
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -76,11 +80,19 @@ func (h *ContactHandler) handleActionRequest(
 	result, err := actionFunc(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
-		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to "+actionName)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to "+actionName)); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
-	h.writeSuccessResponse(w, result, successMessage)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if encErr := json.NewEncoder(w).Encode(common.NewSuccessResponse(result, successMessage)); encErr != nil {
+		h.logger.Error("Failed to encode success response: " + encErr.Error())
+	}
 }
 
 func (h *ContactHandler) handleListRequest(
@@ -96,7 +108,11 @@ func (h *ContactHandler) handleListRequest(
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		h.writeErrorResponse(w, statusCode, err.Error())
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -134,11 +150,19 @@ func (h *ContactHandler) handleListRequest(
 	result, err := listFunc(r.Context(), sess, limit, offset, search)
 	if err != nil {
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
-		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to "+actionName)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to "+actionName)); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
-	h.writeSuccessResponse(w, result, successMessage)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if encErr := json.NewEncoder(w).Encode(common.NewSuccessResponse(result, successMessage)); encErr != nil {
+		h.logger.Error("Failed to encode success response: " + encErr.Error())
+	}
 }
 
 // @Summary Check if phone numbers are on WhatsApp
@@ -169,7 +193,11 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
-			return h.contactUC.CheckWhatsApp(ctx, req.(*contact.CheckWhatsAppRequest))
+			checkReq, ok := req.(*contact.CheckWhatsAppRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			return h.contactUC.CheckWhatsApp(ctx, checkReq)
 		},
 	)
 }
@@ -196,7 +224,9 @@ func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Reques
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -204,7 +234,9 @@ func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Reques
 	if jid == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("JID is required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("JID is required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -229,19 +261,25 @@ func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Reques
 		if err.Error() == "user not found" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("User not found"))
+			if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("User not found")); encErr != nil {
+				h.logger.Error("Failed to encode error response: " + encErr.Error())
+			}
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get profile picture"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get profile picture")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
 	response := common.NewSuccessResponse(result, "Profile picture retrieved successfully")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if encErr := json.NewEncoder(w).Encode(response); encErr != nil {
+		h.logger.Error("Failed to encode success response: " + encErr.Error())
+	}
 }
 
 // @Summary Get user information
@@ -272,7 +310,11 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
-			return h.contactUC.GetUserInfo(ctx, req.(*contact.GetUserInfoRequest))
+			userReq, ok := req.(*contact.GetUserInfoRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			return h.contactUC.GetUserInfo(ctx, userReq)
 		},
 	)
 }
@@ -332,7 +374,11 @@ func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 			}, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
-			return h.contactUC.SyncContacts(ctx, req.(*contact.SyncContactsRequest))
+			syncReq, ok := req.(*contact.SyncContactsRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			return h.contactUC.SyncContacts(ctx, syncReq)
 		},
 	)
 }

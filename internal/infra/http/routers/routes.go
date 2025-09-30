@@ -268,14 +268,21 @@ func setupMediaRoutes(r chi.Router, container *app.Container, appLogger *logger.
 
 // setupChatwootRoutes sets up chatwoot integration routes
 func setupChatwootRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
-	// TODO: Implement chatwoot handler for Chi when needed
-	// chatwootHandler := handlers.NewChatwootHandler(container.GetChatwootUseCase(), appLogger)
+	chatwootHandler := handlers.NewChatwootHandler(
+		container.GetChatwootUseCase(),
+		container.GetSessionRepository(),
+		appLogger,
+	)
 
-	// r.Route("/{sessionId}/chatwoot", func(r chi.Router) {
-	// 	r.Post("/set", chatwootHandler.CreateConfig)
-	// 	r.Get("/", chatwootHandler.GetConfig)
-	// 	r.Put("/", chatwootHandler.UpdateConfig)
-	// })
+	r.Route("/{sessionId}/chatwoot", func(r chi.Router) {
+		r.Post("/set", chatwootHandler.CreateConfig)
+		r.Get("/", chatwootHandler.GetConfig)
+		r.Put("/", chatwootHandler.UpdateConfig)
+		r.Delete("/", chatwootHandler.DeleteConfig)
+		r.Post("/test", chatwootHandler.TestConnection)
+		r.Get("/stats", chatwootHandler.GetStats)
+		r.Post("/auto-create-inbox", chatwootHandler.AutoCreateInbox)
+	})
 }
 
 // setupGlobalRoutes sets up global routes
@@ -284,7 +291,11 @@ func setupGlobalRoutes(r *chi.Mux, appLogger *logger.Logger, container *app.Cont
 	webhookHandler := handlers.NewWebhookHandler(appLogger, container.GetWebhookUseCase(), container.GetSessionRepository())
 	r.Get("/webhook/events", webhookHandler.GetSupportedEvents)
 
-	// TODO: Implement chatwoot webhook for Chi when needed
-	// chatwootHandler := handlers.NewChatwootHandler(container.GetChatwootUseCase(), appLogger)
-	// r.Post("/chatwoot/webhook/{sessionId}", chatwootHandler.ReceiveWebhook)
+	// Chatwoot webhook routes
+	chatwootHandler := handlers.NewChatwootHandler(
+		container.GetChatwootUseCase(),
+		container.GetSessionRepository(),
+		appLogger,
+	)
+	r.Post("/chatwoot/webhook/{sessionId}", chatwootHandler.ReceiveWebhook)
 }

@@ -70,7 +70,9 @@ func (h *CommunityHandler) handleGroupLinkAction(
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -79,7 +81,9 @@ func (h *CommunityHandler) handleGroupLinkAction(
 		h.logger.Error("Failed to parse request body: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -103,7 +107,9 @@ func (h *CommunityHandler) handleGroupLinkAction(
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s group", actionName)))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s group", actionName))); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -113,7 +119,9 @@ func (h *CommunityHandler) handleGroupLinkAction(
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("Group %sed successfully", actionName)))
+	if encErr := json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("Group %sed successfully", actionName))); encErr != nil {
+		h.logger.Error("Failed to encode success response: " + encErr.Error())
+	}
 }
 
 func (h *CommunityHandler) handleCommunityQueryAction(
@@ -132,7 +140,9 @@ func (h *CommunityHandler) handleCommunityQueryAction(
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -140,7 +150,9 @@ func (h *CommunityHandler) handleCommunityQueryAction(
 	if paramValue == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("%s parameter is required", paramName)))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("%s parameter is required", paramName))); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -168,7 +180,9 @@ func (h *CommunityHandler) handleCommunityQueryAction(
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName))); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -179,7 +193,9 @@ func (h *CommunityHandler) handleCommunityQueryAction(
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("%s completed successfully", actionName)))
+	if encErr := json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("%s completed successfully", actionName))); encErr != nil {
+		h.logger.Error("Failed to encode success response: " + encErr.Error())
+	}
 }
 
 func (h *CommunityHandler) parseLinkGroupRequest(r *http.Request) (interface{}, error) {
@@ -218,7 +234,12 @@ func (h *CommunityHandler) LinkGroup(w http.ResponseWriter, r *http.Request) {
 		"link",
 		h.parseLinkGroupRequest,
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.communityUC.LinkGroup(ctx, sessionID, req.(*community.LinkGroupRequest))
+			linkReq, ok := req.(*community.LinkGroupRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.communityUC.LinkGroup(ctx, sessionID, linkReq)
+			return result, err
 		},
 	)
 }
@@ -243,7 +264,12 @@ func (h *CommunityHandler) UnlinkGroup(w http.ResponseWriter, r *http.Request) {
 		"unlink",
 		h.parseUnlinkGroupRequest,
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.communityUC.UnlinkGroup(ctx, sessionID, req.(*community.UnlinkGroupRequest))
+			unlinkReq, ok := req.(*community.UnlinkGroupRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.communityUC.UnlinkGroup(ctx, sessionID, unlinkReq)
+			return result, err
 		},
 	)
 }
@@ -270,7 +296,12 @@ func (h *CommunityHandler) GetCommunityInfo(w http.ResponseWriter, r *http.Reque
 			return &community.GetCommunityInfoRequest{CommunityJID: jid}
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.communityUC.GetCommunityInfo(ctx, sessionID, req.(*community.GetCommunityInfoRequest))
+			infoReq, ok := req.(*community.GetCommunityInfoRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.communityUC.GetCommunityInfo(ctx, sessionID, infoReq)
+			return result, err
 		},
 	)
 }
@@ -297,7 +328,12 @@ func (h *CommunityHandler) GetSubGroups(w http.ResponseWriter, r *http.Request) 
 			return &community.GetSubGroupsRequest{CommunityJID: jid}
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.communityUC.GetSubGroups(ctx, sessionID, req.(*community.GetSubGroupsRequest))
+			subGroupsReq, ok := req.(*community.GetSubGroupsRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.communityUC.GetSubGroups(ctx, sessionID, subGroupsReq)
+			return result, err
 		},
 	)
 }

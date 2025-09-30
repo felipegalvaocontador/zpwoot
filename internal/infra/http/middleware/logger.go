@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"zpwoot/platform/logger"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func HTTPLogger(logger *logger.Logger) func(http.Handler) http.Handler {

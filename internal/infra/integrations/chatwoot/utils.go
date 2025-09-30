@@ -355,26 +355,27 @@ func (u *Utils) GetErrorCategory(err error) string {
 
 	errStr := strings.ToLower(err.Error())
 
-	switch {
-	case strings.Contains(errStr, "connection"):
-		return "connection"
-	case strings.Contains(errStr, "timeout"):
-		return "timeout"
-	case strings.Contains(errStr, "unauthorized") || strings.Contains(errStr, "401"):
-		return "authentication"
-	case strings.Contains(errStr, "forbidden") || strings.Contains(errStr, "403"):
-		return "authorization"
-	case strings.Contains(errStr, "not found") || strings.Contains(errStr, "404"):
-		return "not_found"
-	case strings.Contains(errStr, "rate limit") || strings.Contains(errStr, "429"):
-		return "rate_limit"
-	case strings.Contains(errStr, "server") || strings.Contains(errStr, "500"):
-		return "server_error"
-	case strings.Contains(errStr, "network"):
-		return "network"
-	case strings.Contains(errStr, "parse") || strings.Contains(errStr, "json"):
-		return "parsing"
-	default:
-		return "unknown"
+	// Define error category mappings
+	errorCategories := map[string][]string{
+		"connection":     {"connection"},
+		"timeout":        {"timeout"},
+		"authentication": {"unauthorized", "401"},
+		"authorization":  {"forbidden", "403"},
+		"not_found":      {"not found", "404"},
+		"rate_limit":     {"rate limit", "429"},
+		"server_error":   {"server", "500"},
+		"network":        {"network"},
+		"parsing":        {"parse", "json"},
 	}
+
+	// Check each category
+	for category, keywords := range errorCategories {
+		for _, keyword := range keywords {
+			if strings.Contains(errStr, keyword) {
+				return category
+			}
+		}
+	}
+
+	return "unknown"
 }

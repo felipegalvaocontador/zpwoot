@@ -1407,27 +1407,7 @@ func (h *MessageHandler) sendSpecificMessageType(c *fiber.Ctx, messageType strin
 	ctx := c.Context()
 	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), &req)
 	if err != nil {
-		h.logger.ErrorWithFields("Failed to send "+messageType+" message", map[string]interface{}{
-			"session_id": sess.ID.String(),
-			"to":         req.RemoteJID,
-			"type":       messageType,
-			"error":      err.Error(),
-		})
-
-		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
-		}
-		if strings.Contains(err.Error(), "not logged in") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not logged in"))
-		}
-		if strings.Contains(err.Error(), "invalid request") {
-			return c.Status(400).JSON(common.NewErrorResponse(err.Error()))
-		}
-		if strings.Contains(err.Error(), "failed to process media") {
-			return c.Status(400).JSON(common.NewErrorResponse("Failed to process media: " + err.Error()))
-		}
-
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to send " + messageType + " message"))
+		return h.handleSendMessageError(c, err, messageType, sess.ID.String(), req.RemoteJID)
 	}
 
 	h.logger.InfoWithFields(capitalizeFirst(messageType)+" message sent successfully", map[string]interface{}{
@@ -1442,44 +1422,72 @@ func (h *MessageHandler) sendSpecificMessageType(c *fiber.Ctx, messageType strin
 
 // detectMediaType detects the media type from MIME type or file extension
 func (h *MessageHandler) detectMediaType(mimeType, fileURL string) string {
-	// If MIME type is provided, use it
+	// Define media type mappings
+	mimeTypePrefixes := map[string]string{
+		"image/": "image",
+		"audio/": "audio",
+		"video/": "video",
+		"application/": "document",
+	}
+
+	fileExtensions := map[string]string{
+		".jpg": "image", ".jpeg": "image", ".png": "image", ".gif": "image", ".webp": "image",
+		".mp3": "audio", ".wav": "audio", ".ogg": "audio", ".m4a": "audio",
+		".mp4": "video", ".avi": "video", ".mov": "video", ".webm": "video",
+		".pdf": "document", ".doc": "document", ".txt": "document", ".zip": "document",
+	}
+
+	// Check MIME type first
 	if mimeType != "" {
-		switch {
-		case strings.HasPrefix(mimeType, "image/"):
-			return "image"
-		case strings.HasPrefix(mimeType, "audio/"):
-			return "audio"
-		case strings.HasPrefix(mimeType, "video/"):
-			return "video"
-		case mimeType == "application/pdf" || strings.HasPrefix(mimeType, "application/"):
-			return "document"
-		case mimeType == "image/webp" && strings.Contains(fileURL, "sticker"):
+		// Special case for stickers
+		if mimeType == "image/webp" && strings.Contains(fileURL, "sticker") {
 			return "sticker"
+		}
+
+		// Check MIME type prefixes
+		for prefix, mediaType := range mimeTypePrefixes {
+			if strings.HasPrefix(mimeType, prefix) {
+				return mediaType
+			}
 		}
 	}
 
 	// Fallback to file extension detection
 	if fileURL != "" {
 		lower := strings.ToLower(fileURL)
-		switch {
-		case strings.Contains(lower, ".jpg") || strings.Contains(lower, ".jpeg") ||
-			strings.Contains(lower, ".png") || strings.Contains(lower, ".gif") ||
-			strings.Contains(lower, ".webp"):
-			return "image"
-		case strings.Contains(lower, ".mp3") || strings.Contains(lower, ".wav") ||
-			strings.Contains(lower, ".ogg") || strings.Contains(lower, ".m4a"):
-			return "audio"
-		case strings.Contains(lower, ".mp4") || strings.Contains(lower, ".avi") ||
-			strings.Contains(lower, ".mov") || strings.Contains(lower, ".webm"):
-			return "video"
-		case strings.Contains(lower, ".pdf") || strings.Contains(lower, ".doc") ||
-			strings.Contains(lower, ".txt") || strings.Contains(lower, ".zip"):
-			return "document"
+		for ext, mediaType := range fileExtensions {
+			if strings.Contains(lower, ext) {
+				return mediaType
+			}
 		}
 	}
 
 	// Default to image if can't detect
 	return "image"
+}
+
+// handleSendMessageError handles errors from sending messages with appropriate status codes
+func (h *MessageHandler) handleSendMessageError(c *fiber.Ctx, err error, messageType, sessionID, remoteJID string) error {
+	h.logger.ErrorWithFields("Failed to send "+messageType+" message", map[string]interface{}{
+		"session_id": sessionID,
+		"to":         remoteJID,
+		"type":       messageType,
+		"error":      err.Error(),
+	})
+
+	errStr := err.Error()
+	switch {
+	case strings.Contains(errStr, "not connected"):
+		return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+	case strings.Contains(errStr, "not logged in"):
+		return c.Status(400).JSON(common.NewErrorResponse("Session is not logged in"))
+	case strings.Contains(errStr, "invalid request"):
+		return c.Status(400).JSON(common.NewErrorResponse(errStr))
+	case strings.Contains(errStr, "failed to process media"):
+		return c.Status(400).JSON(common.NewErrorResponse("Failed to process media: " + errStr))
+	default:
+		return c.Status(500).JSON(common.NewErrorResponse("Failed to send " + messageType + " message"))
+	}
 }
 
 // @Summary Send poll

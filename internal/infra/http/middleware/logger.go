@@ -63,52 +63,57 @@ func (w *httpLogWriter) Write(p []byte) (int, error) {
 	}
 
 	parts := strings.Split(logLine, " | ")
-	if len(parts) >= 6 {
-		timestamp := parts[0]
-		status := parts[1]
-		latency := parts[2]
-		ip := parts[3]
-		method := parts[4]
-		path := parts[5]
-		errorMsg := ""
-		if len(parts) > 6 {
-			errorMsg = parts[6]
-		}
-
-		statusCode, err := strconv.Atoi(status)
-		if err != nil {
-			statusCode = 0 // Default to 0 if conversion fails
-		}
-
-		fields := map[string]interface{}{
-			"component":   "http",
-			"timestamp":   timestamp,
-			"status_code": statusCode,
-			"latency":     latency,
-			"ip":          ip,
-			"method":      method,
-			"path":        path,
-		}
-
-		if errorMsg != "" && errorMsg != "-" {
-			fields["error"] = errorMsg
-		}
-
-		message := fmt.Sprintf("%s %s", method, path)
-
-		switch {
-		case statusCode >= 500:
-			w.logger.ErrorWithFields(message, fields)
-		case statusCode >= 400:
-			w.logger.WarnWithFields(message, fields)
-		default:
-			w.logger.InfoWithFields(message, fields)
-		}
-	} else {
-		w.logger.Info(logLine)
+	if len(parts) < 6 {
+		return len(p), nil
 	}
 
+	w.logHTTPRequest(parts)
 	return len(p), nil
+}
+
+// logHTTPRequest processes and logs HTTP request information
+func (w *httpLogWriter) logHTTPRequest(parts []string) {
+	timestamp := parts[0]
+	status := parts[1]
+	latency := parts[2]
+	ip := parts[3]
+	method := parts[4]
+	path := parts[5]
+
+	errorMsg := ""
+	if len(parts) > 6 {
+		errorMsg = parts[6]
+	}
+
+	statusCode, err := strconv.Atoi(status)
+	if err != nil {
+		statusCode = 0 // Default to 0 if conversion fails
+	}
+
+	fields := map[string]interface{}{
+		"component":   "http",
+		"timestamp":   timestamp,
+		"status_code": statusCode,
+		"latency":     latency,
+		"ip":          ip,
+		"method":      method,
+		"path":        path,
+	}
+
+	if errorMsg != "" && errorMsg != "-" {
+		fields["error"] = errorMsg
+	}
+
+	message := fmt.Sprintf("%s %s", method, path)
+
+	switch {
+	case statusCode >= 500:
+		w.logger.ErrorWithFields(message, fields)
+	case statusCode >= 400:
+		w.logger.WarnWithFields(message, fields)
+	default:
+		w.logger.InfoWithFields(message, fields)
+	}
 }
 
 func logHTTPRequest(logger *logger.Logger, c *fiber.Ctx, data *fiberLogger.Data) {

@@ -17,16 +17,21 @@ import (
 )
 
 type ContactHandler struct {
-	logger          *logger.Logger
+	*BaseHandler
 	contactUC       contact.UseCase
 	sessionResolver *helpers.SessionResolver
 }
 
 func NewContactHandler(appLogger *logger.Logger, contactUC contact.UseCase, sessionRepo helpers.SessionRepository) *ContactHandler {
+	sessionResolver := helpers.NewSessionResolver(appLogger, sessionRepo)
+	baseSessionResolver := &SessionResolver{
+		logger:      appLogger,
+		sessionRepo: sessionRepo,
+	}
 	return &ContactHandler{
-		logger:          appLogger,
+		BaseHandler:     NewBaseHandler(appLogger, baseSessionResolver),
 		contactUC:       contactUC,
-		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
+		sessionResolver: sessionResolver,
 	}
 }
 
@@ -54,18 +59,14 @@ func (h *ContactHandler) handleActionRequest(
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
 	req, err := parseFunc(r, sess)
 	if err != nil {
 		h.logger.Error("Failed to parse request body: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
@@ -77,16 +78,11 @@ func (h *ContactHandler) handleActionRequest(
 	result, err := actionFunc(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
 		return
 	}
 
-	response := common.NewSuccessResponse(result, successMessage)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, result, successMessage)
 }
 
 // handleListRequest handles list requests with pagination
@@ -103,9 +99,7 @@ func (h *ContactHandler) handleListRequest(
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
@@ -145,16 +139,11 @@ func (h *ContactHandler) handleListRequest(
 	result, err := listFunc(r.Context(), sess, limit, offset, search)
 	if err != nil {
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
 		return
 	}
 
-	response := common.NewSuccessResponse(result, successMessage)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, result, successMessage)
 }
 
 // @Summary Check if phone numbers are on WhatsApp

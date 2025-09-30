@@ -365,7 +365,9 @@ func (h *BaseHandler) handleSimpleGetRequest(
 func (h *BaseHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(common.NewErrorResponse(message))
+	if err := json.NewEncoder(w).Encode(common.NewErrorResponse(message)); err != nil {
+		h.logger.Error("Failed to encode error response: " + err.Error())
+	}
 }
 
 // writeSuccessResponse writes a success response
@@ -373,5 +375,7 @@ func (h *BaseHandler) writeSuccessResponse(w http.ResponseWriter, data interface
 	response := common.NewSuccessResponse(data, message)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode success response: " + err.Error())
+	}
 }

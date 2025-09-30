@@ -17,9 +17,8 @@ import (
 )
 
 type ChatwootHandler struct {
-	chatwootUC      chatwoot.UseCase
-	sessionResolver *helpers.SessionResolver
-	logger          *logger.Logger
+	*BaseHandler
+	chatwootUC chatwoot.UseCase
 }
 
 func NewChatwootHandler(
@@ -27,26 +26,18 @@ func NewChatwootHandler(
 	sessionRepo helpers.SessionRepository,
 	logger *logger.Logger,
 ) *ChatwootHandler {
-	sessionResolver := helpers.NewSessionResolver(logger, sessionRepo)
+	sessionResolver := &SessionResolver{
+		logger:      logger,
+		sessionRepo: sessionRepo,
+	}
 
 	return &ChatwootHandler{
-		chatwootUC:      chatwootUC,
-		sessionResolver: sessionResolver,
-		logger:          logger,
+		BaseHandler: NewBaseHandler(logger, sessionResolver),
+		chatwootUC:  chatwootUC,
 	}
 }
 
-// resolveSession resolves session from URL parameter
-func (h *ChatwootHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
-	sessionIdentifier := chi.URLParam(r, "sessionId")
-	if sessionIdentifier == "" {
-		return nil, errors.New("session identifier is required")
-	}
-
-	return h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
-}
-
-// handleChatwootAction is a helper function to reduce code duplication
+// handleChatwootAction is a helper function for chatwoot-specific actions
 func (h *ChatwootHandler) handleChatwootAction(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -54,15 +45,13 @@ func (h *ChatwootHandler) handleChatwootAction(
 	successMessage string,
 	actionFunc func(context.Context) (interface{}, error),
 ) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.resolveSessionFromChi(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
@@ -74,16 +63,11 @@ func (h *ChatwootHandler) handleChatwootAction(
 	result, err := actionFunc(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
 		return
 	}
 
-	response := common.NewSuccessResponse(result, successMessage)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, result, successMessage)
 }
 
 // @Summary Create Chatwoot configuration

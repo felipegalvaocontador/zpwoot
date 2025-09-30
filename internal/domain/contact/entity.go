@@ -36,10 +36,10 @@ type CheckWhatsAppRequest struct {
 // WhatsAppStatus represents the WhatsApp status of a phone number
 type WhatsAppStatus struct {
 	PhoneNumber  string `json:"phone_number"`
-	IsOnWhatsApp bool   `json:"is_on_whatsapp"`
 	JID          string `json:"jid,omitempty"`
-	IsBusiness   bool   `json:"is_business,omitempty"`
 	VerifiedName string `json:"verified_name,omitempty"`
+	IsOnWhatsApp bool   `json:"is_on_whatsapp"`
+	IsBusiness   bool   `json:"is_business,omitempty"`
 }
 
 // CheckWhatsAppResponse represents the response for checking WhatsApp numbers
@@ -58,12 +58,12 @@ type GetProfilePictureRequest struct {
 
 // ProfilePictureInfo represents profile picture information
 type ProfilePictureInfo struct {
+	UpdatedAt  time.Time `json:"updated_at"`
 	JID        string    `json:"jid"`
 	URL        string    `json:"url,omitempty"`
 	ID         string    `json:"id,omitempty"`
 	Type       string    `json:"type,omitempty"`
 	DirectPath string    `json:"direct_path,omitempty"`
-	UpdatedAt  time.Time `json:"updated_at"`
 	HasPicture bool      `json:"has_picture"`
 }
 
@@ -75,15 +75,15 @@ type GetUserInfoRequest struct {
 
 // UserInfo represents detailed user information
 type UserInfo struct {
+	LastSeen     *time.Time `json:"last_seen,omitempty"`
 	JID          string     `json:"jid"`
 	PhoneNumber  string     `json:"phone_number,omitempty"`
 	Name         string     `json:"name,omitempty"`
 	Status       string     `json:"status,omitempty"`
 	PictureID    string     `json:"picture_id,omitempty"`
-	IsBusiness   bool       `json:"is_business"`
 	VerifiedName string     `json:"verified_name,omitempty"`
+	IsBusiness   bool       `json:"is_business"`
 	IsContact    bool       `json:"is_contact"`
-	LastSeen     *time.Time `json:"last_seen,omitempty"`
 	IsOnline     bool       `json:"is_online"`
 }
 
@@ -97,13 +97,15 @@ type GetUserInfoResponse struct {
 // ListContactsRequest represents a request to list contacts
 type ListContactsRequest struct {
 	SessionID string `json:"session_id"`
+	Search    string `json:"search,omitempty"`
 	Limit     int    `json:"limit,omitempty"`
 	Offset    int    `json:"offset,omitempty"`
-	Search    string `json:"search,omitempty"`
 }
 
 // Contact represents a contact
 type Contact struct {
+	AddedAt     time.Time `json:"added_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 	JID         string    `json:"jid"`
 	PhoneNumber string    `json:"phone_number,omitempty"`
 	Name        string    `json:"name,omitempty"`
@@ -112,8 +114,6 @@ type Contact struct {
 	IsBusiness  bool      `json:"is_business"`
 	IsContact   bool      `json:"is_contact"`
 	IsBlocked   bool      `json:"is_blocked"`
-	AddedAt     time.Time `json:"added_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // ListContactsResponse represents the response for listing contacts
@@ -133,12 +133,12 @@ type SyncContactsRequest struct {
 
 // SyncContactsResponse represents the response for syncing contacts
 type SyncContactsResponse struct {
+	SyncedAt time.Time `json:"synced_at"`
 	Synced   int       `json:"synced"`
 	Added    int       `json:"added"`
 	Updated  int       `json:"updated"`
 	Removed  int       `json:"removed"`
 	Total    int       `json:"total"`
-	SyncedAt time.Time `json:"synced_at"`
 }
 
 // GetBusinessProfileRequest represents a request to get business profile
@@ -161,9 +161,9 @@ type BusinessProfile struct {
 
 // GetBusinessProfileResponse represents the response for getting business profile
 type GetBusinessProfileResponse struct {
+	UpdatedAt time.Time       `json:"updated_at"`
 	Profile   BusinessProfile `json:"profile"`
 	Found     bool            `json:"found"`
-	UpdatedAt time.Time       `json:"updated_at"`
 }
 
 // GetContactStatsRequest represents a request to get contact statistics
@@ -173,17 +173,17 @@ type GetContactStatsRequest struct {
 
 // ContactStats represents contact statistics
 type ContactStats struct {
+	LastSyncAt       *time.Time `json:"last_sync_at,omitempty"`
 	TotalContacts    int        `json:"total_contacts"`
 	WhatsAppContacts int        `json:"whatsapp_contacts"`
 	BusinessContacts int        `json:"business_contacts"`
 	BlockedContacts  int        `json:"blocked_contacts"`
 	SyncRate         float64    `json:"sync_rate"`
-	LastSyncAt       *time.Time `json:"last_sync_at,omitempty"`
 }
 
 // GetContactStatsResponse represents the response for getting contact stats
 type GetContactStatsResponse struct {
-	SessionID string       `json:"session_id"`
 	Stats     ContactStats `json:"stats"`
 	UpdatedAt time.Time    `json:"updated_at"`
+	SessionID string       `json:"session_id"`
 }

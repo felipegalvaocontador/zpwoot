@@ -16,13 +16,13 @@ import (
 	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -71,10 +71,10 @@ const (
 
 // MediaOptions contains options for media messages
 type MediaOptions struct {
+	ContextInfo *appMessage.ContextInfo
 	Caption     string
 	Filename    string
 	MimeType    string
-	ContextInfo *appMessage.ContextInfo
 }
 
 // QRGenerator defines the interface for QR code operations
@@ -91,29 +91,19 @@ type SessionUpdater interface {
 }
 
 type WameowClient struct {
-	sessionID string
-	client    *whatsmeow.Client
-	logger    *logger.Logger
-
-	// Composed services
-	sessionMgr  SessionUpdater
-	qrGenerator QRGenerator
-	msgSender   MessageSender
-
-	// Event handling
-	eventHandler QREventHandler
-
-	// State management
-	mu           sync.RWMutex
-	status       string
+	qrState      QRState
 	lastActivity time.Time
-
-	// QR code management
-	qrState QRState
-
-	// Lifecycle management
-	ctx    context.Context
-	cancel context.CancelFunc
+	sessionMgr   SessionUpdater
+	qrGenerator  QRGenerator
+	msgSender    MessageSender
+	eventHandler QREventHandler
+	ctx          context.Context
+	logger       *logger.Logger
+	client       *whatsmeow.Client
+	cancel       context.CancelFunc
+	sessionID    string
+	status       string
+	mu           sync.RWMutex
 }
 
 type QREventHandler interface {
@@ -122,11 +112,11 @@ type QREventHandler interface {
 
 // QRState encapsulates QR code related state
 type QRState struct {
-	mu          sync.RWMutex
+	stopChannel chan bool
 	code        string
 	codeBase64  string
+	mu          sync.RWMutex
 	loopActive  bool
-	stopChannel chan bool
 }
 
 func NewWameowClient(
@@ -274,7 +264,7 @@ func (c *WameowClient) Disconnect() error {
 
 	// Step 3: Cancel context
 	if c.cancel != nil {
-		c.logger.InfoWithFields("Cancelling client context", map[string]interface{}{
+		c.logger.InfoWithFields("Canceling client context", map[string]interface{}{
 			"session_id": c.sessionID,
 		})
 		c.cancel()
@@ -440,7 +430,7 @@ func (c *WameowClient) handleQRLoop(qrChan <-chan whatsmeow.QRChannelItem) {
 	for {
 		select {
 		case <-c.ctx.Done():
-			c.logger.InfoWithFields("QR loop cancelled", map[string]interface{}{
+			c.logger.InfoWithFields("QR loop canceled", map[string]interface{}{
 				"session_id": c.sessionID,
 			})
 			return
@@ -3356,7 +3346,7 @@ func (c *WameowClient) executeNewsletterUpdatesRequest(ctx context.Context, jid 
 		return nil, fmt.Errorf("failed to get newsletter message updates: %w", err)
 	}
 
-	// Check if context was cancelled
+	// Check if context was canceled
 	select {
 	case <-ctxWithTimeout.Done():
 		c.logger.WarnWithFields("Newsletter message updates operation timed out", map[string]interface{}{

@@ -8,18 +8,18 @@ import (
 )
 
 type Session struct {
-	ID              uuid.UUID    `json:"id" db:"id"`
-	Name            string       `json:"name" db:"name"`
-	DeviceJid       string       `json:"deviceJid" db:"device_jid"`
-	IsConnected     bool         `json:"isConnected" db:"is_connected"`
-	ConnectionError *string      `json:"connectionError,omitempty" db:"connection_error"`
-	QRCode          string       `json:"qrCode,omitempty" db:"qr_code"`
-	QRCodeExpiresAt *time.Time   `json:"qrCodeExpiresAt,omitempty" db:"qr_code_expires_at"`
-	ProxyConfig     *ProxyConfig `json:"proxyConfig,omitempty"`
 	CreatedAt       time.Time    `json:"createdAt" db:"created_at"`
 	UpdatedAt       time.Time    `json:"updatedAt" db:"updated_at"`
+	ConnectionError *string      `json:"connectionError,omitempty" db:"connection_error"`
+	QRCodeExpiresAt *time.Time   `json:"qrCodeExpiresAt,omitempty" db:"qr_code_expires_at"`
+	ProxyConfig     *ProxyConfig `json:"proxyConfig,omitempty"`
 	ConnectedAt     *time.Time   `json:"connectedAt,omitempty" db:"connected_at"`
 	LastSeen        *time.Time   `json:"lastSeen,omitempty" db:"last_seen"`
+	Name            string       `json:"name" db:"name"`
+	DeviceJid       string       `json:"deviceJid" db:"device_jid"`
+	QRCode          string       `json:"qrCode,omitempty" db:"qr_code"`
+	ID              uuid.UUID    `json:"id" db:"id"`
+	IsConnected     bool         `json:"isConnected" db:"is_connected"`
 }
 
 type SessionInfo struct {
@@ -52,17 +52,17 @@ var (
 
 // @name ProxyConfig
 type ProxyConfig struct {
-	Type     string `json:"type" db:"proxy_type" example:"http"` // http, socks5
+	Type     string `json:"type" db:"proxy_type" example:"http"`
 	Host     string `json:"host" db:"proxy_host" example:"proxy.example.com"`
-	Port     int    `json:"port" db:"proxy_port" example:"8080"`
 	Username string `json:"username,omitempty" db:"proxy_username" example:"user"`
 	Password string `json:"password,omitempty" db:"proxy_password" example:"password"`
+	Port     int    `json:"port" db:"proxy_port" example:"8080"`
 }
 
 type CreateSessionRequest struct {
+	ProxyConfig *ProxyConfig `json:"proxyConfig,omitempty"`
 	Name        string       `json:"name" validate:"required,min=1,max=100"`
 	QrCode      bool         `json:"qrCode"`
-	ProxyConfig *ProxyConfig `json:"proxyConfig,omitempty"`
 }
 
 type UpdateSessionRequest struct {
@@ -82,9 +82,9 @@ type PairPhoneRequest struct {
 }
 
 type QRCodeResponse struct {
+	ExpiresAt   time.Time `json:"expires_at"`
 	QRCode      string    `json:"qr_code"`
 	QRCodeImage string    `json:"qr_code_image,omitempty"`
-	ExpiresAt   time.Time `json:"expires_at"`
 	Timeout     int       `json:"timeout_seconds"`
 }
 

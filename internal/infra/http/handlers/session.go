@@ -48,7 +48,7 @@ func (h *SessionHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session, *
 			"path":       c.Path(),
 		})
 
-		if err.Error() == "session not found" || err == domainSession.ErrSessionNotFound {
+		if err.Error() == "session not found" || errors.Is(err, domainSession.ErrSessionNotFound) {
 			return nil, fiber.NewError(404, "Session not found")
 		}
 
@@ -104,7 +104,8 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
 
 		// Handle specific error types
-		if appErr, ok := err.(*errors.AppError); ok {
+		appErr := &errors.AppError{}
+		if errors.As(err, &appErr) {
 			return c.Status(appErr.Code).JSON(common.NewErrorResponse(appErr.Message))
 		}
 

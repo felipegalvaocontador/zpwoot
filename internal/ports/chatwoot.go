@@ -115,19 +115,19 @@ type ChatwootIntegrationExtended interface {
 
 // ChatwootInbox represents an inbox in Chatwoot
 type ChatwootInbox struct {
-	ID                   int                    `json:"id"`
+	AdditionalAttributes map[string]interface{} `json:"additional_attributes,omitempty"`
 	Name                 string                 `json:"name"`
 	ChannelType          string                 `json:"channel_type"`
 	WebhookURL           string                 `json:"webhook_url,omitempty"`
-	GreetingEnabled      bool                   `json:"greeting_enabled"`
+	UpdatedAt            string                 `json:"updated_at"`
 	GreetingMessage      string                 `json:"greeting_message"`
-	WorkingHoursEnabled  bool                   `json:"working_hours_enabled"`
 	OutOfOfficeMessage   string                 `json:"out_of_office_message"`
 	Timezone             string                 `json:"timezone"`
-	EnableAutoAssignment bool                   `json:"enable_auto_assignment"`
-	AdditionalAttributes map[string]interface{} `json:"additional_attributes,omitempty"`
 	CreatedAt            string                 `json:"created_at"`
-	UpdatedAt            string                 `json:"updated_at"`
+	ID                   int                    `json:"id"`
+	WorkingHoursEnabled  bool                   `json:"working_hours_enabled"`
+	EnableAutoAssignment bool                   `json:"enable_auto_assignment"`
+	GreetingEnabled      bool                   `json:"greeting_enabled"`
 }
 
 // ChatwootContactInbox represents the relationship between contact and inbox
@@ -138,60 +138,60 @@ type ChatwootContactInbox struct {
 
 // ChatwootSender represents the sender of a message
 type ChatwootSender struct {
-	ID            int    `json:"id"`
 	Name          string `json:"name"`
 	AvailableName string `json:"available_name"`
 	AvatarURL     string `json:"avatar_url"`
-	Type          string `json:"type"` // contact, user, agent_bot
+	Type          string `json:"type"`
 	Identifier    string `json:"identifier,omitempty"`
 	Email         string `json:"email,omitempty"`
+	ID            int    `json:"id"`
 }
 
 // ChatwootAccount represents an account in Chatwoot
 type ChatwootAccount struct {
-	ID           int    `json:"id"`
 	Name         string `json:"name"`
 	Locale       string `json:"locale"`
 	Domain       string `json:"domain,omitempty"`
 	SupportEmail string `json:"support_email,omitempty"`
+	ID           int    `json:"id"`
 }
 
 // ChatwootAgent represents an agent in Chatwoot
 type ChatwootAgent struct {
-	ID        int    `json:"id"`
 	Name      string `json:"name"`
 	Email     string `json:"email"`
-	AccountID int    `json:"account_id"`
 	Role      string `json:"role"`
-	Confirmed bool   `json:"confirmed"`
 	AvatarURL string `json:"avatar_url,omitempty"`
+	ID        int    `json:"id"`
+	AccountID int    `json:"account_id"`
+	Confirmed bool   `json:"confirmed"`
 	Available bool   `json:"available"`
 }
 
 // ChatwootLabel represents a label in Chatwoot
 type ChatwootLabel struct {
-	ID            int    `json:"id"`
 	Title         string `json:"title"`
 	Description   string `json:"description"`
 	Color         string `json:"color"`
+	ID            int    `json:"id"`
 	ShowOnSidebar bool   `json:"show_on_sidebar"`
 }
 
 // ChatwootCustomAttribute represents a custom attribute in Chatwoot
 type ChatwootCustomAttribute struct {
-	ID             int    `json:"id"`
 	AttributeKey   string `json:"attribute_key"`
 	AttributeType  string `json:"attribute_type"`
 	Description    string `json:"description"`
 	DefaultValue   string `json:"default_value,omitempty"`
 	AttributeModel string `json:"attribute_model"`
+	ID             int    `json:"id"`
 }
 
 // ChatwootWebhook represents a webhook configuration in Chatwoot
 type ChatwootWebhook struct {
-	ID        int      `json:"id"`
 	URL       string   `json:"url"`
 	Events    []string `json:"events"`
+	ID        int      `json:"id"`
 	AccountID int      `json:"account_id"`
 }
 
@@ -231,33 +231,27 @@ type AccountMetrics struct {
 
 // ContactUpdate represents an update operation for a contact
 type ContactUpdate struct {
-	ID      int                    `json:"id"`
 	Updates map[string]interface{} `json:"updates"`
+	ID      int                    `json:"id"`
 }
 
 // ZpMessage represents a complete mapping between WhatsApp message and Chatwoot message
 type ZpMessage struct {
-	ID        string `json:"id"`
-	SessionID string `json:"session_id"`
-
-	// WhatsApp Message Data (from whatsmeow)
-	ZpMessageID string    `json:"zp_message_id"` // WhatsApp message ID
-	ZpSender    string    `json:"zp_sender"`     // WhatsApp sender JID
-	ZpChat      string    `json:"zp_chat"`       // WhatsApp chat JID
-	ZpTimestamp time.Time `json:"zp_timestamp"`  // WhatsApp message timestamp
-	ZpFromMe    bool      `json:"zp_from_me"`    // Whether message was sent by me
-	ZpType      string    `json:"zp_type"`       // WhatsApp message type
-	Content     string    `json:"content"`       // Message text content
-
-	// Chatwoot Message Data
-	CwMessageID      *int `json:"cw_message_id,omitempty"`      // Chatwoot message ID
-	CwConversationID *int `json:"cw_conversation_id,omitempty"` // Chatwoot conversation ID
-
-	// Sync Status
-	SyncStatus string     `json:"sync_status"` // pending, synced, failed
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
-	SyncedAt   *time.Time `json:"synced_at,omitempty"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	ZpTimestamp      time.Time  `json:"zp_timestamp"`
+	CwMessageID      *int       `json:"cw_message_id,omitempty"`
+	SyncedAt         *time.Time `json:"synced_at,omitempty"`
+	CwConversationID *int       `json:"cw_conversation_id,omitempty"`
+	ZpSender         string     `json:"zp_sender"`
+	ZpType           string     `json:"zp_type"`
+	Content          string     `json:"content"`
+	ZpChat           string     `json:"zp_chat"`
+	SyncStatus       string     `json:"sync_status"`
+	ID               string     `json:"id"`
+	ZpMessageID      string     `json:"zp_message_id"`
+	SessionID        string     `json:"session_id"`
+	ZpFromMe         bool       `json:"zp_from_me"`
 }
 
 // ChatwootMessageRepository defines the interface for zpMessage operations
@@ -284,7 +278,7 @@ type ChatwootMessageMapper interface {
 
 // ChatwootWebhookPayload represents the payload structure for Chatwoot webhooks
 type ChatwootWebhookPayload struct {
-	Event   string                 `json:"event"`
-	Account ChatwootAccount        `json:"account"`
 	Data    map[string]interface{} `json:"data"`
+	Account ChatwootAccount        `json:"account"`
+	Event   string                 `json:"event"`
 }

@@ -190,7 +190,7 @@ func (im *ImportManager) GetImportProgress(sessionID string) (*ImportProgress, e
 
 // CancelImport cancels an ongoing import
 func (im *ImportManager) CancelImport(sessionID string) error {
-	im.logger.InfoWithFields("Cancelling import", map[string]interface{}{
+	im.logger.InfoWithFields("Canceling import", map[string]interface{}{
 		"session_id": sessionID,
 	})
 
@@ -205,7 +205,7 @@ type ImportResult struct {
 	SessionID            string        `json:"session_id"`
 	InboxID              int           `json:"inbox_id"`
 	DaysLimit            int           `json:"days_limit"`
-	Status               string        `json:"status"` // running, completed, failed, cancelled
+	Status               string        `json:"status"` // running, completed, failed, canceled
 	StartTime            time.Time     `json:"start_time"`
 	EndTime              time.Time     `json:"end_time"`
 	Duration             time.Duration `json:"duration"`
@@ -220,7 +220,7 @@ type ContactImportSummary struct {
 	SessionID           string        `json:"session_id"`
 	InboxID             int           `json:"inbox_id"`
 	MergeBrazilContacts bool          `json:"merge_brazil_contacts"`
-	Status              string        `json:"status"` // running, completed, failed, cancelled
+	Status              string        `json:"status"` // running, completed, failed, canceled
 	StartTime           time.Time     `json:"start_time"`
 	EndTime             time.Time     `json:"end_time"`
 	Duration            time.Duration `json:"duration"`
@@ -233,7 +233,7 @@ type ContactImportSummary struct {
 // ImportProgress represents the progress of an ongoing import
 type ImportProgress struct {
 	SessionID         string `json:"session_id"`
-	Status            string `json:"status"` // running, completed, failed, cancelled, not_found
+	Status            string `json:"status"` // running, completed, failed, canceled, not_found
 	ProgressPercent   int    `json:"progress_percent"`
 	MessagesProcessed int    `json:"messages_processed"`
 	TotalMessages     int    `json:"total_messages"`

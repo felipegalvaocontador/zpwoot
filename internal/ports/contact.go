@@ -114,11 +114,11 @@ type ContactService interface {
 
 // ListContactsRequest represents a request to list contacts
 type ListContactsRequest struct {
+	IsBusiness  *bool  `json:"is_business,omitempty"`
+	IsBlocked   *bool  `json:"is_blocked,omitempty"`
 	SessionID   string `json:"session_id"`
 	Query       string `json:"query,omitempty"`
 	ContactType string `json:"contact_type,omitempty"`
-	IsBusiness  *bool  `json:"is_business,omitempty"`
-	IsBlocked   *bool  `json:"is_blocked,omitempty"`
 	Limit       int    `json:"limit"`
 	Offset      int    `json:"offset"`
 }
@@ -160,11 +160,11 @@ type GetProfilePictureRequest struct {
 
 // ProfilePictureInfo represents profile picture information
 type ProfilePictureInfo struct {
+	UpdatedAt time.Time `json:"updated_at"`
 	URL       string    `json:"url"`
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	DirectURL string    `json:"direct_url,omitempty"`
-	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // GetUserInfoRequest represents a request to get user information
@@ -196,10 +196,10 @@ type SyncContactsRequest struct {
 
 // SyncContactsResponse represents a response for contact sync
 type SyncContactsResponse struct {
+	Contacts     []*contact.Contact `json:"contacts"`
 	SyncedCount  int                `json:"synced_count"`
 	NewCount     int                `json:"new_count"`
 	UpdatedCount int                `json:"updated_count"`
-	Contacts     []*contact.Contact `json:"contacts"`
 }
 
 // GetBusinessProfileRequest represents a request to get business profile

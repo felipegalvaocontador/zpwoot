@@ -70,21 +70,21 @@ type ProfilePictureInfo struct {
 
 // NewsletterInfo represents a WhatsApp newsletter/channel
 type NewsletterInfo struct {
-	ID                string                      `json:"id"`
-	Name              string                      `json:"name"`
-	Description       string                      `json:"description"`
-	InviteCode        string                      `json:"inviteCode"`
-	SubscriberCount   int                         `json:"subscriberCount"`
-	State             NewsletterState             `json:"state"`
-	Role              NewsletterRole              `json:"role"`
-	Muted             bool                        `json:"muted"`
-	MuteState         NewsletterMuteState         `json:"muteState"`
-	Verified          bool                        `json:"verified"`
-	VerificationState NewsletterVerificationState `json:"verificationState"`
 	CreationTime      time.Time                   `json:"creationTime"`
 	UpdateTime        time.Time                   `json:"updateTime"`
-	Picture           *ProfilePictureInfo         `json:"picture,omitempty"`
 	Preview           *ProfilePictureInfo         `json:"preview,omitempty"`
+	Picture           *ProfilePictureInfo         `json:"picture,omitempty"`
+	Role              NewsletterRole              `json:"role"`
+	State             NewsletterState             `json:"state"`
+	ID                string                      `json:"id"`
+	MuteState         NewsletterMuteState         `json:"muteState"`
+	VerificationState NewsletterVerificationState `json:"verificationState"`
+	InviteCode        string                      `json:"inviteCode"`
+	Description       string                      `json:"description"`
+	Name              string                      `json:"name"`
+	SubscriberCount   int                         `json:"subscriberCount"`
+	Muted             bool                        `json:"muted"`
+	Verified          bool                        `json:"verified"`
 }
 
 // CreateNewsletterRequest represents the data needed to create a newsletter
@@ -284,22 +284,22 @@ func ParseNewsletterState(state string) (NewsletterState, error) {
 
 // NewsletterMessage represents a message in a newsletter
 type NewsletterMessage struct {
+	Timestamp   time.Time `json:"timestamp"`
 	ID          string    `json:"id"`
 	ServerID    string    `json:"serverId"`
 	FromJID     string    `json:"fromJid"`
-	Timestamp   time.Time `json:"timestamp"`
 	Type        string    `json:"type"`
 	Body        string    `json:"body,omitempty"`
+	Reactions   []string  `json:"reactions,omitempty"`
 	ViewsCount  int       `json:"viewsCount"`
 	SharesCount int       `json:"sharesCount"`
-	Reactions   []string  `json:"reactions,omitempty"`
 }
 
 // GetNewsletterMessagesRequest represents the request for getting newsletter messages
 type GetNewsletterMessagesRequest struct {
 	JID    string `json:"jid" validate:"required"`
+	Before string `json:"before,omitempty"`
 	Count  int    `json:"count,omitempty"`
-	Before string `json:"before,omitempty"` // MessageServerID
 }
 
 // GetNewsletterMessagesResponse represents the response for getting newsletter messages
@@ -312,9 +312,9 @@ type GetNewsletterMessagesResponse struct {
 // GetNewsletterMessageUpdatesRequest represents the request for getting newsletter message updates
 type GetNewsletterMessageUpdatesRequest struct {
 	JID   string `json:"jid" validate:"required"`
+	Since string `json:"since,omitempty"`
+	After string `json:"after,omitempty"`
 	Count int    `json:"count,omitempty"`
-	Since string `json:"since,omitempty"` // ISO timestamp
-	After string `json:"after,omitempty"` // MessageServerID
 }
 
 // GetNewsletterMessageUpdatesResponse represents the response for getting newsletter message updates
@@ -369,9 +369,9 @@ type NewsletterActionResponse struct {
 
 // UploadNewsletterRequest represents the request for uploading newsletter media
 type UploadNewsletterRequest struct {
-	Data      []byte `json:"data" validate:"required"`
 	MimeType  string `json:"mimeType" validate:"required"`
-	MediaType string `json:"mediaType" validate:"required"` // image, video, audio, document
+	MediaType string `json:"mediaType" validate:"required"`
+	Data      []byte `json:"data" validate:"required"`
 }
 
 // UploadNewsletterResponse represents the response for uploading newsletter media

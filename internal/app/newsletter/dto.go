@@ -3,6 +3,7 @@ package newsletter
 import (
 	"fmt"
 	"time"
+
 	"zpwoot/internal/domain/newsletter"
 )
 
@@ -14,13 +15,13 @@ type CreateNewsletterRequest struct {
 
 // CreateNewsletterResponse - Response da criação de newsletter
 type CreateNewsletterResponse struct {
+	CreatedAt   time.Time `json:"createdAt"`
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	InviteCode  string    `json:"inviteCode"`
 	State       string    `json:"state"`
 	Role        string    `json:"role"`
-	CreatedAt   time.Time `json:"createdAt"`
 }
 
 // GetNewsletterInfoRequest - Request para obter info de newsletter
@@ -35,21 +36,21 @@ type GetNewsletterInfoWithInviteRequest struct {
 
 // NewsletterInfoResponse - Response com informações do newsletter
 type NewsletterInfoResponse struct {
-	ID                string              `json:"id"`
-	Name              string              `json:"name"`
-	Description       string              `json:"description"`
-	InviteCode        string              `json:"inviteCode"`
-	SubscriberCount   int                 `json:"subscriberCount"`
-	State             string              `json:"state"`
-	Role              string              `json:"role"`
-	Muted             bool                `json:"muted"`
-	MuteState         string              `json:"muteState"`
-	Verified          bool                `json:"verified"`
-	VerificationState string              `json:"verificationState"`
 	CreationTime      time.Time           `json:"creationTime"`
 	UpdateTime        time.Time           `json:"updateTime"`
-	Picture           *ProfilePictureInfo `json:"picture,omitempty"`
 	Preview           *ProfilePictureInfo `json:"preview,omitempty"`
+	Picture           *ProfilePictureInfo `json:"picture,omitempty"`
+	Role              string              `json:"role"`
+	State             string              `json:"state"`
+	ID                string              `json:"id"`
+	MuteState         string              `json:"muteState"`
+	VerificationState string              `json:"verificationState"`
+	InviteCode        string              `json:"inviteCode"`
+	Description       string              `json:"description"`
+	Name              string              `json:"name"`
+	SubscriberCount   int                 `json:"subscriberCount"`
+	Muted             bool                `json:"muted"`
+	Verified          bool                `json:"verified"`
 }
 
 // ProfilePictureInfo - Informações da foto do perfil
@@ -88,10 +89,10 @@ type SubscribedNewslettersResponse struct {
 
 // NewsletterActionResponse - Response genérica para ações
 type NewsletterActionResponse struct {
+	Timestamp time.Time `json:"timestamp"`
 	JID       string    `json:"jid"`
 	Status    string    `json:"status"`
 	Message   string    `json:"message"`
-	Timestamp time.Time `json:"timestamp"`
 }
 
 // Conversion methods
@@ -271,8 +272,8 @@ func NewErrorResponse(jid, message string) *NewsletterActionResponse {
 // GetNewsletterMessagesRequest represents the request for getting newsletter messages
 type GetNewsletterMessagesRequest struct {
 	NewsletterJID string `json:"newsletterJid" validate:"required"`
+	Before        string `json:"before,omitempty"`
 	Count         int    `json:"count,omitempty"`
-	Before        string `json:"before,omitempty"` // MessageServerID
 }
 
 // Validate validates the GetNewsletterMessagesRequest
@@ -288,15 +289,15 @@ func (req *GetNewsletterMessagesRequest) Validate() error {
 
 // NewsletterMessageDTO represents a newsletter message in the API
 type NewsletterMessageDTO struct {
+	Timestamp   time.Time `json:"timestamp"`
 	ID          string    `json:"id"`
 	ServerID    string    `json:"serverId"`
 	FromJID     string    `json:"fromJid"`
-	Timestamp   time.Time `json:"timestamp"`
 	Type        string    `json:"type"`
 	Body        string    `json:"body,omitempty"`
+	Reactions   []string  `json:"reactions,omitempty"`
 	ViewsCount  int       `json:"viewsCount"`
 	SharesCount int       `json:"sharesCount"`
-	Reactions   []string  `json:"reactions,omitempty"`
 }
 
 // FromDomain converts domain NewsletterMessage to DTO
@@ -338,9 +339,9 @@ func NewGetNewsletterMessagesResponse(messages []*newsletter.NewsletterMessage) 
 // GetNewsletterMessageUpdatesRequest represents the request for getting newsletter message updates
 type GetNewsletterMessageUpdatesRequest struct {
 	NewsletterJID string `json:"newsletterJid" validate:"required"`
+	Since         string `json:"since,omitempty"`
+	After         string `json:"after,omitempty"`
 	Count         int    `json:"count,omitempty"`
-	Since         string `json:"since,omitempty"` // ISO timestamp
-	After         string `json:"after,omitempty"` // MessageServerID
 }
 
 // Validate validates the GetNewsletterMessageUpdatesRequest
@@ -465,9 +466,9 @@ func (req *AcceptTOSNoticeRequest) Validate() error {
 
 // UploadNewsletterRequest represents the request for uploading newsletter media
 type UploadNewsletterRequest struct {
-	Data      []byte `json:"data" validate:"required"`
 	MimeType  string `json:"mimeType" validate:"required"`
-	MediaType string `json:"mediaType" validate:"required"` // image, video, audio, document
+	MediaType string `json:"mediaType" validate:"required"`
+	Data      []byte `json:"data" validate:"required"`
 }
 
 // Validate validates the UploadNewsletterRequest

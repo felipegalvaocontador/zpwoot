@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+
 	"zpwoot/internal/domain/newsletter"
 )
 

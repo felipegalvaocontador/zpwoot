@@ -79,79 +79,76 @@ var (
 
 // ChatwootConfig represents the Chatwoot configuration
 type ChatwootConfig struct {
-	ID        uuid.UUID `json:"id" db:"id"`
-	SessionID uuid.UUID `json:"sessionId" db:"sessionId"`
-	URL       string    `json:"url" db:"url"`
-	Token     string    `json:"token" db:"token"`
-	AccountID string    `json:"accountId" db:"accountId"`
-	InboxID   *string   `json:"inboxId,omitempty" db:"inboxId"`
-	Enabled   bool      `json:"enabled" db:"enabled"`
-
-	// Advanced configuration - shorter names matching DB
-	InboxName      *string  `json:"inboxName,omitempty" db:"inboxName"`
-	AutoCreate     bool     `json:"autoCreate" db:"autoCreate"`
-	SignMsg        bool     `json:"signMsg" db:"signMsg"`
-	SignDelimiter  string   `json:"signDelimiter" db:"signDelimiter"`
-	ReopenConv     bool     `json:"reopenConv" db:"reopenConv"`
-	ConvPending    bool     `json:"convPending" db:"convPending"`
-	ImportContacts bool     `json:"importContacts" db:"importContacts"`
-	ImportMessages bool     `json:"importMessages" db:"importMessages"`
-	ImportDays     int      `json:"importDays" db:"importDays"`
-	MergeBrazil    bool     `json:"mergeBrazil" db:"mergeBrazil"`
-	Organization   *string  `json:"organization,omitempty" db:"organization"`
-	Logo           *string  `json:"logo,omitempty" db:"logo"`
-	Number         *string  `json:"number,omitempty" db:"number"`
-	IgnoreJids     []string `json:"ignoreJids,omitempty" db:"ignoreJids"`
-
-	CreatedAt time.Time `json:"createdAt" db:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt" db:"updatedAt"`
+	UpdatedAt      time.Time `json:"updatedAt" db:"updatedAt"`
+	CreatedAt      time.Time `json:"createdAt" db:"createdAt"`
+	InboxName      *string   `json:"inboxName,omitempty" db:"inboxName"`
+	Number         *string   `json:"number,omitempty" db:"number"`
+	Logo           *string   `json:"logo,omitempty" db:"logo"`
+	InboxID        *string   `json:"inboxId,omitempty" db:"inboxId"`
+	Organization   *string   `json:"organization,omitempty" db:"organization"`
+	SignDelimiter  string    `json:"signDelimiter" db:"signDelimiter"`
+	URL            string    `json:"url" db:"url"`
+	Token          string    `json:"token" db:"token"`
+	AccountID      string    `json:"accountId" db:"accountId"`
+	IgnoreJids     []string  `json:"ignoreJids,omitempty" db:"ignoreJids"`
+	ImportDays     int       `json:"importDays" db:"importDays"`
+	SessionID      uuid.UUID `json:"sessionId" db:"sessionId"`
+	ID             uuid.UUID `json:"id" db:"id"`
+	ImportMessages bool      `json:"importMessages" db:"importMessages"`
+	MergeBrazil    bool      `json:"mergeBrazil" db:"mergeBrazil"`
+	Enabled        bool      `json:"enabled" db:"enabled"`
+	AutoCreate     bool      `json:"autoCreate" db:"autoCreate"`
+	ImportContacts bool      `json:"importContacts" db:"importContacts"`
+	ConvPending    bool      `json:"convPending" db:"convPending"`
+	ReopenConv     bool      `json:"reopenConv" db:"reopenConv"`
+	SignMsg        bool      `json:"signMsg" db:"signMsg"`
 }
 
 // ChatwootContact represents a contact in Chatwoot
 type ChatwootContact struct {
-	ID                   int                    `json:"id"`
+	CreatedAt            UnixTime               `json:"created_at"`
+	UpdatedAt            UnixTime               `json:"updated_at"`
+	CustomAttributes     map[string]interface{} `json:"custom_attributes,omitempty"`
+	AdditionalAttributes map[string]interface{} `json:"additional_attributes,omitempty"`
 	Name                 string                 `json:"name"`
 	PhoneNumber          string                 `json:"phone_number"`
 	Email                string                 `json:"email,omitempty"`
 	Identifier           string                 `json:"identifier,omitempty"`
-	CustomAttributes     map[string]interface{} `json:"custom_attributes,omitempty"`
-	AdditionalAttributes map[string]interface{} `json:"additional_attributes,omitempty"`
-	CreatedAt            UnixTime               `json:"created_at"`
-	UpdatedAt            UnixTime               `json:"updated_at"`
+	ID                   int                    `json:"id"`
 }
 
 // ChatwootConversation represents a conversation in Chatwoot
 type ChatwootConversation struct {
+	CreatedAt UnixTime `json:"created_at"`
+	UpdatedAt UnixTime `json:"updated_at"`
+	Status    string   `json:"status"`
 	ID        int      `json:"id"`
 	ContactID int      `json:"contact_id"`
 	InboxID   int      `json:"inbox_id"`
-	Status    string   `json:"status"`
-	CreatedAt UnixTime `json:"created_at"`
-	UpdatedAt UnixTime `json:"updated_at"`
 }
 
 // ChatwootMessage represents a message in Chatwoot
 type ChatwootMessage struct {
-	ID                int                    `json:"id"`
-	ConversationID    int                    `json:"conversation_id"`
-	Content           string                 `json:"content"`
-	MessageType       int                    `json:"message_type"` // Chatwoot returns this as number (0=incoming, 1=outgoing)
-	ContentType       string                 `json:"content_type"`
+	CreatedAt         UnixTime               `json:"created_at"`
 	ContentAttributes map[string]interface{} `json:"content_attributes,omitempty"`
 	Metadata          map[string]interface{} `json:"metadata,omitempty"`
-	Private           bool                   `json:"private"`
+	Content           string                 `json:"content"`
+	ContentType       string                 `json:"content_type"`
 	SourceID          string                 `json:"source_id,omitempty"`
 	Attachments       []ChatwootAttachment   `json:"attachments,omitempty"`
-	CreatedAt         UnixTime               `json:"created_at"`
+	ID                int                    `json:"id"`
+	ConversationID    int                    `json:"conversation_id"`
+	MessageType       int                    `json:"message_type"`
+	Private           bool                   `json:"private"`
 }
 
 // ChatwootAttachment represents an attachment in Chatwoot
 type ChatwootAttachment struct {
-	ID       int    `json:"id"`
 	FileType string `json:"file_type"`
 	FileName string `json:"file_name"`
 	DataURL  string `json:"data_url"`
 	ThumbURL string `json:"thumb_url,omitempty"`
+	ID       int    `json:"id"`
 	FileSize int    `json:"file_size,omitempty"`
 }
 

@@ -8,14 +8,14 @@ import (
 )
 
 type WebhookConfig struct {
-	ID        uuid.UUID `json:"id" db:"id"`
-	SessionID *string   `json:"session_id,omitempty" db:"session_id"` // null for global webhooks
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	SessionID *string   `json:"session_id,omitempty" db:"session_id"`
 	URL       string    `json:"url" db:"url"`
 	Secret    string    `json:"secret,omitempty" db:"secret"`
 	Events    []string  `json:"events" db:"events"`
-	Enabled   bool      `json:"enabled" db:"enabled"` // User-controlled enable/disable
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID        uuid.UUID `json:"id" db:"id"`
+	Enabled   bool      `json:"enabled" db:"enabled"`
 }
 
 var (
@@ -27,17 +27,17 @@ var (
 
 type SetConfigRequest struct {
 	SessionID *string  `json:"session_id,omitempty" validate:"omitempty,uuid"`
+	Enabled   *bool    `json:"enabled,omitempty"`
 	URL       string   `json:"url" validate:"required,url"`
 	Secret    string   `json:"secret,omitempty"`
 	Events    []string `json:"events" validate:"required,min=1"`
-	Enabled   *bool    `json:"enabled,omitempty"`
 }
 
 type UpdateWebhookRequest struct {
 	URL     *string  `json:"url,omitempty" validate:"omitempty,url"`
 	Secret  *string  `json:"secret,omitempty"`
-	Events  []string `json:"events,omitempty" validate:"omitempty,min=1"`
 	Enabled *bool    `json:"enabled,omitempty"`
+	Events  []string `json:"events,omitempty" validate:"omitempty,min=1"`
 }
 
 type ListWebhooksRequest struct {
@@ -48,11 +48,11 @@ type ListWebhooksRequest struct {
 }
 
 type WebhookEvent struct {
+	Timestamp time.Time              `json:"timestamp"`
+	Data      map[string]interface{} `json:"data"`
 	ID        string                 `json:"id"`
 	SessionID string                 `json:"session_id"`
 	Type      string                 `json:"type"`
-	Timestamp time.Time              `json:"timestamp"`
-	Data      map[string]interface{} `json:"data"`
 }
 
 var SupportedEventTypes = []string{

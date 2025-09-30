@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"zpwoot/platform/logger"
 )
 
@@ -193,10 +194,10 @@ func (s *Service) ListWebhooks(ctx context.Context, req *ListWebhooksRequest) ([
 }
 
 type TestWebhookResult struct {
-	Success      bool
+	Error        error
 	StatusCode   int
 	ResponseTime int64
-	Error        error
+	Success      bool
 }
 
 func (s *Service) TestWebhook(ctx context.Context, webhookID string, event *WebhookEvent) (*TestWebhookResult, error) {

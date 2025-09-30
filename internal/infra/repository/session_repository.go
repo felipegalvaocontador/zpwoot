@@ -30,18 +30,18 @@ func NewSessionRepository(db *sqlx.DB, logger *logger.Logger) ports.SessionRepos
 }
 
 type sessionModel struct {
+	CreatedAt       time.Time      `db:"createdAt"`
+	UpdatedAt       time.Time      `db:"updatedAt"`
+	QRCodeExpiresAt sql.NullTime   `db:"qrCodeExpiresAt"`
+	ConnectedAt     sql.NullTime   `db:"connectedAt"`
+	LastSeen        sql.NullTime   `db:"lastSeen"`
 	ID              string         `db:"id"`
 	Name            string         `db:"name"`
 	DeviceJid       sql.NullString `db:"deviceJid"`
-	IsConnected     bool           `db:"isConnected"`
 	ConnectionError sql.NullString `db:"connectionError"`
 	QRCode          sql.NullString `db:"qrCode"`
-	QRCodeExpiresAt sql.NullTime   `db:"qrCodeExpiresAt"`
-	ProxyConfig     sql.NullString `db:"proxyConfig"` // JSON
-	CreatedAt       time.Time      `db:"createdAt"`
-	UpdatedAt       time.Time      `db:"updatedAt"`
-	ConnectedAt     sql.NullTime   `db:"connectedAt"`
-	LastSeen        sql.NullTime   `db:"lastSeen"`
+	ProxyConfig     sql.NullString `db:"proxyConfig"`
+	IsConnected     bool           `db:"isConnected"`
 }
 
 func (r *sessionRepository) Create(ctx context.Context, sess *session.Session) error {
@@ -80,13 +80,12 @@ func (r *sessionRepository) Create(ctx context.Context, sess *session.Session) e
 }
 
 func (r *sessionRepository) GetByID(ctx context.Context, id string) (*session.Session, error) {
-
 	var model sessionModel
 	query := `SELECT * FROM "zpSessions" WHERE id = $1`
 
 	err := r.db.GetContext(ctx, &model, query, id)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, session.ErrSessionNotFound
 		}
 		r.logger.ErrorWithFields("Failed to get session by ID", map[string]interface{}{
@@ -114,7 +113,7 @@ func (r *sessionRepository) GetByName(ctx context.Context, name string) (*sessio
 
 	err := r.db.GetContext(ctx, &model, query, name)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, session.ErrSessionNotFound
 		}
 		r.logger.ErrorWithFields("Failed to get session by name", map[string]interface{}{
@@ -142,7 +141,7 @@ func (r *sessionRepository) GetByDeviceJid(ctx context.Context, deviceJid string
 
 	err := r.db.GetContext(ctx, &model, query, deviceJid)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, session.ErrSessionNotFound
 		}
 		r.logger.ErrorWithFields("Failed to get session by device JID", map[string]interface{}{
@@ -161,7 +160,6 @@ func (r *sessionRepository) GetByDeviceJid(ctx context.Context, deviceJid string
 }
 
 func (r *sessionRepository) List(ctx context.Context, req *session.ListSessionsRequest) ([]*session.Session, int, error) {
-
 	whereClause := "WHERE 1=1"
 	args := []interface{}{}
 	argIndex := 1
@@ -222,7 +220,6 @@ func (r *sessionRepository) List(ctx context.Context, req *session.ListSessionsR
 }
 
 func (r *sessionRepository) Update(ctx context.Context, sess *session.Session) error {
-
 	model := r.toModel(sess)
 	model.UpdatedAt = time.Now()
 
@@ -285,7 +282,6 @@ func (r *sessionRepository) Delete(ctx context.Context, id string) error {
 }
 
 func (r *sessionRepository) UpdateConnectionStatus(ctx context.Context, id string, isConnected bool) error {
-
 	query := `UPDATE "zpSessions" SET "isConnected" = $1, "updatedAt" = $2 WHERE id = $3`
 
 	result, err := r.db.ExecContext(ctx, query, isConnected, time.Now(), id)

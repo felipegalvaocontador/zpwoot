@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"zpwoot/internal/domain/chatwoot"
 	"zpwoot/internal/ports"
 )
@@ -35,12 +36,12 @@ type CreateChatwootConfigRequest struct {
 } // @name CreateChatwootConfigRequest
 
 type CreateChatwootConfigResponse struct {
+	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	InboxID   *string   `json:"inboxId,omitempty" example:"1"`
 	ID        string    `json:"id" example:"chatwoot-config-123"`
 	URL       string    `json:"url" example:"https://chatwoot.example.com"`
 	AccountID string    `json:"accountId" example:"1"`
-	InboxID   *string   `json:"inboxId,omitempty" example:"1"`
 	Active    bool      `json:"active" example:"true"`
-	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 } // @name CreateChatwootConfigResponse
 
 type UpdateChatwootConfigRequest struct {
@@ -68,55 +69,55 @@ type UpdateChatwootConfigRequest struct {
 }
 
 type ChatwootConfigResponse struct {
+	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	UpdatedAt time.Time `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
+	InboxID   *string   `json:"inboxId,omitempty" example:"1"`
 	ID        string    `json:"id" example:"chatwoot-config-123"`
 	URL       string    `json:"url" example:"https://chatwoot.example.com"`
 	AccountID string    `json:"accountId" example:"1"`
-	InboxID   *string   `json:"inboxId,omitempty" example:"1"`
 	Active    bool      `json:"active" example:"true"`
-	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
-	UpdatedAt time.Time `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
 } // @name ChatwootConfigResponse
 
 type SyncContactRequest struct {
+	Attributes  map[string]interface{} `json:"attributes,omitempty"`
 	PhoneNumber string                 `json:"phoneNumber" validate:"required" example:"+5511999999999"`
 	Name        string                 `json:"name" validate:"required" example:"John Doe"`
 	Email       string                 `json:"email,omitempty" validate:"omitempty,email" example:"john@example.com"`
-	Attributes  map[string]interface{} `json:"attributes,omitempty"`
 }
 
 type SyncContactResponse struct {
-	ID          int                    `json:"id" example:"123"`
+	CreatedAt   time.Time              `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	UpdatedAt   time.Time              `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
+	Attributes  map[string]interface{} `json:"attributes,omitempty"`
 	PhoneNumber string                 `json:"phoneNumber" example:"+5511999999999"`
 	Name        string                 `json:"name" example:"John Doe"`
 	Email       string                 `json:"email,omitempty" example:"john@example.com"`
-	Attributes  map[string]interface{} `json:"attributes,omitempty"`
-	CreatedAt   time.Time              `json:"createdAt" example:"2024-01-01T00:00:00Z"`
-	UpdatedAt   time.Time              `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
+	ID          int                    `json:"id" example:"123"`
 }
 
 type SyncConversationRequest struct {
-	ContactID   int    `json:"contactId" validate:"required" example:"123"`
 	SessionID   string `json:"sessionId" validate:"required" example:"session-123"`
 	PhoneNumber string `json:"phoneNumber" validate:"required" example:"+5511999999999"`
+	ContactID   int    `json:"contactId" validate:"required" example:"123"`
 }
 
 type SyncConversationResponse struct {
-	ID          int       `json:"id" example:"456"`
-	ContactID   int       `json:"contactId" example:"123"`
+	CreatedAt   time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	UpdatedAt   time.Time `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
 	SessionID   string    `json:"sessionId" example:"session-123"`
 	PhoneNumber string    `json:"phoneNumber" example:"+5511999999999"`
 	Status      string    `json:"status" example:"open"`
-	CreatedAt   time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
-	UpdatedAt   time.Time `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
+	ID          int       `json:"id" example:"456"`
+	ContactID   int       `json:"contactId" example:"123"`
 }
 
 type SendMessageToChatwootRequest struct {
-	ConversationID int                    `json:"conversationId" validate:"required" example:"456"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
 	Content        string                 `json:"content" validate:"required" example:"Hello from Wameow!"`
 	MessageType    string                 `json:"messageType" validate:"required,oneof=incoming outgoing" example:"incoming"`
 	ContentType    string                 `json:"contentType,omitempty" example:"text"`
 	Attachments    []ChatwootAttachment   `json:"attachments,omitempty"`
-	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	ConversationID int                    `json:"conversationId" validate:"required" example:"456"`
 }
 
 type ChatwootAttachment struct {
@@ -126,25 +127,25 @@ type ChatwootAttachment struct {
 }
 
 type SendMessageToChatwootResponse struct {
-	ID             int                    `json:"id" example:"789"`
-	ConversationID int                    `json:"conversationId" example:"456"`
+	CreatedAt      time.Time              `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
 	Content        string                 `json:"content" example:"Hello from Wameow!"`
 	MessageType    string                 `json:"messageType" example:"incoming"`
 	ContentType    string                 `json:"contentType" example:"text"`
-	Metadata       map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt      time.Time              `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	ID             int                    `json:"id" example:"789"`
+	ConversationID int                    `json:"conversationId" example:"456"`
 }
 
 // WebhookRequest represents the complete webhook payload from Chatwoot
 type WebhookRequest struct {
-	Account           ChatwootAccount        `json:"account"`
-	Conversation      ChatwootConversation   `json:"conversation"`
-	Message           *ChatwootMessage       `json:"message,omitempty"`
 	Contact           ChatwootContact        `json:"contact"`
-	Event             string                 `json:"event"`
-	Private           bool                   `json:"private"`
+	Message           *ChatwootMessage       `json:"message,omitempty"`
 	ContentAttributes map[string]interface{} `json:"content_attributes,omitempty"`
 	Meta              *Meta                  `json:"meta,omitempty"`
+	Account           ChatwootAccount        `json:"account"`
+	Event             string                 `json:"event"`
+	Conversation      ChatwootConversation   `json:"conversation"`
+	Private           bool                   `json:"private"`
 } // @name WebhookRequest
 
 // Meta represents metadata in webhook payload
@@ -154,89 +155,83 @@ type Meta struct {
 
 // Sender represents the sender information in webhook
 type Sender struct {
-	ID            int    `json:"id"`
 	Name          string `json:"name"`
 	Identifier    string `json:"identifier"`
 	AvailableName string `json:"available_name"`
 	AvatarURL     string `json:"avatar_url"`
-	Type          string `json:"type"` // contact, user, agent_bot
+	Type          string `json:"type"`
 	Email         string `json:"email,omitempty"`
 	PhoneNumber   string `json:"phone_number,omitempty"`
+	ID            int    `json:"id"`
 } // @name Sender
 
 type ChatwootWebhookPayload struct {
-	Event        string               `json:"event" example:"message_created"`
-	Account      ChatwootAccount      `json:"account"`
-	Conversation ChatwootConversation `json:"conversation,omitempty"`
-
-	// Real Chatwoot webhook fields (top-level)
-	ID          int                    `json:"id,omitempty"`
-	Content     string                 `json:"content,omitempty"`
-	ContentType string                 `json:"content_type,omitempty"`
-	MessageType string                 `json:"message_type,omitempty"`
-	Private     bool                   `json:"private,omitempty"`
-	SourceID    *string                `json:"source_id,omitempty"`
-	Sender      Sender                 `json:"sender,omitempty"`
-	Inbox       map[string]interface{} `json:"inbox,omitempty"`
-
-	// Legacy/nested message (some deployments send under "message")
-	Message ChatwootMessage `json:"message,omitempty"`
-
-	// Optional/extra attributes
-	ContentAttributes    map[string]interface{} `json:"content_attributes,omitempty"`
-	AdditionalAttributes map[string]interface{} `json:"additional_attributes,omitempty"`
 	CreatedAt            interface{}            `json:"created_at,omitempty"`
+	ContentAttributes    map[string]interface{} `json:"content_attributes,omitempty"`
+	Inbox                map[string]interface{} `json:"inbox,omitempty"`
 	Data                 map[string]interface{} `json:"data,omitempty"`
+	AdditionalAttributes map[string]interface{} `json:"additional_attributes,omitempty"`
+	SourceID             *string                `json:"source_id,omitempty"`
+	Sender               Sender                 `json:"sender,omitempty"`
+	Account              ChatwootAccount        `json:"account"`
+	ContentType          string                 `json:"content_type,omitempty"`
+	Event                string                 `json:"event" example:"message_created"`
+	MessageType          string                 `json:"message_type,omitempty"`
+	Content              string                 `json:"content,omitempty"`
+	Message              ChatwootMessage        `json:"message,omitempty"`
+	Conversation         ChatwootConversation   `json:"conversation,omitempty"`
+	ID                   int                    `json:"id,omitempty"`
+	Private              bool                   `json:"private,omitempty"`
 }
 
 type ChatwootAccount struct {
-	ID   int    `json:"id" example:"1"`
 	Name string `json:"name" example:"My Company"`
+	ID   int    `json:"id" example:"1"`
 }
 
 type ChatwootConversation struct {
-	ID                   int                    `json:"id" example:"456"`
-	Status               string                 `json:"status" example:"open"`
-	ContactID            int                    `json:"contact_id" example:"123"`
-	InboxID              int                    `json:"inbox_id" example:"1"`
 	AgentLastSeenAt      interface{}            `json:"agent_last_seen_at,omitempty"`
 	ContactLastSeenAt    interface{}            `json:"contact_last_seen_at,omitempty"`
-	Timestamp            int64                  `json:"timestamp" example:"1640995200"`
-	UnreadCount          int                    `json:"unread_count" example:"0"`
 	AdditionalAttributes map[string]interface{} `json:"additional_attributes,omitempty"`
 	CustomAttributes     map[string]interface{} `json:"custom_attributes,omitempty"`
+	Status               string                 `json:"status" example:"open"`
 	Labels               []string               `json:"labels,omitempty"`
+	ID                   int                    `json:"id" example:"456"`
+	ContactID            int                    `json:"contact_id" example:"123"`
+	InboxID              int                    `json:"inbox_id" example:"1"`
+	Timestamp            int64                  `json:"timestamp" example:"1640995200"`
+	UnreadCount          int                    `json:"unread_count" example:"0"`
 }
 
 type ChatwootContact struct {
-	ID                   int                    `json:"id" example:"123"`
+	AdditionalAttributes map[string]interface{} `json:"additional_attributes,omitempty"`
+	CustomAttributes     map[string]interface{} `json:"custom_attributes,omitempty"`
 	Name                 string                 `json:"name" example:"John Doe"`
 	PhoneNumber          string                 `json:"phone_number" example:"+5511999999999"`
 	Email                string                 `json:"email,omitempty" example:"john@example.com"`
 	Identifier           string                 `json:"identifier,omitempty"`
-	AdditionalAttributes map[string]interface{} `json:"additional_attributes,omitempty"`
-	CustomAttributes     map[string]interface{} `json:"custom_attributes,omitempty"`
+	ID                   int                    `json:"id" example:"123"`
 }
 
 type ChatwootMessage struct {
-	ID                int                    `json:"id" example:"789"`
+	ContentAttributes map[string]interface{} `json:"content_attributes,omitempty"`
+	Sender            *Sender                `json:"sender,omitempty"`
 	Content           string                 `json:"content" example:"Hello!"`
 	MessageType       string                 `json:"message_type" example:"incoming"`
 	ContentType       string                 `json:"content_type" example:"text"`
-	ContentAttributes map[string]interface{} `json:"content_attributes,omitempty"`
 	CreatedAt         string                 `json:"created_at" example:"2024-01-01T00:00:00Z"`
-	Private           bool                   `json:"private" example:"false"`
 	SourceID          string                 `json:"source_id,omitempty"`
-	Sender            *Sender                `json:"sender,omitempty"`
-	ConversationID    int                    `json:"conversation_id" example:"456"`
 	Attachments       []ChatwootAttachment   `json:"attachments,omitempty"`
+	ID                int                    `json:"id" example:"789"`
+	ConversationID    int                    `json:"conversation_id" example:"456"`
+	Private           bool                   `json:"private" example:"false"`
 }
 
 type TestChatwootConnectionResponse struct {
-	Success     bool   `json:"success" example:"true"`
 	AccountName string `json:"accountName,omitempty" example:"My Company"`
 	InboxName   string `json:"inboxName,omitempty" example:"Wameow Inbox"`
 	Error       string `json:"error,omitempty"`
+	Success     bool   `json:"success" example:"true"`
 } // @name TestChatwootConnectionResponse
 
 type ChatwootStatsResponse struct {
@@ -270,35 +265,35 @@ type ChatwootConfigEvolutionRequest struct {
 } // @name ChatwootConfigEvolutionRequest
 
 type ChatwootConfigEvolutionResponse struct {
-	Enabled                 bool     `json:"enabled" example:"true"`
+	InboxID                 *string  `json:"inboxId,omitempty" example:"1"`
 	AccountID               string   `json:"accountId" example:"1"`
 	Token                   string   `json:"token" example:"WAF6y4K5s6sdR9uVpsdE7BCt"`
 	URL                     string   `json:"url" example:"http://localhost:3001"`
 	NameInbox               string   `json:"nameInbox" example:"WhatsApp Inbox"`
-	SignMsg                 bool     `json:"signMsg" example:"false"`
 	SignDelimiter           string   `json:"signDelimiter" example:"\\n\\n"`
 	Number                  string   `json:"number" example:"5511999999999"`
-	ReopenConversation      bool     `json:"reopenConversation" example:"true"`
-	ConversationPending     bool     `json:"conversationPending" example:"false"`
-	MergeBrazilContacts     bool     `json:"mergeBrazilContacts" example:"true"`
-	ImportContacts          bool     `json:"importContacts" example:"false"`
-	ImportMessages          bool     `json:"importMessages" example:"false"`
-	DaysLimitImportMessages int      `json:"daysLimitImportMessages" example:"60"`
-	AutoCreate              bool     `json:"autoCreate" example:"true"`
-	Organization            string   `json:"organization" example:"My Company"`
-	Logo                    string   `json:"logo" example:"https://example.com/logo.png"`
-	IgnoreJids              []string `json:"ignoreJids" example:"['123456@s.whatsapp.net']"`
 	WebhookURL              string   `json:"webhook_url" example:"http://localhost:8080/chatwoot/webhook/session-id"`
-	InboxID                 *string  `json:"inboxId,omitempty" example:"1"`
+	Logo                    string   `json:"logo" example:"https://example.com/logo.png"`
+	Organization            string   `json:"organization" example:"My Company"`
+	IgnoreJids              []string `json:"ignoreJids" example:"['123456@s.whatsapp.net']"`
+	DaysLimitImportMessages int      `json:"daysLimitImportMessages" example:"60"`
+	SignMsg                 bool     `json:"signMsg" example:"false"`
+	ImportMessages          bool     `json:"importMessages" example:"false"`
+	AutoCreate              bool     `json:"autoCreate" example:"true"`
+	ImportContacts          bool     `json:"importContacts" example:"false"`
+	MergeBrazilContacts     bool     `json:"mergeBrazilContacts" example:"true"`
+	ConversationPending     bool     `json:"conversationPending" example:"false"`
+	ReopenConversation      bool     `json:"reopenConversation" example:"true"`
+	Enabled                 bool     `json:"enabled" example:"true"`
 } // @name ChatwootConfigEvolutionResponse
 
 type InitInstanceChatwootRequest struct {
 	InboxName    string `json:"inboxName" validate:"required" example:"WhatsApp Inbox"`
 	WebhookURL   string `json:"webhookUrl" validate:"required,url" example:"https://myapp.com/webhook"`
-	AutoCreate   bool   `json:"autoCreate" example:"true"`
 	Number       string `json:"number,omitempty" example:"5511999999999"`
 	Organization string `json:"organization,omitempty" example:"My Company"`
 	Logo         string `json:"logo,omitempty" example:"https://example.com/logo.png"`
+	AutoCreate   bool   `json:"autoCreate" example:"true"`
 } // @name InitInstanceChatwootRequest
 
 type ImportHistoryRequest struct {

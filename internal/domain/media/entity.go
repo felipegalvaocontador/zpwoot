@@ -24,12 +24,12 @@ type DownloadMediaRequest struct {
 
 // DownloadMediaResponse represents the result of downloading media
 type DownloadMediaResponse struct {
-	Data      []byte
 	MimeType  string
-	FileSize  int64
 	Filename  string
 	MediaType string
-	FilePath  string // Path where file is cached
+	FilePath  string
+	Data      []byte
+	FileSize  int64
 }
 
 // GetMediaInfoRequest represents a request to get media information
@@ -40,36 +40,36 @@ type GetMediaInfoRequest struct {
 
 // MediaInfo represents information about media in a message
 type MediaInfo struct {
+	Timestamp time.Time
 	MessageID string
 	MediaType string
 	MimeType  string
-	FileSize  int64
 	Filename  string
 	Caption   string
-	Timestamp time.Time
 	FromJID   string
+	FileSize  int64
 }
 
 // CachedMediaItem represents a cached media file
 type CachedMediaItem struct {
+	CachedAt   time.Time
+	LastAccess time.Time
+	ExpiresAt  time.Time
 	SessionID  string
 	MessageID  string
 	MediaType  string
 	MimeType   string
-	FileSize   int64
 	Filename   string
 	FilePath   string
-	CachedAt   time.Time
-	LastAccess time.Time
-	ExpiresAt  time.Time
+	FileSize   int64
 }
 
 // ListCachedMediaRequest represents a request to list cached media
 type ListCachedMediaRequest struct {
 	SessionID string
+	MediaType string
 	Limit     int
 	Offset    int
-	MediaType string // Optional filter
 }
 
 // ListCachedMediaResponse represents the result of listing cached media
@@ -85,8 +85,8 @@ type ListCachedMediaResponse struct {
 // ClearCacheRequest represents a request to clear media cache
 type ClearCacheRequest struct {
 	SessionID string
-	OlderThan int    // Hours
-	MediaType string // Optional filter
+	MediaType string
+	OlderThan int
 }
 
 // ClearCacheResponse represents the result of clearing cache
@@ -114,9 +114,9 @@ type GetMediaStatsRequest struct {
 
 // GetMediaStatsResponse represents media statistics
 type GetMediaStatsResponse struct {
+	UpdatedAt time.Time
 	SessionID string
 	Stats     MediaStats
-	UpdatedAt time.Time
 }
 
 // IsValidMediaType checks if a media type is valid

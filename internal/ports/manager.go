@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"go.mau.fi/whatsmeow/types"
+
 	"zpwoot/internal/domain/message"
 	"zpwoot/internal/domain/session"
 )
@@ -73,14 +74,14 @@ type WameowManager interface {
 
 // GroupInfo represents information about a WhatsApp group
 type GroupInfo struct {
+	CreatedAt    time.Time          `json:"createdAt"`
+	UpdatedAt    time.Time          `json:"updatedAt"`
 	GroupJID     string             `json:"groupJid"`
 	Name         string             `json:"name"`
 	Description  string             `json:"description"`
 	Owner        string             `json:"owner"`
 	Participants []GroupParticipant `json:"participants"`
 	Settings     GroupSettings      `json:"settings"`
-	CreatedAt    time.Time          `json:"createdAt"`
-	UpdatedAt    time.Time          `json:"updatedAt"`
 }
 
 // GroupParticipant represents a participant in a WhatsApp group
@@ -119,10 +120,10 @@ type WameowMessage struct {
 	From      string `json:"from"`
 	To        string `json:"to"`
 	Body      string `json:"body"`
-	Timestamp int64  `json:"timestamp"`
 	Type      string `json:"type"`
 	MediaURL  string `json:"media_url,omitempty"`
 	Caption   string `json:"caption,omitempty"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // MessageInfo represents basic information about a message

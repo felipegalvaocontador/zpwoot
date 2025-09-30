@@ -7,27 +7,27 @@ import (
 )
 
 type ProxyConfig struct {
-	Type     string `json:"type" example:"http"` // http, socks5
+	Type     string `json:"type" example:"http"`
 	Host     string `json:"host" example:"proxy.example.com"`
-	Port     int    `json:"port" example:"8080"`
 	Username string `json:"username,omitempty" example:"proxyuser"`
 	Password string `json:"password,omitempty" example:"proxypass123"`
+	Port     int    `json:"port" example:"8080"`
 } // @name ProxyConfig
 
 type CreateSessionRequest struct {
+	ProxyConfig *ProxyConfig `json:"proxyConfig,omitempty"`
 	Name        string       `json:"name" validate:"required,min=3,max=50" example:"my-session"`
 	QrCode      bool         `json:"qrCode" example:"false"`
-	ProxyConfig *ProxyConfig `json:"proxyConfig,omitempty"`
 } // @name CreateSessionRequest
 
 type CreateSessionResponse struct {
+	CreatedAt   time.Time    `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	ProxyConfig *ProxyConfig `json:"proxyConfig,omitempty"`
 	ID          string       `json:"id" example:"1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"`
 	Name        string       `json:"name" example:"my-session"`
-	IsConnected bool         `json:"isConnected" example:"false"`
-	ProxyConfig *ProxyConfig `json:"proxyConfig,omitempty"`
 	QrCode      string       `json:"qrCode,omitempty" example:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."`
 	Code        string       `json:"code,omitempty" example:"2@abc123..."`
-	CreatedAt   time.Time    `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	IsConnected bool         `json:"isConnected" example:"false"`
 } // @name CreateSessionResponse
 
 type UpdateSessionRequest struct {
@@ -55,15 +55,15 @@ type SessionInfoResponse struct {
 } // @name SessionInfoResponse
 
 type SessionResponse struct {
+	CreatedAt       time.Time    `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	UpdatedAt       time.Time    `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
+	ConnectionError *string      `json:"connectionError,omitempty" example:"Connection timeout"`
+	ProxyConfig     *ProxyConfig `json:"proxyConfig,omitempty"`
+	ConnectedAt     *time.Time   `json:"connectedAt,omitempty" example:"2024-01-01T00:00:30Z"`
 	ID              string       `json:"id" example:"session-123"`
 	Name            string       `json:"name" example:"my-Wameow-session"`
 	DeviceJid       string       `json:"deviceJid,omitempty" example:"5511999999999@s.Wameow.net"`
 	IsConnected     bool         `json:"isConnected" example:"false"`
-	ConnectionError *string      `json:"connectionError,omitempty" example:"Connection timeout"`
-	ProxyConfig     *ProxyConfig `json:"proxyConfig,omitempty"`
-	CreatedAt       time.Time    `json:"createdAt" example:"2024-01-01T00:00:00Z"`
-	UpdatedAt       time.Time    `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
-	ConnectedAt     *time.Time   `json:"connectedAt,omitempty" example:"2024-01-01T00:00:30Z"`
 } // @name SessionResponse
 
 type DeviceInfoResponse struct {
@@ -78,9 +78,9 @@ type PairPhoneRequest struct {
 } // @name PairPhoneRequest
 
 type QRCodeResponse struct {
+	ExpiresAt   time.Time `json:"expiresAt" example:"2024-01-01T00:01:00Z"`
 	QRCode      string    `json:"qrCode" example:"2@abc123def456..." description:"Raw QR code string (stored in database)"`
 	QRCodeImage string    `json:"qrCodeImage,omitempty" example:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" description:"Base64 encoded QR code image (generated dynamically from qrCode string)"`
-	ExpiresAt   time.Time `json:"expiresAt" example:"2024-01-01T00:01:00Z"`
 	Timeout     int       `json:"timeoutSeconds" example:"60"`
 } // @name QRCodeResponse
 
@@ -93,10 +93,10 @@ type ProxyResponse struct {
 } // @name ProxyResponse
 
 type ConnectSessionResponse struct {
-	Success bool   `json:"success" example:"true"`
 	Message string `json:"message" example:"Session connection initiated successfully"`
 	QrCode  string `json:"qrCode,omitempty" example:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..." description:"Base64 encoded QR code image (generated dynamically from code string)"`
 	Code    string `json:"code,omitempty" example:"2@abc123..." description:"Raw QR code string (stored in database)"`
+	Success bool   `json:"success" example:"true"`
 } // @name ConnectSessionResponse
 
 func (r *CreateSessionRequest) ToCreateSessionRequest() *domainSession.CreateSessionRequest {

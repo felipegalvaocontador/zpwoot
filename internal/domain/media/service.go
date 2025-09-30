@@ -30,14 +30,14 @@ type WhatsAppClient interface {
 
 // MessageInfo represents information about a WhatsApp message
 type MessageInfo struct {
+	Timestamp time.Time
 	ID        string
 	FromJID   string
-	Timestamp time.Time
 	MediaType string
 	MimeType  string
-	FileSize  int64
 	Filename  string
 	Caption   string
+	FileSize  int64
 	HasMedia  bool
 }
 

@@ -54,7 +54,6 @@ func NewService(repo Repository, wameow WameowManager, qrGenerator QRGenerator, 
 }
 
 func (s *Service) CreateSession(ctx context.Context, req *CreateSessionRequest) (*Session, error) {
-
 	session := NewSession(req.Name)
 	session.ProxyConfig = req.ProxyConfig
 

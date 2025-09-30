@@ -137,12 +137,12 @@ func (m *WebhookManager) GetStats() *WebhookStats {
 
 // WebhookStats contains statistics about webhook operations
 type WebhookStats struct {
-	Started       bool   `json:"started"`
+	RetryDelay    string `json:"retry_delay"`
 	Workers       int    `json:"workers"`
 	QueueSize     int    `json:"queue_size"`
 	QueueCapacity int    `json:"queue_capacity"`
 	MaxRetries    int    `json:"max_retries"`
-	RetryDelay    string `json:"retry_delay"`
+	Started       bool   `json:"started"`
 }
 
 // TestWebhook tests a webhook endpoint with a sample event

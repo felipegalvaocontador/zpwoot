@@ -8,26 +8,26 @@ import (
 
 type SetConfigRequest struct {
 	SessionID *string  `json:"sessionId,omitempty" validate:"omitempty,uuid" example:"1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"`
+	Enabled   *bool    `json:"enabled,omitempty" example:"true"`
 	URL       string   `json:"url" validate:"required,url" example:"https://myapp.com/webhook/whatsapp"`
 	Secret    string   `json:"secret,omitempty" example:"my-webhook-secret-key-123"`
 	Events    []string `json:"events" validate:"required,min=1" example:"message,status,connection"`
-	Enabled   *bool    `json:"enabled,omitempty" example:"true"` // Whether webhook is enabled (default: true)
 } // @name SetConfigRequest
 
 type SetConfigResponse struct {
-	ID        string    `json:"id" example:"webhook-456def"`
+	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 	SessionID *string   `json:"sessionId,omitempty" example:"1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"`
+	ID        string    `json:"id" example:"webhook-456def"`
 	URL       string    `json:"url" example:"https://myapp.com/webhook/whatsapp"`
 	Events    []string  `json:"events" example:"message,status,connection"`
-	Enabled   bool      `json:"enabled" example:"true"` // Whether webhook is enabled
-	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	Enabled   bool      `json:"enabled" example:"true"`
 } // @name SetConfigResponse
 
 type UpdateWebhookRequest struct {
 	URL     *string  `json:"url,omitempty" validate:"omitempty,url" example:"https://myapp.com/webhook/whatsapp/v2"`
 	Secret  *string  `json:"secret,omitempty" example:"updated-webhook-secret-456"`
+	Enabled *bool    `json:"enabled,omitempty" example:"false"`
 	Events  []string `json:"events,omitempty" validate:"omitempty,min=1" example:"message,status,connection,qr"`
-	Enabled *bool    `json:"enabled,omitempty" example:"false"` // Whether webhook is enabled
 } // @name UpdateWebhookRequest
 
 type ListWebhooksRequest struct {
@@ -45,33 +45,33 @@ type ListWebhooksResponse struct {
 } // @name ListWebhooksResponse
 
 type WebhookResponse struct {
-	ID        string    `json:"id" example:"webhook-123"`
-	SessionID *string   `json:"sessionId,omitempty" example:"session-123"`
-	URL       string    `json:"url" example:"https://example.com/webhook"`
-	Events    []string  `json:"events" example:"message,status"`
-	Enabled   bool      `json:"enabled" example:"true"` // Whether webhook is enabled
 	CreatedAt time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 	UpdatedAt time.Time `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
+	SessionID *string   `json:"sessionId,omitempty" example:"session-123"`
+	ID        string    `json:"id" example:"webhook-123"`
+	URL       string    `json:"url" example:"https://example.com/webhook"`
+	Events    []string  `json:"events" example:"message,status"`
+	Enabled   bool      `json:"enabled" example:"true"`
 } // @name WebhookResponse
 
 type WebhookEventResponse struct {
+	Timestamp time.Time              `json:"timestamp" example:"2024-01-01T00:00:00Z"`
+	Data      map[string]interface{} `json:"data"`
 	ID        string                 `json:"id" example:"event-123"`
 	SessionID string                 `json:"sessionId" example:"session-123"`
 	Type      string                 `json:"type" example:"message"`
-	Timestamp time.Time              `json:"timestamp" example:"2024-01-01T00:00:00Z"`
-	Data      map[string]interface{} `json:"data"`
 } // @name WebhookEventResponse
 
 type TestWebhookRequest struct {
-	EventType string                 `json:"eventType" validate:"required" example:"message"`
 	TestData  map[string]interface{} `json:"testData,omitempty"`
+	EventType string                 `json:"eventType" validate:"required" example:"message"`
 } // @name TestWebhookRequest
 
 type TestWebhookResponse struct {
-	Success      bool   `json:"success" example:"true"`
+	Error        string `json:"error,omitempty"`
 	StatusCode   int    `json:"statusCode" example:"200"`
 	ResponseTime int64  `json:"responseTimeMs" example:"150"`
-	Error        string `json:"error,omitempty"`
+	Success      bool   `json:"success" example:"true"`
 }
 
 type WebhookEventsResponse struct {

@@ -53,11 +53,11 @@ var (
 
 // CommunityError represents a community-specific error with additional context
 type CommunityError struct {
+	Cause   error                  `json:"-"`
+	Context map[string]interface{} `json:"context,omitempty"`
 	Code    string                 `json:"code"`
 	Message string                 `json:"message"`
 	Details string                 `json:"details,omitempty"`
-	Context map[string]interface{} `json:"context,omitempty"`
-	Cause   error                  `json:"-"`
 }
 
 // Error implements the error interface
@@ -211,12 +211,14 @@ func NewRateLimitedError() *CommunityError {
 
 // IsCommunityError checks if an error is a community error
 func IsCommunityError(err error) bool {
-	_, ok := err.(*CommunityError)
+	communityError := &CommunityError{}
+	ok := errors.As(err, &communityError)
 	return ok
 }
 
 // GetCommunityError extracts a community error from an error
 func GetCommunityError(err error) (*CommunityError, bool) {
-	communityErr, ok := err.(*CommunityError)
+	communityErr := &CommunityError{}
+	ok := errors.As(err, &communityErr)
 	return communityErr, ok
 }

@@ -29,26 +29,24 @@ type SessionStats struct {
 }
 
 type EventHandlerInfo struct {
-	ID      string
 	Handler ports.EventHandler
+	ID      string
 }
 
 type Manager struct {
-	clients       map[string]*WameowClient
-	clientsMutex  sync.RWMutex
-	container     *sqlstore.Container
-	connectionMgr *ConnectionManager
-	qrGenerator   *QRCodeGenerator
-	sessionMgr    SessionUpdater
-	logger        *logger.Logger
-
-	sessionStats map[string]*SessionStats
-	statsMutex   sync.RWMutex
-
-	eventHandlers   map[string]map[string]*EventHandlerInfo // sessionID -> handlerID -> handler
+	sessionMgr      SessionUpdater
+	chatwootManager ChatwootManager
+	webhookHandler  WebhookEventHandler
+	logger          *logger.Logger
+	qrGenerator     *QRCodeGenerator
+	connectionMgr   *ConnectionManager
+	clients         map[string]*WameowClient
+	sessionStats    map[string]*SessionStats
+	eventHandlers   map[string]map[string]*EventHandlerInfo
+	container       *sqlstore.Container
+	statsMutex      sync.RWMutex
 	handlersMutex   sync.RWMutex
-	webhookHandler  WebhookEventHandler // Global webhook handler for all sessions
-	chatwootManager ChatwootManager     // Global Chatwoot manager for all sessions
+	clientsMutex    sync.RWMutex
 }
 
 func NewManager(
@@ -132,7 +130,6 @@ func (m *Manager) configureSession(client *WameowClient, sessionID string, confi
 func (m *Manager) ConnectSession(sessionID string) error {
 	client := m.getClient(sessionID)
 	if client == nil {
-
 		sess, err := m.sessionMgr.GetSession(sessionID)
 		if err != nil {
 			return fmt.Errorf("session %s not found", sessionID)
@@ -180,7 +177,6 @@ func (m *Manager) DisconnectSession(sessionID string) error {
 }
 
 func (m *Manager) LogoutSession(sessionID string) error {
-
 	client := m.getClient(sessionID)
 	if client == nil {
 		return fmt.Errorf("session %s not found", sessionID)
@@ -644,7 +640,6 @@ func (m *Manager) getClient(sessionID string) *WameowClient {
 }
 
 func (m *Manager) applyProxyConfig(client *whatsmeow.Client, config *session.ProxyConfig) error {
-
 	if client == nil {
 		return fmt.Errorf("cannot apply proxy config to nil client")
 	}
@@ -1175,17 +1170,17 @@ func (m *Manager) setupEventHandlers(client *whatsmeow.Client, sessionID string)
 }
 
 type MessageResult struct {
+	Timestamp time.Time
 	MessageID string
 	Status    string
-	Timestamp time.Time
 }
 
 type ContactListResult struct {
+	Timestamp     time.Time
+	Results       []ContactResult
 	TotalContacts int
 	SuccessCount  int
 	FailureCount  int
-	Results       []ContactResult
-	Timestamp     time.Time
 }
 
 type ContactResult struct {
@@ -1196,9 +1191,9 @@ type ContactResult struct {
 }
 
 type TextMessageResult struct {
+	Timestamp time.Time
 	MessageID string
 	Status    string
-	Timestamp time.Time
 }
 
 func (m *Manager) SendTextMessage(sessionID, to, text string, contextInfo *appMessage.ContextInfo) (*TextMessageResult, error) {
@@ -1683,13 +1678,13 @@ func convertToPortsGroupInfo(groupInfo interface{}) *ports.GroupInfo {
 
 		return &ports.GroupInfo{
 			GroupJID:     gi.JID.String(),
-			Name:         gi.GroupName.Name,   // Usar gi.GroupName.Name
-			Description:  gi.GroupTopic.Topic, // Usar gi.GroupTopic.Topic
+			Name:         gi.Name,  // Usar gi.GroupName.Name
+			Description:  gi.Topic, // Usar gi.GroupTopic.Topic
 			Owner:        gi.OwnerJID.String(),
 			Participants: participants,
 			Settings: ports.GroupSettings{
-				Announce: gi.GroupAnnounce.IsAnnounce, // Usar gi.GroupAnnounce.IsAnnounce
-				Locked:   gi.IsLocked,     // Usar gi.IsLocked
+				Announce: gi.IsAnnounce, // Usar gi.GroupAnnounce.IsAnnounce
+				Locked:   gi.IsLocked,   // Usar gi.IsLocked
 			},
 			CreatedAt: gi.GroupCreated,
 			UpdatedAt: time.Now(),

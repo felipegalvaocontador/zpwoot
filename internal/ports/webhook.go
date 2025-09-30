@@ -71,12 +71,12 @@ type WebhookDelivery struct {
 	EventID      string `json:"event_id" db:"event_id"`
 	URL          string `json:"url" db:"url"`
 	Payload      string `json:"payload" db:"payload"`
-	StatusCode   int    `json:"status_code" db:"status_code"`
 	ResponseBody string `json:"response_body" db:"response_body"`
-	Latency      int64  `json:"latency" db:"latency"`
-	Success      bool   `json:"success" db:"success"`
 	Error        string `json:"error,omitempty" db:"error"`
+	StatusCode   int    `json:"status_code" db:"status_code"`
+	Latency      int64  `json:"latency" db:"latency"`
 	CreatedAt    int64  `json:"created_at" db:"created_at"`
+	Success      bool   `json:"success" db:"success"`
 }
 
 // DeliveryStats represents delivery statistics for webhooks

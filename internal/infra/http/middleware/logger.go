@@ -14,9 +14,9 @@ import (
 )
 
 type LoggerConfig struct {
+	Output io.Writer
 	Logger *logger.Logger
 	Format string
-	Output io.Writer
 }
 
 func NewLogger(customLogger *logger.Logger) fiber.Handler {

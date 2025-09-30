@@ -30,28 +30,26 @@ const (
 )
 
 type SendResult struct {
+	Timestamp time.Time `json:"timestamp"`
 	MessageID string    `json:"messageId"`
 	Status    string    `json:"status"`
 	Error     string    `json:"error,omitempty"`
-	Timestamp time.Time `json:"timestamp"`
 }
 
 type SendMessageRequest struct {
-	To       string      `json:"to" validate:"required" example:"5511999999999@s.whatsapp.net"`
-	Type     MessageType `json:"type" validate:"required,oneof=text image audio video document sticker location contact" example:"text"`
-	Body     string      `json:"body,omitempty" example:"Hello World!"`
-	Caption  string      `json:"caption,omitempty" example:"Image caption"`
-	File     string      `json:"file,omitempty" example:"https://example.com/image.jpg"`
-	Filename string      `json:"filename,omitempty" example:"document.pdf"`
-	MimeType string      `json:"mimeType,omitempty" example:"image/jpeg"`
-
-	Latitude  float64 `json:"latitude,omitempty" example:"-23.5505"`
-	Longitude float64 `json:"longitude,omitempty" example:"-46.6333"`
-	Address   string  `json:"address,omitempty" example:"São Paulo, SP"`
-
+	ContextInfo  *ContextInfo `json:"contextInfo,omitempty"`
+	MimeType     string       `json:"mimeType,omitempty" example:"image/jpeg"`
+	Body         string       `json:"body,omitempty" example:"Hello World!"`
+	Caption      string       `json:"caption,omitempty" example:"Image caption"`
+	File         string       `json:"file,omitempty" example:"https://example.com/image.jpg"`
+	Filename     string       `json:"filename,omitempty" example:"document.pdf"`
+	To           string       `json:"to" validate:"required" example:"5511999999999@s.whatsapp.net"`
+	Address      string       `json:"address,omitempty" example:"São Paulo, SP"`
 	ContactName  string       `json:"contactName,omitempty" example:"John Doe"`
 	ContactPhone string       `json:"contactPhone,omitempty" example:"+5511999999999"`
-	ContextInfo  *ContextInfo `json:"contextInfo,omitempty"`
+	Type         MessageType  `json:"type" validate:"required,oneof=text image audio video document sticker location contact" example:"text"`
+	Latitude     float64      `json:"latitude,omitempty" example:"-23.5505"`
+	Longitude    float64      `json:"longitude,omitempty" example:"-46.6333"`
 }
 
 type ContextInfo struct {
@@ -60,9 +58,9 @@ type ContextInfo struct {
 }
 
 type SendMessageResponse struct {
+	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	MessageID string    `json:"messageId" example:"3EB0C767D71D"`
 	Status    string    `json:"status" example:"sent"`
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 }
 
 type MediaInfo struct {
@@ -74,10 +72,10 @@ type MediaInfo struct {
 }
 
 type LocationMessage struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
 	Address   string  `json:"address,omitempty"`
 	Name      string  `json:"name,omitempty"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 type ContactMessage struct {
@@ -149,52 +147,52 @@ type GetPollResultsRequest struct {
 
 // PollInfo represents basic poll information
 type PollInfo struct {
+	CreatedAt             time.Time
 	MessageID             string
 	Name                  string
+	To                    string
 	Options               []string
 	SelectableOptionCount int
 	AllowMultipleAnswers  bool
-	CreatedAt             time.Time
-	To                    string
 }
 
 // PollOption represents a poll option with vote information
 type PollOption struct {
 	Name      string
-	VoteCount int
 	Voters    []string
+	VoteCount int
 }
 
 // PollResults represents poll results with vote counts
 type PollResults struct {
+	CreatedAt             time.Time
 	PollMessageID         string
 	PollName              string
+	To                    string
 	Options               []PollOption
 	TotalVotes            int
 	SelectableOptionCount int
 	AllowMultipleAnswers  bool
-	CreatedAt             time.Time
-	To                    string
 }
 
 // PollVote represents a vote in a poll
 type PollVote struct {
+	VotedAt         time.Time
 	PollMessageID   string
 	VoterJID        string
 	SelectedOptions []string
-	VotedAt         time.Time
 }
 
 // Poll represents a complete poll entity
 type Poll struct {
+	CreatedAt             time.Time
 	MessageID             string
 	Name                  string
+	To                    string
 	Options               []string
+	Votes                 []PollVote
 	SelectableOptionCount int
 	AllowMultipleAnswers  bool
-	CreatedAt             time.Time
-	To                    string
-	Votes                 []PollVote
 }
 
 // Business logic methods for polls

@@ -7,27 +7,25 @@ import (
 )
 
 type SendMessageRequest struct {
-	RemoteJID string `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
-	Type      string `json:"type" validate:"required,oneof=text image audio video document sticker location contact" example:"text"`
-	Body      string `json:"body,omitempty" example:"Hello World!"`
-	Caption   string `json:"caption,omitempty" example:"Image caption"`
-	File      string `json:"file,omitempty" example:"https://example.com/image.jpg"`
-	Filename  string `json:"filename,omitempty" example:"document.pdf"` // Only used for document type, not for audio
-	MimeType  string `json:"mimeType,omitempty" example:"image/jpeg"`
-
-	Latitude  float64 `json:"latitude,omitempty" example:"-23.5505"`
-	Longitude float64 `json:"longitude,omitempty" example:"-46.6333"`
-	Address   string  `json:"address,omitempty" example:"São Paulo, SP"`
-
+	ContextInfo  *ContextInfo `json:"contextInfo,omitempty"`
+	MimeType     string       `json:"mimeType,omitempty" example:"image/jpeg"`
+	Body         string       `json:"body,omitempty" example:"Hello World!"`
+	Caption      string       `json:"caption,omitempty" example:"Image caption"`
+	File         string       `json:"file,omitempty" example:"https://example.com/image.jpg"`
+	Filename     string       `json:"filename,omitempty" example:"document.pdf"`
+	RemoteJID    string       `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
+	Address      string       `json:"address,omitempty" example:"São Paulo, SP"`
 	ContactName  string       `json:"contactName,omitempty" example:"John Doe"`
 	ContactPhone string       `json:"contactPhone,omitempty" example:"+5511999999999"`
-	ContextInfo  *ContextInfo `json:"contextInfo,omitempty"`
+	Type         string       `json:"type" validate:"required,oneof=text image audio video document sticker location contact" example:"text"`
+	Latitude     float64      `json:"latitude,omitempty" example:"-23.5505"`
+	Longitude    float64      `json:"longitude,omitempty" example:"-46.6333"`
 } // @name SendMessageRequest
 
 type SendMessageResponse struct {
+	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	ID        string    `json:"id" example:"3EB0C767D71D"`
 	Status    string    `json:"status" example:"sent"`
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 } // @name SendMessageResponse
 
 func FromDomainRequest(req *message.SendMessageRequest) *SendMessageRequest {
@@ -127,47 +125,45 @@ type MediaMessageRequest struct {
 } // @name MediaMessageRequest
 
 type ImageMessageRequest struct {
+	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
 	RemoteJID   string       `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 	File        string       `json:"file" validate:"required" example:"https://example.com/image.jpg"`
 	Caption     string       `json:"caption" example:"Beautiful sunset photo"`
 	MimeType    string       `json:"mimeType" example:"image/jpeg"`
 	Filename    string       `json:"filename" example:"sunset.jpg"`
-	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
 } // @name ImageMessageRequest
 
 type VideoMessageRequest struct {
+	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
 	RemoteJID   string       `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 	File        string       `json:"file" validate:"required" example:"https://example.com/video.mp4"`
 	Caption     string       `json:"caption" example:"Check out this amazing video!"`
 	MimeType    string       `json:"mimeType" example:"video/mp4"`
 	Filename    string       `json:"filename" example:"amazing_video.mp4"`
-	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
 } // @name VideoMessageRequest
 
 type AudioMessageRequest struct {
+	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
 	RemoteJID   string       `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 	File        string       `json:"file" validate:"required" example:"https://example.com/audio.ogg"`
 	Caption     string       `json:"caption" example:"Voice message"`
 	MimeType    string       `json:"mimeType" example:"audio/ogg"`
-	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
-	// Note: AudioMessage in WhatsApp protocol doesn't support filename field
-	// Use DocumentMessage for files that need a filename
 } // @name AudioMessageRequest
 
 type DocumentMessageRequest struct {
+	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
 	RemoteJID   string       `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 	File        string       `json:"file" validate:"required" example:"https://example.com/document.pdf"`
 	Caption     string       `json:"caption" example:"Important document"`
 	MimeType    string       `json:"mimeType" example:"application/pdf"`
 	Filename    string       `json:"filename" validate:"required" example:"important_document.pdf"`
-	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
 } // @name DocumentMessageRequest
 
 type LocationMessageRequest struct {
 	RemoteJID string  `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
+	Address   string  `json:"address" example:"Avenida Paulista, 1578 - Bela Vista, São Paulo - SP, Brazil"`
 	Latitude  float64 `json:"latitude" validate:"required" example:"-23.5505"`
 	Longitude float64 `json:"longitude" validate:"required" example:"-46.6333"`
-	Address   string  `json:"address" example:"Avenida Paulista, 1578 - Bela Vista, São Paulo - SP, Brazil"`
 } // @name LocationMessageRequest
 
 type ContactMessageRequest struct {
@@ -192,11 +188,11 @@ type ContactListMessageRequest struct {
 } // @name ContactListMessageRequest
 
 type ContactListMessageResponse struct {
+	Timestamp     string              `json:"timestamp" example:"2024-01-01T00:00:00Z"`
+	Results       []ContactSendResult `json:"results"`
 	TotalContacts int                 `json:"totalContacts" example:"3"`
 	SuccessCount  int                 `json:"successCount" example:"3"`
 	FailureCount  int                 `json:"failureCount" example:"0"`
-	Results       []ContactSendResult `json:"results"`
-	Timestamp     string              `json:"timestamp" example:"2024-01-01T00:00:00Z"`
 } // @name ContactListMessageResponse
 
 type ContactSendResult struct {
@@ -225,10 +221,10 @@ type EditMessageRequest struct {
 } // @name EditMessageRequest
 
 type EditMessageResponse struct {
+	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	ID        string    `json:"id" example:"3EB0C767D71D"`
 	Status    string    `json:"status" example:"edited"`
 	NewBody   string    `json:"newBody" example:"Updated message text"`
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 } // @name EditMessageResponse
 
 type RevokeMessageRequest struct {
@@ -238,9 +234,9 @@ type RevokeMessageRequest struct {
 } // @name RevokeMessageRequest
 
 type RevokeMessageResponse struct {
+	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	ID        string    `json:"id" example:"3EB0C767D71D"`
 	Status    string    `json:"status" example:"revoked"`
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 } // @name RevokeMessageResponse
 
 type MarkAsReadRequest struct {
@@ -250,35 +246,35 @@ type MarkAsReadRequest struct {
 } // @name MarkAsReadRequest
 
 type MarkAsReadResponse struct {
-	MessageIDs []string  `json:"messageIds" example:"3EB0C767D71D,3EB0C767D71E"`
-	Status     string    `json:"status" example:"read"`
 	Timestamp  time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
+	Status     string    `json:"status" example:"read"`
+	MessageIDs []string  `json:"messageIds" example:"3EB0C767D71D,3EB0C767D71E"`
 } // @name MarkAsReadResponse
 
 type MessageResponse struct {
+	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	ID        string    `json:"id" example:"3EB0C767D71D"`
 	Status    string    `json:"status" example:"sent"`
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 } // @name MessageResponse
 
 type ReactionResponse struct {
+	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	ID        string    `json:"id" example:"3EB0C767D71D"`
 	Reaction  string    `json:"reaction" example:"👍"`
 	Status    string    `json:"status" example:"sent"`
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 } // @name ReactionResponse
 
 type PresenceResponse struct {
+	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	Status    string    `json:"status" example:"sent"`
 	Presence  string    `json:"presence" example:"typing"`
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 } // @name PresenceResponse
 
 type EditResponse struct {
+	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	ID        string    `json:"id" example:"3EB0C767D71D"`
 	Status    string    `json:"status" example:"edited"`
 	NewBody   string    `json:"newBody" example:"Updated message text"`
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 } // @name EditResponse
 
 type BusinessProfileRequest struct {
@@ -293,9 +289,9 @@ type BusinessProfileRequest struct {
 } // @name BusinessProfileRequest
 
 type TextMessageRequest struct {
+	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
 	RemoteJID   string       `json:"remoteJid" validate:"required" example:"5511987654321@s.whatsapp.net"`
 	Body        string       `json:"body" validate:"required" example:"Hello, this is a text message"`
-	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
 } // @name TextMessageRequest
 
 type ContextInfo struct {
@@ -316,12 +312,12 @@ type CreatePollRequest struct {
 
 // CreatePollResponse represents the response after creating a poll
 type CreatePollResponse struct {
+	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	MessageID string    `json:"messageId" example:"3EB0C767D71D"`
 	PollName  string    `json:"pollName" example:"What's your favorite color?"`
-	Options   []string  `json:"options" example:"Red,Blue,Green"`
 	RemoteJID string    `json:"remoteJid" example:"5511999999999@s.whatsapp.net"`
 	Status    string    `json:"status" example:"sent"`
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
+	Options   []string  `json:"options" example:"Red,Blue,Green"`
 } // @name CreatePollResponse
 
 // VotePollRequest represents a request to vote in a poll
@@ -333,11 +329,11 @@ type VotePollRequest struct {
 
 // VotePollResponse represents the response after voting in a poll
 type VotePollResponse struct {
+	Timestamp       time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	PollMessageID   string    `json:"pollMessageId" example:"3EB0C767D71D"`
-	SelectedOptions []string  `json:"selectedOptions" example:"Red"`
 	RemoteJID       string    `json:"remoteJid" example:"5511999999999@s.whatsapp.net"`
 	Status          string    `json:"status" example:"sent"`
-	Timestamp       time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
+	SelectedOptions []string  `json:"selectedOptions" example:"Red"`
 } // @name VotePollResponse
 
 // GetPollResultsRequest represents a request to get poll results
@@ -349,20 +345,20 @@ type GetPollResultsRequest struct {
 // PollOption represents a poll option with vote count
 type PollOption struct {
 	Name      string   `json:"name" example:"Red"`
-	VoteCount int      `json:"voteCount" example:"5"`
 	Voters    []string `json:"voters,omitempty" example:"5511999999999@s.whatsapp.net"`
+	VoteCount int      `json:"voteCount" example:"5"`
 } // @name PollOption
 
 // GetPollResultsResponse represents poll results
 type GetPollResultsResponse struct {
+	CreatedAt             time.Time    `json:"createdAt" example:"2024-01-01T12:00:00Z"`
 	PollMessageID         string       `json:"pollMessageId" example:"3EB0C767D71D"`
 	PollName              string       `json:"pollName" example:"What's your favorite color?"`
+	RemoteJID             string       `json:"remoteJid" example:"5511999999999@s.whatsapp.net"`
 	Options               []PollOption `json:"options"`
 	TotalVotes            int          `json:"totalVotes" example:"10"`
 	SelectableOptionCount int          `json:"selectableOptionCount" example:"1"`
 	AllowMultipleAnswers  bool         `json:"allowMultipleAnswers" example:"false"`
-	CreatedAt             time.Time    `json:"createdAt" example:"2024-01-01T12:00:00Z"`
-	RemoteJID             string       `json:"remoteJid" example:"5511999999999@s.whatsapp.net"`
 } // @name GetPollResultsResponse
 
 // MarkReadRequest represents a request to mark a message as read
@@ -373,8 +369,8 @@ type MarkReadRequest struct {
 
 // MarkReadResponse represents the response for marking a message as read
 type MarkReadResponse struct {
-	MessageID string    `json:"messageId" example:"3EB0C431C26A1916E07E"`
-	Success   bool      `json:"success" example:"true"`
 	MarkedAt  time.Time `json:"markedAt" example:"2024-01-01T12:00:00Z"`
+	MessageID string    `json:"messageId" example:"3EB0C431C26A1916E07E"`
 	Message   string    `json:"message" example:"Message marked as read successfully"`
+	Success   bool      `json:"success" example:"true"`
 } // @name MarkReadResponse

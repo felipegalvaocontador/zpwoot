@@ -79,11 +79,11 @@ func (r *GetSubGroupsRequest) GetCommunityJID() string {
 
 // LinkGroupResponse represents the response for linking a group to a community
 type LinkGroupResponse struct {
-	Success      bool      `json:"success"`
+	LinkedAt     time.Time `json:"linkedAt"`
 	Message      string    `json:"message"`
 	CommunityJID string    `json:"communityJid"`
 	GroupJID     string    `json:"groupJid"`
-	LinkedAt     time.Time `json:"linkedAt"`
+	Success      bool      `json:"success"`
 }
 
 // NewLinkGroupResponse creates a new link group response
@@ -99,11 +99,11 @@ func NewLinkGroupResponse(linkInfo *community.GroupLinkInfo) *LinkGroupResponse 
 
 // UnlinkGroupResponse represents the response for unlinking a group from a community
 type UnlinkGroupResponse struct {
-	Success      bool      `json:"success"`
+	UnlinkedAt   time.Time `json:"unlinkedAt"`
 	Message      string    `json:"message"`
 	CommunityJID string    `json:"communityJid"`
 	GroupJID     string    `json:"groupJid"`
-	UnlinkedAt   time.Time `json:"unlinkedAt"`
+	Success      bool      `json:"success"`
 }
 
 // NewUnlinkGroupResponse creates a new unlink group response
@@ -149,13 +149,13 @@ func NewCommunityInfoResponse(info *community.CommunityInfo) *CommunityInfoRespo
 
 // LinkedGroupInfo represents information about a linked group
 type LinkedGroupInfo struct {
+	LinkedAt         time.Time `json:"linkedAt"`
 	JID              string    `json:"jid"`
 	Name             string    `json:"name"`
 	Description      string    `json:"description"`
 	ParticipantCount int       `json:"participantCount"`
 	IsOwner          bool      `json:"isOwner"`
 	IsAdmin          bool      `json:"isAdmin"`
-	LinkedAt         time.Time `json:"linkedAt"`
 }
 
 // NewLinkedGroupInfo creates a new linked group info
@@ -194,8 +194,8 @@ func NewSubGroupsResponse(communityJID string, groups []*community.LinkedGroup) 
 
 // CommunityActionResponse represents a generic response for community actions
 type CommunityActionResponse struct {
-	Success bool   `json:"success"`
 	Message string `json:"message"`
+	Success bool   `json:"success"`
 }
 
 // NewCommunityActionResponse creates a new community action response
@@ -208,11 +208,11 @@ func NewCommunityActionResponse(success bool, message string) *CommunityActionRe
 
 // CommunityErrorResponse represents an error response for community operations
 type CommunityErrorResponse struct {
-	Success bool                   `json:"success"`
+	Context map[string]interface{} `json:"context,omitempty"`
 	Error   string                 `json:"error"`
 	Code    string                 `json:"code,omitempty"`
 	Details string                 `json:"details,omitempty"`
-	Context map[string]interface{} `json:"context,omitempty"`
+	Success bool                   `json:"success"`
 }
 
 // NewCommunityErrorResponse creates a new community error response
@@ -252,13 +252,13 @@ func NewCommunityStatsResponse(stats *community.CommunityStats) *CommunityStatsR
 
 // CommunityEventResponse represents a community event
 type CommunityEventResponse struct {
+	Timestamp    time.Time              `json:"timestamp"`
+	Data         map[string]interface{} `json:"data,omitempty"`
 	ID           string                 `json:"id"`
 	Type         string                 `json:"type"`
 	CommunityJID string                 `json:"communityJid"`
 	ActorJID     string                 `json:"actorJid"`
 	TargetJID    string                 `json:"targetJid,omitempty"`
-	Data         map[string]interface{} `json:"data,omitempty"`
-	Timestamp    time.Time              `json:"timestamp"`
 }
 
 // NewCommunityEventResponse creates a new community event response
@@ -276,11 +276,11 @@ func NewCommunityEventResponse(event *community.CommunityEvent) *CommunityEventR
 
 // CommunityParticipantResponse represents a community participant
 type CommunityParticipantResponse struct {
+	JoinedAt time.Time `json:"joinedAt"`
 	JID      string    `json:"jid"`
 	Name     string    `json:"name"`
 	IsOwner  bool      `json:"isOwner"`
 	IsAdmin  bool      `json:"isAdmin"`
-	JoinedAt time.Time `json:"joinedAt"`
 }
 
 // NewCommunityParticipantResponse creates a new community participant response
@@ -296,11 +296,11 @@ func NewCommunityParticipantResponse(participant *community.CommunityParticipant
 
 // CommunitySettingsResponse represents community settings
 type CommunitySettingsResponse struct {
-	IsAnnouncement     bool   `json:"isAnnouncement"`
-	IsMuted            bool   `json:"isMuted"`
 	WhoCanAddGroups    string `json:"whoCanAddGroups"`
 	WhoCanSendMessages string `json:"whoCanSendMessages"`
 	WhoCanEditInfo     string `json:"whoCanEditInfo"`
+	IsAnnouncement     bool   `json:"isAnnouncement"`
+	IsMuted            bool   `json:"isMuted"`
 }
 
 // NewCommunitySettingsResponse creates a new community settings response

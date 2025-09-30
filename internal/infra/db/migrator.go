@@ -18,11 +18,11 @@ import (
 var migrationsFS embed.FS
 
 type Migration struct {
-	Version   int
+	AppliedAt *time.Time
 	Name      string
 	UpSQL     string
 	DownSQL   string
-	AppliedAt *time.Time
+	Version   int
 }
 
 type Migrator struct {

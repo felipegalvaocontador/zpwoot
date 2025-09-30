@@ -24,14 +24,14 @@ type WebhookEventProcessor interface {
 
 // WebhookDeliveryService handles the delivery of webhook events to external endpoints
 type WebhookDeliveryService struct {
-	logger        *logger.Logger
 	webhookRepo   ports.WebhookRepository
+	logger        *logger.Logger
 	httpClient    *http.Client
+	deliveryQueue chan *DeliveryTask
+	processors    []WebhookEventProcessor
 	maxRetries    int
 	retryDelay    time.Duration
-	deliveryQueue chan *DeliveryTask
 	workers       int
-	processors    []WebhookEventProcessor // Additional processors for webhook events
 }
 
 // DeliveryTask represents a webhook delivery task
@@ -44,20 +44,20 @@ type DeliveryTask struct {
 
 // WebhookPayload represents the payload sent to webhook endpoints
 type WebhookPayload struct {
+	Data      map[string]interface{} `json:"data"`
 	Event     string                 `json:"event"`
 	SessionID string                 `json:"sessionId"`
 	Timestamp int64                  `json:"timestamp"`
-	Data      map[string]interface{} `json:"data"`
 }
 
 // DeliveryResult represents the result of a webhook delivery attempt
 type DeliveryResult struct {
-	Success      bool          `json:"success"`
-	StatusCode   int           `json:"status_code"`
 	ResponseBody string        `json:"response_body"`
-	Latency      time.Duration `json:"latency"`
 	Error        string        `json:"error,omitempty"`
+	StatusCode   int           `json:"status_code"`
+	Latency      time.Duration `json:"latency"`
 	Attempt      int           `json:"attempt"`
+	Success      bool          `json:"success"`
 }
 
 // NewWebhookDeliveryService creates a new webhook delivery service

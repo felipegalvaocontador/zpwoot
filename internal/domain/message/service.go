@@ -3,6 +3,7 @@ package message
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -82,10 +83,10 @@ func (mp *MediaProcessor) validateMediaForType(media *ProcessedMedia, messageTyp
 }
 
 type ProcessedMedia struct {
+	Cleanup  func() error
 	FilePath string
 	MimeType string
 	FileSize int64
-	Cleanup  func() error
 }
 
 func (mp *MediaProcessor) ProcessMedia(ctx context.Context, file string) (*ProcessedMedia, error) {
@@ -190,7 +191,7 @@ func (mp *MediaProcessor) logURLProcessing(url string) {
 func (mp *MediaProcessor) downloadFromURL(ctx context.Context, url string) (*http.Response, error) {
 	client := &http.Client{Timeout: mp.timeout}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
@@ -240,7 +241,7 @@ func (mp *MediaProcessor) saveToTempFile(resp *http.Response, url, mimeType stri
 	}
 
 	written, err := io.CopyN(tempFile, resp.Body, mp.maxSize+1)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		mp.cleanupTempFile(tempFile)
 		return nil, fmt.Errorf("failed to copy data to temporary file: %w", err)
 	}

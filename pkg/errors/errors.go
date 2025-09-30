@@ -1,14 +1,15 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
 
 type AppError struct {
-	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Details string `json:"details,omitempty"`
+	Code    int    `json:"code"`
 }
 
 func (e *AppError) Error() string {
@@ -70,12 +71,14 @@ func Wrap(err error, message string) error {
 }
 
 func IsAppError(err error) bool {
-	_, ok := err.(*AppError)
+	appError := &AppError{}
+	ok := errors.As(err, &appError)
 	return ok
 }
 
 func GetAppError(err error) *AppError {
-	if appErr, ok := err.(*AppError); ok {
+	appErr := &AppError{}
+	if errors.As(err, &appErr) {
 		return appErr
 	}
 	return NewWithDetails(http.StatusInternalServerError, "Internal server error", err.Error())

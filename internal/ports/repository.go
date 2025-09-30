@@ -52,13 +52,13 @@ type ChatwootRepository interface {
 type SyncRecord struct {
 	ID           string `json:"id" db:"id"`
 	SessionID    string `json:"session_id" db:"session_id"`
-	RecordType   string `json:"record_type" db:"record_type"` // contact, conversation, message
-	ExternalID   string `json:"external_id" db:"external_id"` // Wameow ID
-	ChatwootID   int    `json:"chatwoot_id" db:"chatwoot_id"` // Chatwoot ID
+	RecordType   string `json:"record_type" db:"record_type"`
+	ExternalID   string `json:"external_id" db:"external_id"`
 	PhoneNumber  string `json:"phone_number,omitempty" db:"phone_number"`
-	LastSyncAt   int64  `json:"last_sync_at" db:"last_sync_at"`
-	SyncStatus   string `json:"sync_status" db:"sync_status"` // pending, synced, failed
+	SyncStatus   string `json:"sync_status" db:"sync_status"`
 	ErrorMessage string `json:"error_message,omitempty" db:"error_message"`
+	ChatwootID   int    `json:"chatwoot_id" db:"chatwoot_id"`
+	LastSyncAt   int64  `json:"last_sync_at" db:"last_sync_at"`
 	CreatedAt    int64  `json:"created_at" db:"created_at"`
 	UpdatedAt    int64  `json:"updated_at" db:"updated_at"`
 }

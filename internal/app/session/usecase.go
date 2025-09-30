@@ -147,7 +147,8 @@ func (uc *useCaseImpl) ConnectSession(ctx context.Context, sessionID string) (*C
 
 	if err != nil {
 		// Check if it's an "already connected" error
-		if appErr, ok := err.(*errors.AppError); ok && appErr.Code == 409 {
+		appErr := &errors.AppError{}
+		if errors.As(err, &appErr) {
 			response = &ConnectSessionResponse{
 				Success: true,
 				Message: "Session is already connected and active",
@@ -184,7 +185,8 @@ func (uc *useCaseImpl) LogoutSession(ctx context.Context, sessionID string) erro
 	err := uc.sessionService.LogoutSession(ctx, sessionID)
 	if err != nil {
 		// Check if it's an "already disconnected" error
-		if appErr, ok := err.(*errors.AppError); ok && appErr.Code == 409 {
+		appErr := &errors.AppError{}
+		if errors.As(err, &appErr) {
 			// Return success for already disconnected sessions
 			return nil
 		}

@@ -881,8 +881,8 @@ func (h *MessageHandler) SendButtonMessage(c *fiber.Ctx) error {
 	type buttonRequest struct {
 		RemoteJID string         `json:"remoteJid"`
 		Title     string         `json:"Title"`
-		Buttons   []buttonStruct `json:"Buttons"`
 		Id        string         `json:"Id,omitempty"`
+		Buttons   []buttonStruct `json:"Buttons"`
 	}
 
 	var buttonReq buttonRequest
@@ -1012,10 +1012,10 @@ type listRequest struct {
 	ButtonText string     `json:"ButtonText"`
 	Desc       string     `json:"Desc"`
 	TopText    string     `json:"TopText"`
-	Sections   []section  `json:"Sections"`
-	List       []listItem `json:"List"` // compatibility
 	FooterText string     `json:"FooterText"`
 	Id         string     `json:"Id,omitempty"`
+	Sections   []section  `json:"Sections"`
+	List       []listItem `json:"List"`
 }
 
 // parseListMessageRequest parses and validates the list message request

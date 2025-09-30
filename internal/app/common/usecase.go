@@ -32,16 +32,16 @@ type VersionResponse struct {
 } // @name VersionResponse
 
 type StatsResponse struct {
+	LastHealthCheck time.Time       `json:"last_health_check" example:"2024-01-01T00:00:00Z"`
+	Features        map[string]bool `json:"features"`
 	Uptime          string          `json:"uptime" example:"2h30m15s"`
+	DatabaseStatus  string          `json:"database_status" example:"connected"`
 	MemoryUsage     MemoryStats     `json:"memory_usage"`
 	GoroutineCount  int             `json:"goroutine_count" example:"25"`
 	RequestCount    int64           `json:"request_count" example:"1250"`
 	ErrorCount      int64           `json:"error_count" example:"5"`
 	ActiveSessions  int             `json:"active_sessions" example:"10"`
 	ActiveWebhooks  int             `json:"active_webhooks" example:"3"`
-	DatabaseStatus  string          `json:"database_status" example:"connected"`
-	LastHealthCheck time.Time       `json:"last_health_check" example:"2024-01-01T00:00:00Z"`
-	Features        map[string]bool `json:"features"`
 } // @name StatsResponse
 
 type MemoryStats struct {
@@ -53,12 +53,12 @@ type MemoryStats struct {
 
 type useCaseImpl struct {
 	startTime    time.Time
+	sessionRepo  ports.SessionRepository
+	webhookRepo  ports.WebhookRepository
+	db           *sql.DB
 	version      string
 	buildTime    string
 	gitCommit    string
-	db           *sql.DB
-	sessionRepo  ports.SessionRepository
-	webhookRepo  ports.WebhookRepository
 	requestCount int64
 	errorCount   int64
 }

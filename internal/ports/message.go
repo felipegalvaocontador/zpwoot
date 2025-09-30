@@ -135,30 +135,30 @@ type MessageService interface {
 
 // MessageEntity represents a message entity for repository operations
 type MessageEntity struct {
-	ID        string    `json:"id"`
-	SessionID string    `json:"session_id"`
-	ChatJID   string    `json:"chat_jid"`
-	FromJID   string    `json:"from_jid"`
+	Timestamp time.Time `json:"timestamp"`
+	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at"`
+	Content   string    `json:"content"`
 	ToJID     string    `json:"to_jid"`
 	Type      string    `json:"type"`
-	Content   string    `json:"content"`
+	ID        string    `json:"id"`
 	MediaURL  string    `json:"media_url,omitempty"`
 	Caption   string    `json:"caption,omitempty"`
+	FromJID   string    `json:"from_jid"`
+	ChatJID   string    `json:"chat_jid"`
+	SessionID string    `json:"session_id"`
 	IsRead    bool      `json:"is_read"`
-	Timestamp time.Time `json:"timestamp"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // ListMessagesRequest represents a request to list messages
 type ListMessagesRequest struct {
+	FromDate  *time.Time `json:"from_date,omitempty"`
+	ToDate    *time.Time `json:"to_date,omitempty"`
 	SessionID string     `json:"session_id"`
 	ChatJID   string     `json:"chat_jid,omitempty"`
 	Type      string     `json:"type,omitempty"`
 	Limit     int        `json:"limit"`
 	Offset    int        `json:"offset"`
-	FromDate  *time.Time `json:"from_date,omitempty"`
-	ToDate    *time.Time `json:"to_date,omitempty"`
 }
 
 // ListMessagesResponse represents a response with message list
@@ -182,10 +182,10 @@ type MessageStats struct {
 
 // GetMessageStatsRequest represents a request to get message statistics
 type GetMessageStatsRequest struct {
-	SessionID string     `json:"session_id"`
-	ChatJID   string     `json:"chat_jid,omitempty"`
 	FromDate  *time.Time `json:"from_date,omitempty"`
 	ToDate    *time.Time `json:"to_date,omitempty"`
+	SessionID string     `json:"session_id"`
+	ChatJID   string     `json:"chat_jid,omitempty"`
 }
 
 // GetMessageStatsResponse represents a response with message statistics
@@ -197,10 +197,10 @@ type GetMessageStatsResponse struct {
 
 // ScheduleMessageRequest represents a request to schedule a message
 type ScheduleMessageRequest struct {
+	ScheduledAt time.Time                   `json:"scheduled_at"`
+	Message     *message.SendMessageRequest `json:"message"`
 	SessionID   string                      `json:"session_id"`
 	To          string                      `json:"to"`
-	Message     *message.SendMessageRequest `json:"message"`
-	ScheduledAt time.Time                   `json:"scheduled_at"`
 }
 
 // ScheduleMessageResponse represents a response for scheduled message
@@ -213,12 +213,12 @@ type ScheduleMessageResponse struct {
 
 // ScheduledMessage represents a scheduled message
 type ScheduledMessage struct {
+	ScheduledAt time.Time                   `json:"scheduled_at"`
+	CreatedAt   time.Time                   `json:"created_at"`
+	UpdatedAt   time.Time                   `json:"updated_at"`
+	Message     *message.SendMessageRequest `json:"message"`
 	ID          string                      `json:"id"`
 	SessionID   string                      `json:"session_id"`
 	To          string                      `json:"to"`
-	Message     *message.SendMessageRequest `json:"message"`
-	ScheduledAt time.Time                   `json:"scheduled_at"`
 	Status      string                      `json:"status"`
-	CreatedAt   time.Time                   `json:"created_at"`
-	UpdatedAt   time.Time                   `json:"updated_at"`
 }

@@ -11,10 +11,10 @@ type CheckWhatsAppRequest struct {
 // WhatsAppStatus represents the status of a phone number on WhatsApp
 type WhatsAppStatus struct {
 	PhoneNumber  string `json:"phoneNumber" example:"+5511999999999"`
-	IsOnWhatsApp bool   `json:"isOnWhatsapp" example:"true"`
 	JID          string `json:"jid,omitempty" example:"5511999999999@s.whatsapp.net"`
-	IsBusiness   bool   `json:"isBusiness" example:"false"`
 	VerifiedName string `json:"verifiedName,omitempty" example:"Company Name"`
+	IsOnWhatsApp bool   `json:"isOnWhatsapp" example:"true"`
+	IsBusiness   bool   `json:"isBusiness" example:"false"`
 }
 
 // CheckWhatsAppResponse represents the response for checking WhatsApp numbers
@@ -33,12 +33,12 @@ type GetProfilePictureRequest struct {
 
 // ProfilePictureResponse represents profile picture information
 type ProfilePictureResponse struct {
+	UpdatedAt  time.Time `json:"updatedAt,omitempty" example:"2024-01-01T12:00:00Z"`
 	JID        string    `json:"jid" example:"5511999999999@s.whatsapp.net"`
 	URL        string    `json:"url,omitempty" example:"https://pps.whatsapp.net/v/..."`
 	ID         string    `json:"id,omitempty" example:"1234567890"`
 	Type       string    `json:"type,omitempty" example:"image"`
 	DirectPath string    `json:"directPath,omitempty"`
-	UpdatedAt  time.Time `json:"updatedAt,omitempty" example:"2024-01-01T12:00:00Z"`
 	HasPicture bool      `json:"hasPicture" example:"true"`
 }
 
@@ -50,15 +50,15 @@ type GetUserInfoRequest struct {
 
 // UserInfo represents information about a WhatsApp user
 type UserInfo struct {
+	LastSeen     *time.Time `json:"lastSeen,omitempty" example:"2024-01-01T12:00:00Z"`
 	JID          string     `json:"jid" example:"5511999999999@s.whatsapp.net"`
 	PhoneNumber  string     `json:"phoneNumber" example:"+5511999999999"`
 	Name         string     `json:"name,omitempty" example:"John Doe"`
 	Status       string     `json:"status,omitempty" example:"Hey there! I am using WhatsApp."`
 	PictureID    string     `json:"pictureId,omitempty" example:"1234567890"`
-	IsBusiness   bool       `json:"isBusiness" example:"false"`
 	VerifiedName string     `json:"verifiedName,omitempty" example:"Company Name"`
+	IsBusiness   bool       `json:"isBusiness" example:"false"`
 	IsContact    bool       `json:"isContact" example:"true"`
-	LastSeen     *time.Time `json:"lastSeen,omitempty" example:"2024-01-01T12:00:00Z"`
 	IsOnline     bool       `json:"isOnline" example:"false"`
 }
 
@@ -72,13 +72,15 @@ type GetUserInfoResponse struct {
 // ListContactsRequest represents a request to list contacts
 type ListContactsRequest struct {
 	SessionID string `json:"sessionId,omitempty"`
+	Search    string `json:"search,omitempty" example:"John"`
 	Limit     int    `json:"limit" validate:"min=1,max=100" example:"50"`
 	Offset    int    `json:"offset" validate:"min=0" example:"0"`
-	Search    string `json:"search,omitempty" example:"John"`
 }
 
 // Contact represents a contact in the contact list
 type Contact struct {
+	AddedAt     time.Time `json:"addedAt,omitempty" example:"2024-01-01T12:00:00Z"`
+	UpdatedAt   time.Time `json:"updatedAt,omitempty" example:"2024-01-01T12:00:00Z"`
 	JID         string    `json:"jid" example:"5511999999999@s.whatsapp.net"`
 	PhoneNumber string    `json:"phoneNumber" example:"+5511999999999"`
 	Name        string    `json:"name,omitempty" example:"John Doe"`
@@ -87,8 +89,6 @@ type Contact struct {
 	IsBusiness  bool      `json:"isBusiness" example:"false"`
 	IsContact   bool      `json:"isContact" example:"true"`
 	IsBlocked   bool      `json:"isBlocked" example:"false"`
-	AddedAt     time.Time `json:"addedAt,omitempty" example:"2024-01-01T12:00:00Z"`
-	UpdatedAt   time.Time `json:"updatedAt,omitempty" example:"2024-01-01T12:00:00Z"`
 }
 
 // ListContactsResponse represents the response for listing contacts
@@ -108,13 +108,13 @@ type SyncContactsRequest struct {
 
 // SyncContactsResponse represents the response for syncing contacts
 type SyncContactsResponse struct {
+	SyncedAt time.Time `json:"syncedAt" example:"2024-01-01T12:00:00Z"`
+	Message  string    `json:"message" example:"Contacts synchronized successfully"`
 	Synced   int       `json:"synced" example:"25"`
 	Added    int       `json:"added" example:"5"`
 	Updated  int       `json:"updated" example:"3"`
 	Removed  int       `json:"removed" example:"1"`
 	Total    int       `json:"total" example:"150"`
-	SyncedAt time.Time `json:"syncedAt" example:"2024-01-01T12:00:00Z"`
-	Message  string    `json:"message" example:"Contacts synchronized successfully"`
 }
 
 // GetBusinessProfileRequest represents a request to get business profile
@@ -137,19 +137,19 @@ type BusinessProfile struct {
 
 // BusinessProfileResponse represents the response for getting business profile
 type BusinessProfileResponse struct {
+	UpdatedAt time.Time       `json:"updatedAt" example:"2024-01-01T12:00:00Z"`
 	Profile   BusinessProfile `json:"profile"`
 	Found     bool            `json:"found" example:"true"`
-	UpdatedAt time.Time       `json:"updatedAt" example:"2024-01-01T12:00:00Z"`
 }
 
 // ContactStats represents statistics about contacts
 type ContactStats struct {
+	LastSyncAt       *time.Time `json:"lastSyncAt,omitempty" example:"2024-01-01T12:00:00Z"`
 	TotalContacts    int        `json:"totalContacts" example:"150"`
 	WhatsAppContacts int        `json:"whatsappContacts" example:"120"`
 	BusinessContacts int        `json:"businessContacts" example:"10"`
 	BlockedContacts  int        `json:"blockedContacts" example:"2"`
 	SyncRate         float64    `json:"syncRate" example:"0.8"`
-	LastSyncAt       *time.Time `json:"lastSyncAt,omitempty" example:"2024-01-01T12:00:00Z"`
 }
 
 // GetContactStatsRequest represents a request to get contact statistics
@@ -159,7 +159,7 @@ type GetContactStatsRequest struct {
 
 // GetContactStatsResponse represents the response for contact statistics
 type GetContactStatsResponse struct {
-	SessionID string       `json:"sessionId" example:"session-123"`
 	Stats     ContactStats `json:"stats"`
 	UpdatedAt time.Time    `json:"updatedAt" example:"2024-01-01T12:00:00Z"`
+	SessionID string       `json:"sessionId" example:"session-123"`
 }

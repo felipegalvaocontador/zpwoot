@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -27,29 +28,29 @@ func NewChatwootRepository(db *sqlx.DB, logger *logger.Logger) ports.ChatwootRep
 }
 
 type chatwootConfigModel struct {
-	ID             string         `db:"id"`
+	UpdatedAt      time.Time      `db:"updatedAt"`
+	CreatedAt      time.Time      `db:"createdAt"`
+	SignDelimiter  string         `db:"signDelimiter"`
 	SessionID      string         `db:"sessionId"`
 	URL            string         `db:"url"`
 	Token          string         `db:"token"`
 	AccountID      string         `db:"accountId"`
+	ID             string         `db:"id"`
 	InboxID        sql.NullString `db:"inboxId"`
-	Enabled        bool           `db:"enabled"`
-	InboxName      sql.NullString `db:"inboxName"`
-	AutoCreate     bool           `db:"autoCreate"`
-	SignMsg        bool           `db:"signMsg"`
-	SignDelimiter  string         `db:"signDelimiter"`
-	ReopenConv     bool           `db:"reopenConv"`
-	ConvPending    bool           `db:"convPending"`
-	ImportContacts bool           `db:"importContacts"`
-	ImportMessages bool           `db:"importMessages"`
-	ImportDays     int            `db:"importDays"`
-	MergeBrazil    bool           `db:"mergeBrazil"`
 	Organization   sql.NullString `db:"organization"`
-	Logo           sql.NullString `db:"logo"`
-	Number         sql.NullString `db:"number"`
+	InboxName      sql.NullString `db:"inboxName"`
 	IgnoreJids     pq.StringArray `db:"ignoreJids"`
-	CreatedAt      time.Time      `db:"createdAt"`
-	UpdatedAt      time.Time      `db:"updatedAt"`
+	Number         sql.NullString `db:"number"`
+	Logo           sql.NullString `db:"logo"`
+	ImportDays     int            `db:"importDays"`
+	SignMsg        bool           `db:"signMsg"`
+	MergeBrazil    bool           `db:"mergeBrazil"`
+	ImportMessages bool           `db:"importMessages"`
+	ImportContacts bool           `db:"importContacts"`
+	ConvPending    bool           `db:"convPending"`
+	ReopenConv     bool           `db:"reopenConv"`
+	AutoCreate     bool           `db:"autoCreate"`
+	Enabled        bool           `db:"enabled"`
 }
 
 func (r *chatwootRepository) CreateConfig(ctx context.Context, config *ports.ChatwootConfig) error {
@@ -96,7 +97,7 @@ func (r *chatwootRepository) GetConfig(ctx context.Context) (*ports.ChatwootConf
 
 	err := r.db.GetContext(ctx, &model, query)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ports.ErrConfigNotFound
 		}
 		r.logger.ErrorWithFields("Failed to get chatwoot config", map[string]interface{}{
@@ -123,7 +124,7 @@ func (r *chatwootRepository) GetConfigBySessionID(ctx context.Context, sessionID
 
 	err := r.db.GetContext(ctx, &model, query, sessionID)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ports.ErrConfigNotFound
 		}
 		r.logger.ErrorWithFields("Failed to get chatwoot config by session ID", map[string]interface{}{

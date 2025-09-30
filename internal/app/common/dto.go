@@ -1,16 +1,16 @@
 package common
 
 type SuccessResponse struct {
-	Success bool        `json:"success" example:"true"`
-	Message string      `json:"message,omitempty" example:"Operation completed successfully"`
 	Data    interface{} `json:"data,omitempty"`
+	Message string      `json:"message,omitempty" example:"Operation completed successfully"`
+	Success bool        `json:"success" example:"true"`
 } // @name SuccessResponse
 
 type ErrorResponse struct {
-	Success bool        `json:"success" example:"false"`
-	Error   string      `json:"error" example:"Invalid request"`
 	Details interface{} `json:"details,omitempty"`
+	Error   string      `json:"error" example:"Invalid request"`
 	Code    string      `json:"code,omitempty" example:"VALIDATION_ERROR"`
+	Success bool        `json:"success" example:"false"`
 } // @name ErrorResponse
 
 type HealthResponse struct {
@@ -37,9 +37,9 @@ type ValidationError struct {
 }
 
 type ValidationErrorResponse struct {
-	Success bool              `json:"success" example:"false"`
 	Error   string            `json:"error" example:"Validation failed"`
 	Details []ValidationError `json:"details"`
+	Success bool              `json:"success" example:"false"`
 }
 
 type APIKeyResponse struct {

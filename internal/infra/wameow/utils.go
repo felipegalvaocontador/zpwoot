@@ -14,6 +14,7 @@ import (
 	"go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	waTypes "go.mau.fi/whatsmeow/types"
+
 	"zpwoot/platform/logger"
 )
 
@@ -152,9 +153,9 @@ func (a *JIDValidatorAdapter) ParseJID(jid string) (string, error) {
 
 // ConnectionError represents connection-related errors
 type ConnectionError struct {
+	Err       error
 	SessionID string
 	Operation string
-	Err       error
 }
 
 func (e *ConnectionError) Error() string {
@@ -495,13 +496,13 @@ func GetStoreInfo(deviceStore *store.Device) map[string]interface{} {
 }
 
 type ConnectionStatus struct {
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 	SessionID string                 `json:"session_id"`
-	Connected bool                   `json:"connected"`
-	LoggedIn  bool                   `json:"logged_in"`
 	DeviceJID string                 `json:"device_jid,omitempty"`
 	LastError string                 `json:"last_error,omitempty"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 	UpdatedAt int64                  `json:"updated_at"`
+	Connected bool                   `json:"connected"`
+	LoggedIn  bool                   `json:"logged_in"`
 }
 
 func GetConnectionStatus(client *whatsmeow.Client, sessionID string) *ConnectionStatus {

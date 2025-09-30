@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,27 +29,21 @@ func NewMessageRepository(db *sqlx.DB, logger *logger.Logger) ports.ChatwootMess
 
 // zpMessageModel represents the complete database model for zpMessage table
 type zpMessageModel struct {
-	ID        string `db:"id"`
-	SessionID string `db:"sessionId"`
-
-	// WhatsApp Message Data
-	ZpMessageID string    `db:"zpMessageId"`
-	ZpSender    string    `db:"zpSender"`
-	ZpChat      string    `db:"zpChat"`
-	ZpTimestamp time.Time `db:"zpTimestamp"`
-	ZpFromMe    bool      `db:"zpFromMe"`
-	ZpType      string    `db:"zpType"`
-	Content     string    `db:"content"`
-
-	// Chatwoot Message Data
+	CreatedAt        time.Time     `db:"createdAt"`
+	ZpTimestamp      time.Time     `db:"zpTimestamp"`
+	UpdatedAt        time.Time     `db:"updatedAt"`
+	SyncedAt         sql.NullTime  `db:"syncedAt"`
+	SessionID        string        `db:"sessionId"`
+	ZpMessageID      string        `db:"zpMessageId"`
+	ZpSender         string        `db:"zpSender"`
+	ZpChat           string        `db:"zpChat"`
+	ZpType           string        `db:"zpType"`
+	Content          string        `db:"content"`
+	ID               string        `db:"id"`
+	SyncStatus       string        `db:"syncStatus"`
 	CwMessageID      sql.NullInt64 `db:"cwMessageId"`
 	CwConversationID sql.NullInt64 `db:"cwConversationId"`
-
-	// Sync Status
-	SyncStatus string       `db:"syncStatus"`
-	CreatedAt  time.Time    `db:"createdAt"`
-	UpdatedAt  time.Time    `db:"updatedAt"`
-	SyncedAt   sql.NullTime `db:"syncedAt"`
+	ZpFromMe         bool          `db:"zpFromMe"`
 }
 
 // CreateMessage creates a new message mapping
@@ -98,7 +93,7 @@ func (r *MessageRepository) GetMessageByZpID(ctx context.Context, sessionID, zpM
 
 	err := r.db.GetContext(ctx, &model, query, sessionID, zpMessageID)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("zpMessage not found")
 		}
 		r.logger.ErrorWithFields("Failed to get zpMessage by ZP ID", map[string]interface{}{
@@ -128,7 +123,7 @@ func (r *MessageRepository) GetMessageByCwID(ctx context.Context, cwMessageID in
 
 	err := r.db.GetContext(ctx, &model, query, cwMessageID)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("zpMessage not found")
 		}
 		r.logger.ErrorWithFields("Failed to get zpMessage by CW ID", map[string]interface{}{

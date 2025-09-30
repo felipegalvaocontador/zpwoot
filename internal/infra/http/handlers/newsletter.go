@@ -7,6 +7,7 @@ import (
 	"zpwoot/internal/app/newsletter"
 	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
+	"zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
 
 	"github.com/gofiber/fiber/v2"
@@ -40,7 +41,7 @@ func (h *NewsletterHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session
 			"path":       c.Path(),
 		})
 
-		if err.Error() == "session not found" || err == domainSession.ErrSessionNotFound {
+		if err.Error() == "session not found" || errors.Is(err, domainSession.ErrSessionNotFound) {
 			return nil, fiber.NewError(404, "Session not found")
 		}
 

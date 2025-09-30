@@ -27,7 +27,6 @@ func NewMessageMapper(logger *logger.Logger, repository ports.ChatwootMessageRep
 
 // CreateMapping creates a new mapping between WhatsApp and Chatwoot message IDs
 func (mm *MessageMapper) CreateMapping(ctx context.Context, sessionID, zpMessageID, zpSender, zpChat, zpType, content string, zpTimestamp time.Time, zpFromMe bool) (*ports.ZpMessage, error) {
-
 	mapping := &ports.ZpMessage{
 		ID:          uuid.New().String(),
 		SessionID:   sessionID,

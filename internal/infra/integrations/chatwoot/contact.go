@@ -25,7 +25,6 @@ func NewContactSync(logger *logger.Logger, client ports.ChatwootClient) *Contact
 
 // CreateOrUpdateContact creates or updates a contact in Chatwoot
 func (cs *ContactSync) CreateOrUpdateContact(phone, name string, inboxID int, mergeBrazilContacts bool) (*ports.ChatwootContact, error) {
-
 	// Normalize phone number
 	normalizedPhone := cs.normalizePhoneNumber(phone)
 
@@ -157,19 +156,19 @@ func (cs *ContactSync) UpdateContactAttributes(contactID int, attributes map[str
 
 // ContactImportData represents data for importing a contact
 type ContactImportData struct {
+	Attributes map[string]interface{} `json:"attributes,omitempty"`
 	Phone      string                 `json:"phone"`
 	Name       string                 `json:"name"`
 	Email      string                 `json:"email,omitempty"`
-	Attributes map[string]interface{} `json:"attributes,omitempty"`
 }
 
 // ContactImportResult represents the result of importing a contact
 type ContactImportResult struct {
 	Phone     string `json:"phone"`
 	Name      string `json:"name"`
+	Error     string `json:"error,omitempty"`
 	ContactID int    `json:"contact_id,omitempty"`
 	Success   bool   `json:"success"`
-	Error     string `json:"error,omitempty"`
 }
 
 // ValidatePhoneNumber validates if a phone number is valid

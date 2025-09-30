@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.mau.fi/whatsmeow/types"
+
 	"zpwoot/internal/domain/community"
 	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
@@ -138,7 +139,7 @@ func extractIDFromJID(jid string) string {
 func convertToLinkedGroupFromTarget(groupTarget *types.GroupLinkTarget) *community.LinkedGroup {
 	return &community.LinkedGroup{
 		JID:              groupTarget.JID.String(),
-		Name:             groupTarget.GroupName.Name,
+		Name:             groupTarget.Name,
 		Description:      "",         // GroupLinkTarget doesn't have description
 		ParticipantCount: 0,          // GroupLinkTarget doesn't have participant count
 		IsOwner:          false,      // Would need to be determined from user's role

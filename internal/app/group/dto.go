@@ -5,23 +5,24 @@ import (
 	"time"
 
 	"go.mau.fi/whatsmeow/types"
+
 	"zpwoot/internal/domain/group"
 )
 
 // CreateGroupRequest represents the request to create a new group
 type CreateGroupRequest struct {
 	Name         string   `json:"name" validate:"required,min=1,max=25" example:"My Group"`
-	Participants []string `json:"participants" validate:"required,min=1" example:"5511999999999@s.whatsapp.net,5511888888888@s.whatsapp.net"`
 	Description  string   `json:"description,omitempty" validate:"max=512" example:"Group description"`
+	Participants []string `json:"participants" validate:"required,min=1" example:"5511999999999@s.whatsapp.net,5511888888888@s.whatsapp.net"`
 } // @name CreateGroupRequest
 
 // CreateGroupResponse represents the response after creating a group
 type CreateGroupResponse struct {
+	CreatedAt    time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 	GroupJID     string    `json:"groupJid" example:"120363123456789012@g.us"`
 	Name         string    `json:"name" example:"My Group"`
 	Description  string    `json:"description,omitempty" example:"Group description"`
 	Participants []string  `json:"participants" example:"5511999999999@s.whatsapp.net,5511888888888@s.whatsapp.net"`
-	CreatedAt    time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 } // @name CreateGroupResponse
 
 // GetGroupInfoRequest represents the request to get group information
@@ -31,14 +32,14 @@ type GetGroupInfoRequest struct {
 
 // GetGroupInfoResponse represents the group information response
 type GetGroupInfoResponse struct {
+	CreatedAt    time.Time          `json:"createdAt" example:"2024-01-01T00:00:00Z"`
+	UpdatedAt    time.Time          `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
 	GroupJID     string             `json:"groupJid" example:"120363123456789012@g.us"`
 	Name         string             `json:"name" example:"My Group"`
 	Description  string             `json:"description,omitempty" example:"Group description"`
 	Owner        string             `json:"owner" example:"5511999999999@s.whatsapp.net"`
 	Participants []GroupParticipant `json:"participants"`
 	Settings     GroupSettings      `json:"settings"`
-	CreatedAt    time.Time          `json:"createdAt" example:"2024-01-01T00:00:00Z"`
-	UpdatedAt    time.Time          `json:"updatedAt" example:"2024-01-01T00:00:00Z"`
 } // @name GetGroupInfoResponse
 
 // GroupParticipant represents a group participant
@@ -62,19 +63,19 @@ type ListGroupsResponse struct {
 
 // GroupInfo represents basic group information
 type GroupInfo struct {
+	CreatedAt        time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 	GroupJID         string    `json:"groupJid" example:"120363123456789012@g.us"`
 	Name             string    `json:"name" example:"My Group"`
 	Description      string    `json:"description,omitempty" example:"Group description"`
 	ParticipantCount int       `json:"participantCount" example:"10"`
 	IsAdmin          bool      `json:"isAdmin" example:"true"`
-	CreatedAt        time.Time `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 } // @name GroupInfo
 
 // UpdateGroupParticipantsRequest represents the request to add/remove participants
 type UpdateGroupParticipantsRequest struct {
 	GroupJID     string   `json:"groupJid" validate:"required" example:"120363123456789012@g.us"`
-	Participants []string `json:"participants" validate:"required,min=1" example:"5511999999999@s.whatsapp.net,5511888888888@s.whatsapp.net"`
 	Action       string   `json:"action" validate:"required,oneof=add remove promote demote" example:"add"`
+	Participants []string `json:"participants" validate:"required,min=1" example:"5511999999999@s.whatsapp.net,5511888888888@s.whatsapp.net"`
 } // @name UpdateGroupParticipantsRequest
 
 // UpdateGroupParticipantsResponse represents the response after updating participants
@@ -146,17 +147,17 @@ type SetGroupPhotoRequest struct {
 
 // UpdateGroupSettingsRequest represents the request to update group settings
 type UpdateGroupSettingsRequest struct {
-	GroupJID string `json:"groupJid" validate:"required" example:"120363123456789012@g.us"`
 	Announce *bool  `json:"announce,omitempty" example:"true"`
 	Locked   *bool  `json:"locked,omitempty" example:"false"`
+	GroupJID string `json:"groupJid" validate:"required" example:"120363123456789012@g.us"`
 } // @name UpdateGroupSettingsRequest
 
 // GroupActionResponse represents a generic response for group actions
 type GroupActionResponse struct {
+	Timestamp time.Time `json:"timestamp" example:"2024-01-01T00:00:00Z"`
 	GroupJID  string    `json:"groupJid" example:"120363123456789012@g.us"`
 	Status    string    `json:"status" example:"success"`
 	Message   string    `json:"message" example:"Action completed successfully"`
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T00:00:00Z"`
 } // @name GroupActionResponse
 
 // Conversion functions to/from domain models
@@ -268,10 +269,10 @@ type GroupInfoFromLinkResponse struct {
 	JID              string `json:"jid" example:"120363123456789012@g.us"`
 	Name             string `json:"name" example:"My Group"`
 	Description      string `json:"description" example:"Group description"`
+	CreatedAt        string `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 	ParticipantCount int    `json:"participantCount" example:"10"`
 	IsAnnouncement   bool   `json:"isAnnouncement" example:"false"`
 	IsLocked         bool   `json:"isLocked" example:"false"`
-	CreatedAt        string `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 } // @name GroupInfoFromLinkResponse
 
 // NewGroupInfoFromLinkResponse creates a new group info from link response
@@ -292,12 +293,12 @@ type GroupInfoFromInviteResponse struct {
 	JID              string `json:"jid" example:"120363123456789012@g.us"`
 	Name             string `json:"name" example:"My Group"`
 	Description      string `json:"description" example:"Group description"`
-	ParticipantCount int    `json:"participantCount" example:"10"`
-	IsAnnouncement   bool   `json:"isAnnouncement" example:"false"`
-	IsLocked         bool   `json:"isLocked" example:"false"`
 	CreatedAt        string `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 	InviteCode       string `json:"inviteCode" example:"ABC123DEF456"`
 	Inviter          string `json:"inviter,omitempty" example:"5511999999999@s.whatsapp.net"`
+	ParticipantCount int    `json:"participantCount" example:"10"`
+	IsAnnouncement   bool   `json:"isAnnouncement" example:"false"`
+	IsLocked         bool   `json:"isLocked" example:"false"`
 } // @name GroupInfoFromInviteResponse
 
 // NewGroupInfoFromInviteResponse creates a new group info from invite response
@@ -317,10 +318,10 @@ func NewGroupInfoFromInviteResponse(groupInfo *types.GroupInfo, code, inviter st
 
 // JoinGroupWithInviteResponse represents the response for joining group with invite
 type JoinGroupWithInviteResponse struct {
-	Success  bool   `json:"success" example:"true"`
 	Message  string `json:"message" example:"Successfully joined group"`
 	GroupJID string `json:"groupJid" example:"120363123456789012@g.us"`
 	JoinedAt string `json:"joinedAt" example:"2024-01-01T00:00:00Z"`
+	Success  bool   `json:"success" example:"true"`
 } // @name JoinGroupWithInviteResponse
 
 // NewJoinGroupWithInviteResponse creates a new join group with invite response

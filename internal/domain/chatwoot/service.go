@@ -52,17 +52,17 @@ func (s *Service) CreateConfig(ctx context.Context, req *CreateChatwootConfigReq
 
 // configDefaults holds default values for configuration
 type configDefaults struct {
+	signDelimiter  string
+	ignoreJids     []string
+	importDays     int
 	enabled        bool
 	autoCreate     bool
 	signMsg        bool
-	signDelimiter  string
 	reopenConv     bool
 	convPending    bool
 	importContacts bool
 	importMessages bool
-	importDays     int
 	mergeBrazil    bool
-	ignoreJids     []string
 }
 
 // applyConfigDefaults applies default values to configuration request
@@ -569,10 +569,10 @@ func (s *Service) formatContentForWhatsApp(content string) string {
 
 // TestConnectionResult represents the result of a connection test
 type TestConnectionResult struct {
-	Success     bool
+	Error       error
 	AccountName string
 	InboxName   string
-	Error       error
+	Success     bool
 }
 
 // ChatwootStats represents Chatwoot integration statistics

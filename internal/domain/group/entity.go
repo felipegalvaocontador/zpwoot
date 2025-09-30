@@ -24,14 +24,14 @@ var (
 
 // GroupInfo represents a WhatsApp group
 type GroupInfo struct {
+	CreatedAt    time.Time          `json:"createdAt"`
+	UpdatedAt    time.Time          `json:"updatedAt"`
 	GroupJID     string             `json:"groupJid"`
 	Name         string             `json:"name"`
 	Description  string             `json:"description"`
 	Owner        string             `json:"owner"`
 	Participants []GroupParticipant `json:"participants"`
 	Settings     GroupSettings      `json:"settings"`
-	CreatedAt    time.Time          `json:"createdAt"`
-	UpdatedAt    time.Time          `json:"updatedAt"`
 }
 
 // GroupParticipant represents a participant in a group
@@ -50,15 +50,15 @@ type GroupSettings struct {
 // CreateGroupRequest represents the data needed to create a group
 type CreateGroupRequest struct {
 	Name         string   `json:"name"`
-	Participants []string `json:"participants"`
 	Description  string   `json:"description"`
+	Participants []string `json:"participants"`
 }
 
 // UpdateParticipantsRequest represents the data needed to update group participants
 type UpdateParticipantsRequest struct {
 	GroupJID     string   `json:"groupJid"`
+	Action       string   `json:"action"`
 	Participants []string `json:"participants"`
-	Action       string   `json:"action"` // add, remove, promote, demote
 }
 
 // UpdateParticipantsResult represents the result of updating participants
@@ -87,9 +87,9 @@ type SetGroupPhotoRequest struct {
 
 // UpdateGroupSettingsRequest represents the data needed to update group settings
 type UpdateGroupSettingsRequest struct {
-	GroupJID string `json:"groupJid"`
 	Announce *bool  `json:"announce,omitempty"`
 	Locked   *bool  `json:"locked,omitempty"`
+	GroupJID string `json:"groupJid"`
 }
 
 // JoinGroupRequest represents the data needed to join a group

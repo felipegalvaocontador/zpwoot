@@ -190,7 +190,16 @@ func (uc *useCaseImpl) GetMediaInfo(ctx context.Context, req *GetMediaInfoReques
 	}
 
 	// Check if media is cached
-	cached, _ := uc.mediaRepo.GetCachedMedia(ctx, req.SessionID, req.MessageID)
+	cached, err := uc.mediaRepo.GetCachedMedia(ctx, req.SessionID, req.MessageID)
+	if err != nil {
+		uc.logger.WarnWithFields("Failed to check cached media", map[string]interface{}{
+			"session_id": req.SessionID,
+			"message_id": req.MessageID,
+			"error":      err.Error(),
+		})
+		// Continue without cache info
+		cached = nil
+	}
 	isDownloaded := cached != nil && time.Now().Before(cached.ExpiresAt)
 	var cacheExpiry time.Time
 	if cached != nil {

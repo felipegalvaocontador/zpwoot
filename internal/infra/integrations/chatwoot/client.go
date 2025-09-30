@@ -15,11 +15,11 @@ import (
 
 // Client implements the ChatwootClient interface
 type Client struct {
+	httpClient *http.Client
+	logger     *logger.Logger
 	baseURL    string
 	token      string
 	accountID  string
-	httpClient *http.Client
-	logger     *logger.Logger
 }
 
 // NewClient creates a new Chatwoot API client

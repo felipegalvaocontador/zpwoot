@@ -3,9 +3,11 @@ package handlers
 import (
 	"context"
 	"fmt"
+
 	"zpwoot/internal/app/community"
 	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
+	"zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
 
 	"github.com/gofiber/fiber/v2"
@@ -48,7 +50,7 @@ func (h *CommunityHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session,
 			"path":       c.Path(),
 		})
 
-		if err.Error() == ErrSessionNotFound || err == domainSession.ErrSessionNotFound {
+		if err.Error() == ErrSessionNotFound || errors.Is(err, domainSession.ErrSessionNotFound) {
 			return nil, fiber.NewError(404, "Session not found")
 		}
 

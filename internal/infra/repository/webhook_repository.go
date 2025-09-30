@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,14 +29,14 @@ func NewWebhookRepository(db *sqlx.DB, logger *logger.Logger) ports.WebhookRepos
 }
 
 type webhookModel struct {
-	ID        string         `db:"id"`
-	SessionID sql.NullString `db:"sessionId"`
-	URL       string         `db:"url"`
-	Secret    sql.NullString `db:"secret"`
-	Events    string         `db:"events"` // JSONB field
-	Enabled   bool           `db:"enabled"`
 	CreatedAt time.Time      `db:"createdAt"`
 	UpdatedAt time.Time      `db:"updatedAt"`
+	ID        string         `db:"id"`
+	URL       string         `db:"url"`
+	Events    string         `db:"events"`
+	SessionID sql.NullString `db:"sessionId"`
+	Secret    sql.NullString `db:"secret"`
+	Enabled   bool           `db:"enabled"`
 }
 
 func (r *webhookRepository) Create(ctx context.Context, wh *webhook.WebhookConfig) error {
@@ -78,7 +79,7 @@ func (r *webhookRepository) GetByID(ctx context.Context, id string) (*webhook.We
 
 	err := r.db.GetContext(ctx, &model, query, id)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, webhook.ErrWebhookNotFound
 		}
 		r.logger.ErrorWithFields("Failed to get webhook by ID", map[string]interface{}{

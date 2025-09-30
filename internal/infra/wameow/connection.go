@@ -110,8 +110,8 @@ func (c *ConnectionManager) ConnectWithRetry(client *whatsmeow.Client, sessionID
 
 type QRCodeGenerator struct {
 	logger     *logger.Logger
-	mu         sync.Mutex // Protege a saída do terminal
-	lastQRCode string     // Armazena o último QR code exibido para evitar duplicates
+	lastQRCode string
+	mu         sync.Mutex
 }
 
 func NewQRCodeGenerator(logger *logger.Logger) *QRCodeGenerator {
@@ -190,7 +190,6 @@ func NewSessionManager(sessionRepo ports.SessionRepository, logger *logger.Logge
 }
 
 func (s *sessionManager) UpdateConnectionStatus(sessionID string, isConnected bool) {
-
 	if s.sessionRepo == nil {
 		s.logger.WarnWithFields("No session repository available", map[string]interface{}{
 			"session_id": sessionID,

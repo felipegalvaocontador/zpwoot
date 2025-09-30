@@ -34,7 +34,7 @@ func (h *HealthHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 		Status:  "ok",
 		Service: "zpwoot",
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)

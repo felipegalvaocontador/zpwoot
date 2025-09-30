@@ -308,7 +308,6 @@ func (uc *useCaseImpl) SetGroupMemberAddMode(ctx context.Context, sessionID stri
 	return uc.wameowMgr.SetGroupMemberAddMode(sessionID, groupJID, mode)
 }
 
-
 func (uc *useCaseImpl) GetGroupInfoFromLink(ctx context.Context, sessionID string, req *GetGroupInfoFromLinkRequest) (*GroupInfoFromLinkResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err

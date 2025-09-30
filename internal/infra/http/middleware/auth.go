@@ -21,10 +21,10 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
-			
-			if strings.HasPrefix(path, "/health") || 
-			   strings.HasPrefix(path, "/swagger") || 
-			   strings.Contains(path, "/chatwoot/webhook") {
+
+			if strings.HasPrefix(path, "/health") ||
+				strings.HasPrefix(path, "/swagger") ||
+				strings.Contains(path, "/chatwoot/webhook") {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -40,7 +40,7 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 					"method": r.Method,
 					"ip":     getClientIP(r),
 				})
-				
+
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
 				json.NewEncoder(w).Encode(map[string]interface{}{
@@ -58,7 +58,7 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 					"ip":      getClientIP(r),
 					"api_key": maskAPIKey(apiKey),
 				})
-				
+
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
 				json.NewEncoder(w).Encode(map[string]interface{}{

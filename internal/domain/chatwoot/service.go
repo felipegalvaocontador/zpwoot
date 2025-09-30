@@ -30,7 +30,6 @@ func (s *Service) SetMessageMapper(messageMapper ports.ChatwootMessageMapper) {
 	s.messageMapper = messageMapper
 }
 
-
 func (s *Service) CreateConfig(ctx context.Context, req *CreateChatwootConfigRequest) (*ports.ChatwootConfig, error) {
 	defaults := s.applyConfigDefaults(req)
 
@@ -259,7 +258,6 @@ func (s *Service) DeleteConfig(ctx context.Context) error {
 	return nil
 }
 
-
 func (s *Service) SyncContact(ctx context.Context, req *SyncContactRequest) (*ChatwootContact, error) {
 	contact := &ChatwootContact{
 		ID:               1, // This would be assigned by Chatwoot
@@ -299,7 +297,6 @@ func (s *Service) SendMessage(ctx context.Context, req *SendMessageToChatwootReq
 
 	return message, nil
 }
-
 
 func (s *Service) ProcessWebhook(ctx context.Context, sessionID string, payload *ChatwootWebhookPayload) error {
 	time.Sleep(500 * time.Millisecond)
@@ -500,7 +497,6 @@ func (s *Service) formatContentForWhatsApp(content string) string {
 	return content
 }
 
-
 type TestConnectionResult struct {
 	Error       error
 	AccountName string
@@ -533,7 +529,6 @@ func (s *Service) GetStats(ctx context.Context) (*ChatwootStats, error) {
 		MessagesReceived:    300,
 	}, nil
 }
-
 
 func (s *Service) ValidateImportRequest(sessionID string, daysLimit int, inboxID int) error {
 	if sessionID == "" {
@@ -607,7 +602,6 @@ func (s *Service) CreateBotContactIfNeeded(ctx context.Context, client ports.Cha
 
 	return nil
 }
-
 
 func (s *Service) ShouldCreateInbox(autoCreate bool, existingInboxes []ports.ChatwootInbox, inboxName string) (bool, *ports.ChatwootInbox) {
 	if !autoCreate {
@@ -702,7 +696,6 @@ func (s *Service) UpdateConfigWithInbox(ctx context.Context, sessionID string, i
 
 	return nil
 }
-
 
 func (s *Service) InitializeChatwootIntegration(ctx context.Context, sessionID, inboxName, webhookURL string, autoCreate bool, client ports.ChatwootClient) error {
 	inbox, err := s.ProcessInboxInitialization(ctx, sessionID, inboxName, webhookURL, autoCreate, client)

@@ -186,7 +186,6 @@ func FromDomainGroupList(groups []*group.GroupInfo) []GroupInfo {
 	return result
 }
 
-
 type GetGroupInfoFromLinkRequest struct {
 	InviteLink string `json:"inviteLink" validate:"required" example:"https://chat.whatsapp.com/ABC123DEF456"`
 } // @name GetGroupInfoFromLinkRequest

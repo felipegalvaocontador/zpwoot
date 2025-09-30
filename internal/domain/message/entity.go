@@ -186,7 +186,6 @@ type Poll struct {
 	AllowMultipleAnswers  bool
 }
 
-
 func ValidateCreatePollRequest(req *CreatePollRequest) error {
 	if req.Name == "" {
 		return ErrInvalidPollName

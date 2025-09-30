@@ -147,9 +147,9 @@ func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request
 	})
 
 	response := map[string]interface{}{
-		"groupJid":    groupJid,
-		"inviteLink":  "https://chat.whatsapp.com/placeholder",
-		"message":     "Group invite link functionality needs to be implemented in use case",
+		"groupJid":   groupJid,
+		"inviteLink": "https://chat.whatsapp.com/placeholder",
+		"message":    "Group invite link functionality needs to be implemented in use case",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -299,7 +299,7 @@ func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *
 
 	var req struct {
 		GroupJID     string   `json:"groupJid"`
-		Action       string   `json:"action"`       // "approve" or "reject"
+		Action       string   `json:"action"` // "approve" or "reject"
 		Participants []string `json:"participants"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -423,8 +423,8 @@ func (h *GroupHandler) GetGroupInfoFromLink(w http.ResponseWriter, r *http.Reque
 	response := map[string]interface{}{
 		"inviteLink": inviteLink,
 		"groupInfo": map[string]interface{}{
-			"name":        "Sample Group",
-			"description": "Group info from link functionality needs to be implemented",
+			"name":         "Sample Group",
+			"description":  "Group info from link functionality needs to be implemented",
 			"participants": 0,
 		},
 		"message": "Get group info from link functionality needs to be implemented in use case",
@@ -477,8 +477,8 @@ func (h *GroupHandler) GetGroupInfoFromInvite(w http.ResponseWriter, r *http.Req
 		"groupJid": req.GroupJID,
 		"code":     req.Code,
 		"groupInfo": map[string]interface{}{
-			"name":        "Sample Group",
-			"description": "Group info from invite functionality needs to be implemented",
+			"name":         "Sample Group",
+			"description":  "Group info from invite functionality needs to be implemented",
 			"participants": 0,
 		},
 		"message": "Get group info from invite functionality needs to be implemented in use case",
@@ -814,10 +814,10 @@ func (h *GroupHandler) UpdateGroupParticipants(w http.ResponseWriter, r *http.Re
 	}
 
 	h.logger.InfoWithFields("Updating group participants", map[string]interface{}{
-		"session_id":    sess.ID.String(),
-		"group_jid":     req.GroupJID,
-		"action":        req.Action,
-		"participants":  len(req.Participants),
+		"session_id":   sess.ID.String(),
+		"group_jid":    req.GroupJID,
+		"action":       req.Action,
+		"participants": len(req.Participants),
 	})
 
 	response, err := h.groupUC.UpdateGroupParticipants(r.Context(), sess.ID.String(), &req)

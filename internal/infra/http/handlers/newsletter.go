@@ -29,8 +29,6 @@ func NewNewsletterHandler(appLogger *logger.Logger, newsletterUC newsletter.UseC
 	}
 }
 
-
-
 // @Summary Create a new newsletter
 // @Description Create a new WhatsApp newsletter/channel
 // @Tags Newsletters

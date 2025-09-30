@@ -299,7 +299,6 @@ type ContextInfo struct {
 	Participant string `json:"participant,omitempty" example:"5511999999999@s.whatsapp.net"`
 } // @name ContextInfo
 
-
 type CreatePollRequest struct {
 	RemoteJID             string   `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 	Name                  string   `json:"name" validate:"required,min=1,max=100" example:"What's your favorite color?"`

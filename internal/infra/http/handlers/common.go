@@ -336,20 +336,12 @@ func (h *BaseHandler) handleSimpleGetRequest(
 	result, err := actionFunc(r.Context(), sess.ID.String())
 	if err != nil {
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
-		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to "+actionName)
 		return
 	}
 
 	h.writeSuccessResponse(w, result, successMessage)
 }
-
-
-
-
-
-
-
-
 
 func (h *BaseHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")

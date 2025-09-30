@@ -30,8 +30,6 @@ func NewMediaHandler(appLogger *logger.Logger, mediaUC media.UseCase, sessionRep
 	}
 }
 
-
-
 // @Summary Download media from message
 // @Description Download media content from a WhatsApp message
 // @Tags Media

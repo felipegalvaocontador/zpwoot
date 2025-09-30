@@ -50,8 +50,8 @@ func setupMiddlewares(r *chi.Mux, cfg *config.Config, container *app.Container, 
 			defer func() {
 				if err := recover(); err != nil {
 					logger.ErrorWithFields("Panic recovered", map[string]interface{}{
-						"error": err,
-						"path":  r.URL.Path,
+						"error":  err,
+						"path":   r.URL.Path,
 						"method": r.Method,
 					})
 					w.WriteHeader(http.StatusInternalServerError)

@@ -80,7 +80,7 @@ type PairPhoneRequest struct {
 type QRCodeResponse struct {
 	ExpiresAt   time.Time `json:"expiresAt" example:"2024-01-01T00:01:00Z"`
 	QRCode      string    `json:"qrCode" example:"2@abc123def456..." description:"Raw QR code string (stored in database)"`
-	QRCodeImage string `json:"qrCodeImage,omitempty" example:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" description:"Base64 encoded QR code image"`
+	QRCodeImage string    `json:"qrCodeImage,omitempty" example:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" description:"Base64 encoded QR code image"`
 	Timeout     int       `json:"timeoutSeconds" example:"60"`
 } // @name QRCodeResponse
 
@@ -94,7 +94,7 @@ type ProxyResponse struct {
 
 type ConnectSessionResponse struct {
 	Message string `json:"message" example:"Session connection initiated successfully"`
-	QrCode string `json:"qrCode,omitempty" example:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..." description:"Base64 encoded QR code image"`
+	QrCode  string `json:"qrCode,omitempty" example:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..." description:"Base64 encoded QR code image"`
 	Code    string `json:"code,omitempty" example:"2@abc123..." description:"Raw QR code string (stored in database)"`
 	Success bool   `json:"success" example:"true"`
 } // @name ConnectSessionResponse

@@ -204,7 +204,6 @@ func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 		"timestamp":  evt.Info.Timestamp,
 	}
 
-
 	if evt.Message.ContactMessage != nil {
 		contactMsg := evt.Message.ContactMessage
 		messageInfo["message_type"] = MessageTypeContact

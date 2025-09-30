@@ -259,4 +259,3 @@ func (s *Service) validateJID(jid string) error {
 
 	return nil
 }
-

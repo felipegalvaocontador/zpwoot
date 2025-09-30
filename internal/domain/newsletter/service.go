@@ -135,7 +135,6 @@ func (s *Service) ProcessNewsletterInfo(info *NewsletterInfo) error {
 		return err
 	}
 
-
 	return nil
 }
 

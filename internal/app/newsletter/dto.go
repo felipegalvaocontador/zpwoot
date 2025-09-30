@@ -83,7 +83,6 @@ type NewsletterActionResponse struct {
 	Message   string    `json:"message"`
 }
 
-
 func (req *CreateNewsletterRequest) ToDomain() *newsletter.CreateNewsletterRequest {
 	return &newsletter.CreateNewsletterRequest{
 		Name:        req.Name,
@@ -157,7 +156,6 @@ func (req *UnfollowNewsletterRequest) ToDomain() *newsletter.UnfollowNewsletterR
 	}
 }
 
-
 func (req *CreateNewsletterRequest) Validate() error {
 	domainReq := req.ToDomain()
 	return domainReq.Validate()
@@ -182,7 +180,6 @@ func (req *UnfollowNewsletterRequest) Validate() error {
 	domainReq := req.ToDomain()
 	return domainReq.Validate()
 }
-
 
 func NewCreateNewsletterResponse(info *newsletter.NewsletterInfo) *CreateNewsletterResponse {
 	return &CreateNewsletterResponse{
@@ -219,7 +216,6 @@ func NewNewsletterActionResponse(jid, status, message string) *NewsletterActionR
 	}
 }
 
-
 func NewSuccessFollowResponse(jid string) *NewsletterActionResponse {
 	return NewNewsletterActionResponse(jid, "success", "Newsletter followed successfully")
 }
@@ -227,7 +223,6 @@ func NewSuccessFollowResponse(jid string) *NewsletterActionResponse {
 func NewSuccessUnfollowResponse(jid string) *NewsletterActionResponse {
 	return NewNewsletterActionResponse(jid, "success", "Newsletter unfollowed successfully")
 }
-
 
 func NewErrorResponse(jid, message string) *NewsletterActionResponse {
 	return NewNewsletterActionResponse(jid, "error", message)

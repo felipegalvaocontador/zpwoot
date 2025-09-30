@@ -17,7 +17,6 @@ func NewMessageFormatter(logger *logger.Logger) *MessageFormatter {
 	}
 }
 
-
 func (mf *MessageFormatter) FormatMarkdownForChatwoot(content string) string {
 	mf.logger.DebugWithFields("Formatting markdown for Chatwoot", map[string]interface{}{
 		"original_length": len(content),
@@ -53,7 +52,6 @@ func (mf *MessageFormatter) FormatMarkdownForWhatsApp(content string) string {
 
 	return content
 }
-
 
 func (mf *MessageFormatter) convertBoldMarkdown(content, from, to string) string {
 	if from == "*" && to == "**" {
@@ -110,7 +108,6 @@ func (mf *MessageFormatter) convertStrikethroughMarkdown(content, from, to strin
 
 	return content
 }
-
 
 func (mf *MessageFormatter) FormatQuotedMessage(originalMessage, quotedContent string) string {
 	mf.logger.DebugWithFields("Formatting quoted message", map[string]interface{}{

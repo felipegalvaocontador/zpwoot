@@ -627,7 +627,6 @@ func (m *Manager) applyProxyConfig(client *whatsmeow.Client, config *session.Pro
 		return fmt.Errorf("unsupported proxy type: %s", config.Type)
 	}
 
-
 	return nil
 }
 
@@ -979,7 +978,6 @@ func (m *Manager) SetGroupMemberAddMode(sessionID, groupJID string, mode string)
 	ctx := context.Background()
 	return client.SetGroupMemberAddMode(ctx, groupJID, mode)
 }
-
 
 func (m *Manager) GetGroupInfoFromLink(sessionID string, inviteLink string) (*types.GroupInfo, error) {
 	client := m.getClient(sessionID)

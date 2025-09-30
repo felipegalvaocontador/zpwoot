@@ -98,7 +98,6 @@ type InviteLinkResponse struct {
 	InviteLink string `json:"inviteLink"`
 }
 
-
 func (g *GroupInfo) IsCurrentUserAdmin() bool {
 	return false
 }

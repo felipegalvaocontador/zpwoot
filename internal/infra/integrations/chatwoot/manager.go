@@ -73,7 +73,6 @@ func (m *Manager) InitInstanceChatwoot(sessionID, inboxName, webhookURL string, 
 		return fmt.Errorf("session_id is required")
 	}
 
-
 	if autoCreate {
 		m.logger.InfoWithFields("Auto-create inbox requested", map[string]interface{}{
 			"session_id":  sessionID,
@@ -131,7 +130,6 @@ func (m *Manager) Cleanup(sessionID string) error {
 
 	return nil
 }
-
 
 func (m *Manager) GetStats() map[string]interface{} {
 	m.mu.RLock()

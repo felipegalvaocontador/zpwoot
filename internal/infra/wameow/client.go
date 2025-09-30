@@ -2568,7 +2568,6 @@ func (c *WameowClient) DownloadMedia(ctx context.Context, messageID string, medi
 		"media_type": mediaType,
 	})
 
-
 	return nil, fmt.Errorf("download media requires message context - feature needs enhancement")
 }
 
@@ -2801,7 +2800,6 @@ func (c *WameowClient) SetGroupMemberAddMode(ctx context.Context, groupJID strin
 
 	return nil
 }
-
 
 func (c *WameowClient) CreateNewsletter(ctx context.Context, name, description string) (*types.NewsletterMetadata, error) {
 	if !c.client.IsLoggedIn() {
@@ -3625,7 +3623,6 @@ func (c *WameowClient) convertStringToMediaType(mediaType string) whatsmeow.Medi
 	}
 }
 
-
 func (c *WameowClient) handleCommunityAction(
 	ctx context.Context,
 	communityJID, groupJID string,
@@ -3783,7 +3780,6 @@ func (c *WameowClient) GetLinkedGroupsParticipants(ctx context.Context, communit
 	}
 	return jids, nil
 }
-
 
 func (c *WameowClient) GetGroupInfoFromLink(ctx context.Context, inviteLink string) (*types.GroupInfo, error) {
 	if !c.client.IsLoggedIn() {

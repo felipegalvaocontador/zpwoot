@@ -21,12 +21,12 @@ func Metrics(container *app.Container, logger *logger.Logger) func(http.Handler)
 			statusCode := ww.statusCode
 
 			fields := map[string]interface{}{
-				"component":    "metrics",
-				"method":       r.Method,
-				"path":         r.URL.Path,
-				"status_code":  statusCode,
-				"duration_ms":  duration.Milliseconds(),
-				"duration_ns":  duration.Nanoseconds(),
+				"component":   "metrics",
+				"method":      r.Method,
+				"path":        r.URL.Path,
+				"status_code": statusCode,
+				"duration_ms": duration.Milliseconds(),
+				"duration_ns": duration.Nanoseconds(),
 			}
 
 			if requestID := r.Header.Get("X-Request-ID"); requestID != "" {

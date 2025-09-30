@@ -102,7 +102,6 @@ const (
 	ErrCodeCommunityRestricted = "COMMUNITY_RESTRICTED"
 )
 
-
 func NewNotFoundError(communityJID string) *CommunityError {
 	return NewCommunityError(
 		ErrCodeCommunityNotFound,

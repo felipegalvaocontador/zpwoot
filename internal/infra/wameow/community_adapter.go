@@ -63,7 +63,6 @@ func (ca *CommunityAdapter) GetCommunityInfo(ctx context.Context, sessionID stri
 		return nil, fmt.Errorf("session %s not found", sessionID)
 	}
 
-
 	groupInfo, err := client.GetGroupInfo(ctx, communityJID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get community info: %w", err)
@@ -108,7 +107,6 @@ func (ca *CommunityAdapter) GetSubGroups(ctx context.Context, sessionID string, 
 
 	return linkedGroups, nil
 }
-
 
 func extractIDFromJID(jid string) string {
 	if len(jid) > 5 && jid[len(jid)-5:] == "@g.us" {

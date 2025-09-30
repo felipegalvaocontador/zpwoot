@@ -101,7 +101,6 @@ type UnfollowNewsletterRequest struct {
 	JID string `json:"jid"`
 }
 
-
 func (n *NewsletterInfo) Validate() error {
 	if n.ID == "" {
 		return ErrInvalidNewsletterJID
@@ -209,7 +208,6 @@ func (req *UnfollowNewsletterRequest) Validate() error {
 	}
 	return nil
 }
-
 
 func IsValidNewsletterJID(jid string) bool {
 	return strings.Contains(jid, NewsletterJIDSuffix)

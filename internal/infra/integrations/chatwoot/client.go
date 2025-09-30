@@ -33,7 +33,6 @@ func NewClient(baseURL, token, accountID string, logger *logger.Logger) *Client 
 	}
 }
 
-
 func (c *Client) CreateInbox(name, webhookURL string) (*ports.ChatwootInbox, error) {
 	payload := map[string]interface{}{
 		"name": name,
@@ -92,7 +91,6 @@ func (c *Client) DeleteInbox(inboxID int) error {
 
 	return nil
 }
-
 
 func (c *Client) CreateContact(phone, name string, inboxID int) (*ports.ChatwootContact, error) {
 	payload := map[string]interface{}{
@@ -164,7 +162,6 @@ func (c *Client) UpdateContactAttributes(contactID int, attributes map[string]in
 
 	return nil
 }
-
 
 func (c *Client) CreateConversation(contactID, inboxID int) (*ports.ChatwootConversation, error) {
 	payload := map[string]interface{}{
@@ -249,7 +246,6 @@ func (c *Client) UpdateConversationStatus(conversationID int, status string) err
 	return nil
 }
 
-
 func (c *Client) SendMessage(conversationID int, content string) (*ports.ChatwootMessage, error) {
 	return c.SendMessageWithType(conversationID, content, "incoming")
 }
@@ -291,7 +287,6 @@ func (c *Client) GetMessages(conversationID int, before int) ([]ports.ChatwootMe
 	return response.Payload, nil
 }
 
-
 func (c *Client) GetAccount() (*ports.ChatwootAccount, error) {
 	var account ports.ChatwootAccount
 	err := c.makeRequest("GET", "", nil, &account)
@@ -310,7 +305,6 @@ func (c *Client) UpdateAccount(updates map[string]interface{}) error {
 
 	return nil
 }
-
 
 func (c *Client) makeRequest(method, endpoint string, payload interface{}, result interface{}) error {
 	url := fmt.Sprintf("%s/api/v1/accounts/%s%s", c.baseURL, c.accountID, endpoint)

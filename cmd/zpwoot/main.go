@@ -373,17 +373,9 @@ func createContainerConfig(repositories *repository.Repositories, managers manag
 	}
 }
 
-
-
-
-
 func startBackgroundServices(container *app.Container, appLogger *logger.Logger) {
 	go connectOnStartup(container, appLogger)
 }
-
-
-
-
 
 func showVersion() {
 	fmt.Printf("zpwoot - WhatsApp Multi-Session API\n")

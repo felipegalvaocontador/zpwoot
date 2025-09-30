@@ -24,7 +24,6 @@ func NewWebhookHandler(logger *logger.Logger, manager ports.ChatwootManager, wam
 	}
 }
 
-
 func (h *WebhookHandler) ProcessWebhook(ctx context.Context, webhook *chatwootdomain.ChatwootWebhookPayload, sessionID string) error {
 	time.Sleep(500 * time.Millisecond)
 
@@ -56,7 +55,6 @@ func (h *WebhookHandler) ProcessWebhook(ctx context.Context, webhook *chatwootdo
 	return nil
 }
 
-
 func (h *WebhookHandler) handleConversationStatusChanged(ctx context.Context, webhook *chatwootdomain.ChatwootWebhookPayload, sessionID string) error {
 	if webhook.Conversation.Status == "resolved" {
 		h.logger.InfoWithFields("Conversation resolved", map[string]interface{}{
@@ -74,7 +72,6 @@ func (h *WebhookHandler) handleMessageDeleted(ctx context.Context, webhook *chat
 		"message_id": webhook.Message.ID,
 		"session_id": sessionID,
 	})
-
 
 	return nil
 }
@@ -120,7 +117,6 @@ func (h *WebhookHandler) sendToWhatsApp(ctx context.Context, webhook *chatwootdo
 
 	return nil
 }
-
 
 func (h *WebhookHandler) formatContentForWhatsApp(content string) string {
 	return content

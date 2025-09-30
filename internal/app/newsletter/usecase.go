@@ -137,7 +137,6 @@ func (uc *useCaseImpl) GetNewsletterInfo(ctx context.Context, sessionID string, 
 	return uc.getNewsletterInfoGeneric(ctx, sessionID, jid, "jid", uc.newsletterManager.GetNewsletterInfo)
 }
 
-
 func (uc *useCaseImpl) validateSessionAndConnection(ctx context.Context, sessionID string) (*session.Session, error) {
 	session, err := uc.sessionRepo.GetByID(ctx, sessionID)
 	if err != nil {

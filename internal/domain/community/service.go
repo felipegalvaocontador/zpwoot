@@ -34,7 +34,6 @@ func NewService() Service {
 	return &serviceImpl{}
 }
 
-
 func (s *serviceImpl) ValidateCommunityJID(jid string) error {
 	if jid == "" {
 		return fmt.Errorf("community JID cannot be empty")
@@ -109,7 +108,6 @@ func (s *serviceImpl) ValidateLinkRequest(communityJID, groupJID string) error {
 	return nil
 }
 
-
 func (s *serviceImpl) FormatCommunityJID(jid string) string {
 	if jid == "" {
 		return ""
@@ -161,7 +159,6 @@ func (s *serviceImpl) SanitizeCommunityDescription(description string) string {
 
 	return description
 }
-
 
 func (s *serviceImpl) ProcessCommunityInfo(info *CommunityInfo) error {
 	if info == nil {
@@ -234,7 +231,6 @@ func (s *serviceImpl) ProcessGroupLinkResult(result *GroupLinkInfo) error {
 	return nil
 }
 
-
 func (s *serviceImpl) CanLinkGroup(communityJID, groupJID string, userJID string, isOwner, isAdmin bool) error {
 	if err := s.ValidateLinkRequest(communityJID, groupJID); err != nil {
 		return err
@@ -266,7 +262,6 @@ func (s *serviceImpl) CanViewCommunity(communityJID string, userJID string) erro
 
 	return nil
 }
-
 
 func (s *serviceImpl) GenerateCommunityEvent(eventType CommunityEventType, communityJID, actorJID, targetJID string, data map[string]interface{}) *CommunityEvent {
 	return &CommunityEvent{

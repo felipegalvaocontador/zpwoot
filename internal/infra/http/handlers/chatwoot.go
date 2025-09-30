@@ -65,7 +65,7 @@ func (h *ChatwootHandler) handleChatwootAction(
 			h.writeErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
-		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to "+actionName)
 		return
 	}
 

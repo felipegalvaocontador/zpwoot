@@ -17,8 +17,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
-
 type MessageHandler struct {
 	messageUC       message.UseCase
 	wameowManager   *wameow.Manager
@@ -252,7 +250,6 @@ func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -264,12 +261,12 @@ func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
 	mediaType := h.detectMediaType(mediaReq.File, mediaReq.MimeType)
 
 	req := &message.SendMessageRequest{
-		RemoteJID:   mediaReq.RemoteJID,
-		Type:        mediaType,
-		File:        mediaReq.File,
-		Caption:     mediaReq.Caption,
-		MimeType:    mediaReq.MimeType,
-		Filename:    mediaReq.Filename,
+		RemoteJID: mediaReq.RemoteJID,
+		Type:      mediaType,
+		File:      mediaReq.File,
+		Caption:   mediaReq.Caption,
+		MimeType:  mediaReq.MimeType,
+		Filename:  mediaReq.Filename,
 	}
 
 	ctx := r.Context()
@@ -316,17 +313,17 @@ func (h *MessageHandler) detectMediaType(file, mimeType string) string {
 	}
 
 	file = strings.ToLower(file)
-	if strings.HasSuffix(file, ".jpg") || strings.HasSuffix(file, ".jpeg") || 
-	   strings.HasSuffix(file, ".png") || strings.HasSuffix(file, ".gif") || 
-	   strings.HasSuffix(file, ".webp") {
+	if strings.HasSuffix(file, ".jpg") || strings.HasSuffix(file, ".jpeg") ||
+		strings.HasSuffix(file, ".png") || strings.HasSuffix(file, ".gif") ||
+		strings.HasSuffix(file, ".webp") {
 		return "image"
 	}
-	if strings.HasSuffix(file, ".mp4") || strings.HasSuffix(file, ".avi") || 
-	   strings.HasSuffix(file, ".mov") || strings.HasSuffix(file, ".webm") {
+	if strings.HasSuffix(file, ".mp4") || strings.HasSuffix(file, ".avi") ||
+		strings.HasSuffix(file, ".mov") || strings.HasSuffix(file, ".webm") {
 		return "video"
 	}
-	if strings.HasSuffix(file, ".mp3") || strings.HasSuffix(file, ".wav") || 
-	   strings.HasSuffix(file, ".ogg") || strings.HasSuffix(file, ".m4a") {
+	if strings.HasSuffix(file, ".mp3") || strings.HasSuffix(file, ".wav") ||
+		strings.HasSuffix(file, ".ogg") || strings.HasSuffix(file, ".m4a") {
 		return "audio"
 	}
 
@@ -903,7 +900,6 @@ func (h *MessageHandler) handleSingleContact(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -1001,7 +997,6 @@ func (h *MessageHandler) parseContactListRequest(r *http.Request) (*message.Cont
 			return nil, fmt.Errorf("contact %d: 'phone' field is required", i+1)
 		}
 	}
-
 
 	return &contactListReq, nil
 }
@@ -1101,7 +1096,6 @@ func (h *MessageHandler) buildContactListResponse(w http.ResponseWriter, result 
 // @Router /sessions/{sessionId}/messages/send/profile/business [post]
 func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Request) {
 
-
 	h.handleMessageActionWithTwoFields(
 		w,
 		r,
@@ -1199,7 +1193,6 @@ func (h *MessageHandler) SendButtonMessage(w http.ResponseWriter, r *http.Reques
 			return
 		}
 	}
-
 
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
@@ -1352,7 +1345,6 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 			}
 		}
 	}
-
 
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
@@ -2216,8 +2208,8 @@ func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req struct {
-		Phone       string `json:"Phone"`
-		ContactName string `json:"contactName"`
+		Phone        string `json:"Phone"`
+		ContactName  string `json:"contactName"`
 		ContactPhone string `json:"contactPhone"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -2235,11 +2227,11 @@ func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Reques
 	}
 
 	h.logger.InfoWithFields("Sending single contact", map[string]interface{}{
-		"session_id":     sess.ID.String(),
-		"session_name":   sess.Name,
-		"to":             req.Phone,
-		"contact_name":   req.ContactName,
-		"contact_phone":  req.ContactPhone,
+		"session_id":    sess.ID.String(),
+		"session_name":  sess.Name,
+		"to":            req.Phone,
+		"contact_name":  req.ContactName,
+		"contact_phone": req.ContactPhone,
 	})
 
 	response := map[string]interface{}{
@@ -2299,28 +2291,26 @@ func (h *MessageHandler) SendSingleContactBusiness(w http.ResponseWriter, r *htt
 	}
 
 	h.logger.InfoWithFields("Sending single business contact", map[string]interface{}{
-		"session_id":     sess.ID.String(),
-		"session_name":   sess.Name,
-		"to":             req.Phone,
-		"contact_name":   req.ContactName,
-		"contact_phone":  req.ContactPhone,
-		"business_name":  req.BusinessName,
+		"session_id":    sess.ID.String(),
+		"session_name":  sess.Name,
+		"to":            req.Phone,
+		"contact_name":  req.ContactName,
+		"contact_phone": req.ContactPhone,
+		"business_name": req.BusinessName,
 	})
 
 	response := map[string]interface{}{
-		"sessionId":     sess.ID.String(),
-		"to":            req.Phone,
-		"messageId":     "placeholder-message-id",
-		"contactName":   req.ContactName,
-		"contactPhone":  req.ContactPhone,
-		"businessName":  req.BusinessName,
-		"status":        "sent",
-		"message":       "SendSingleContactBusiness functionality needs to be implemented in use case",
+		"sessionId":    sess.ID.String(),
+		"to":           req.Phone,
+		"messageId":    "placeholder-message-id",
+		"contactName":  req.ContactName,
+		"contactPhone": req.ContactPhone,
+		"businessName": req.BusinessName,
+		"status":       "sent",
+		"message":      "SendSingleContactBusiness functionality needs to be implemented in use case",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Single business contact sent successfully"))
 }
-
-

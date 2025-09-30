@@ -380,7 +380,6 @@ func (s *serviceImpl) ReadCachedFile(ctx context.Context, filePath string) ([]by
 	return s.cacheManager.ReadFile(ctx, filePath)
 }
 
-
 func (s *serviceImpl) generateFilename(messageID, mimeType, originalFilename string) string {
 	if originalFilename != "" {
 		return originalFilename

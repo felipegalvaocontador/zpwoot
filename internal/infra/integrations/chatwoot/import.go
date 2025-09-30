@@ -55,7 +55,6 @@ func (im *ImportManager) ImportHistoricalMessages(ctx context.Context, sessionID
 		"days_limit":  daysLimit,
 	})
 
-
 	result.Status = "completed"
 	result.EndTime = time.Now()
 	result.Duration = result.EndTime.Sub(result.StartTime)
@@ -85,7 +84,6 @@ func (im *ImportManager) ImportContacts(ctx context.Context, sessionID string, i
 		StartTime:           time.Now(),
 		Status:              "running",
 	}
-
 
 	result.Status = "completed"
 	result.EndTime = time.Now()
@@ -161,7 +159,6 @@ func (im *ImportManager) CancelImport(sessionID string) error {
 	im.logger.InfoWithFields("Canceling import", map[string]interface{}{
 		"session_id": sessionID,
 	})
-
 
 	return nil
 }

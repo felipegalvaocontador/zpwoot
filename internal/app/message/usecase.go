@@ -165,7 +165,6 @@ func (uc *useCaseImpl) GetPollResults(ctx context.Context, req *GetPollResultsRe
 		"poll_message_id": req.PollMessageID,
 	})
 
-
 	return &GetPollResultsResponse{
 		PollMessageID:         req.PollMessageID,
 		PollName:              "Poll results not yet implemented",

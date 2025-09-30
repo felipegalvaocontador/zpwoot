@@ -106,7 +106,6 @@ const (
 	CommunityEventInfoUpdated       CommunityEventType = "info_updated"
 )
 
-
 func IsValidCommunityJID(jid string) bool {
 	return len(jid) > 0 && (jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix ||
 		jid[len(jid)-len(NewsletterJIDSuffix):] == NewsletterJIDSuffix)
@@ -115,7 +114,6 @@ func IsValidCommunityJID(jid string) bool {
 func IsValidGroupJID(jid string) bool {
 	return len(jid) > 0 && jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix
 }
-
 
 func GetCommunityID(jid string) string {
 	if len(jid) > len(GroupJIDSuffix) && jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix {

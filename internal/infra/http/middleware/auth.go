@@ -10,6 +10,14 @@ import (
 	"zpwoot/platform/logger"
 )
 
+// Context key types to avoid collisions
+type contextKey string
+
+const (
+	apiKeyContextKey        contextKey = "api_key"
+	authenticatedContextKey contextKey = "authenticated"
+)
+
 // APIKeyAuth middleware for Chi router
 func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -72,8 +80,8 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 			})
 
 			// Add authentication info to context
-			ctx := context.WithValue(r.Context(), "api_key", apiKey)
-			ctx = context.WithValue(ctx, "authenticated", true)
+			ctx := context.WithValue(r.Context(), apiKeyContextKey, apiKey)
+			ctx = context.WithValue(ctx, authenticatedContextKey, true)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -82,7 +90,7 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 
 // GetAPIKeyFromContext extracts API key from Chi context
 func GetAPIKeyFromContext(r *http.Request) string {
-	if apiKey, ok := r.Context().Value("api_key").(string); ok {
+	if apiKey, ok := r.Context().Value(apiKeyContextKey).(string); ok {
 		return apiKey
 	}
 	return ""
@@ -90,7 +98,7 @@ func GetAPIKeyFromContext(r *http.Request) string {
 
 // IsAuthenticated checks if request is authenticated
 func IsAuthenticated(r *http.Request) bool {
-	if authenticated, ok := r.Context().Value("authenticated").(bool); ok {
+	if authenticated, ok := r.Context().Value(authenticatedContextKey).(bool); ok {
 		return authenticated
 	}
 	return false

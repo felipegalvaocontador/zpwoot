@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -43,6 +44,46 @@ func (h *ChatwootHandler) resolveSession(r *http.Request) (*domainSession.Sessio
 	}
 
 	return h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+}
+
+// handleChatwootAction is a helper function to reduce code duplication
+func (h *ChatwootHandler) handleChatwootAction(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	actionFunc func(context.Context) (interface{}, error),
+) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	result, err := actionFunc(r.Context())
+	if err != nil {
+		h.logger.Error("Failed to " + actionName + ": " + err.Error())
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName))
+		return
+	}
+
+	response := common.NewSuccessResponse(result, successMessage)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Create Chatwoot configuration
@@ -295,36 +336,10 @@ func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot/test [post]
 func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	h.logger.InfoWithFields("Testing Chatwoot connection", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := h.chatwootUC.TestConnection(r.Context())
-	if err != nil {
-		h.logger.Error("Failed to test Chatwoot connection: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to test Chatwoot connection"))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, "Connection test completed")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.handleChatwootAction(w, r, "Testing Chatwoot connection", "Connection test completed",
+		func(ctx context.Context) (interface{}, error) {
+			return h.chatwootUC.TestConnection(ctx)
+		})
 }
 
 // @Summary Get Chatwoot statistics
@@ -338,36 +353,10 @@ func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request)
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot/stats [get]
 func (h *ChatwootHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	h.logger.InfoWithFields("Getting Chatwoot statistics", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := h.chatwootUC.GetStats(r.Context())
-	if err != nil {
-		h.logger.Error("Failed to get Chatwoot statistics: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get Chatwoot statistics"))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, "Statistics retrieved successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.handleChatwootAction(w, r, "Getting Chatwoot statistics", "Statistics retrieved successfully",
+		func(ctx context.Context) (interface{}, error) {
+			return h.chatwootUC.GetStats(ctx)
+		})
 }
 
 // @Summary Auto-create Chatwoot inbox

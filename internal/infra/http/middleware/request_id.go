@@ -9,6 +9,14 @@ import (
 	"zpwoot/platform/logger"
 )
 
+// Context key types to avoid collisions
+type requestContextKey string
+
+const (
+	requestIDContextKey requestContextKey = "request_id"
+	loggerContextKey    requestContextKey = "logger"
+)
+
 // RequestID middleware for Chi router
 func RequestID(logger *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -20,11 +28,11 @@ func RequestID(logger *logger.Logger) func(http.Handler) http.Handler {
 			}
 
 			// Add request ID to context
-			ctx := context.WithValue(r.Context(), "request_id", requestID)
-			
+			ctx := context.WithValue(r.Context(), requestIDContextKey, requestID)
+
 			// Create logger with request ID
 			requestLogger := logger.WithField("request_id", requestID)
-			ctx = context.WithValue(ctx, "logger", requestLogger)
+			ctx = context.WithValue(ctx, loggerContextKey, requestLogger)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -33,7 +41,7 @@ func RequestID(logger *logger.Logger) func(http.Handler) http.Handler {
 
 // GetLoggerFromContext extracts logger from Chi context
 func GetLoggerFromContext(r *http.Request) *logger.Logger {
-	if logger, ok := r.Context().Value("logger").(*logger.Logger); ok {
+	if logger, ok := r.Context().Value(loggerContextKey).(*logger.Logger); ok {
 		return logger
 	}
 	return logger.New()
@@ -41,7 +49,7 @@ func GetLoggerFromContext(r *http.Request) *logger.Logger {
 
 // GetRequestIDFromContext extracts request ID from Chi context
 func GetRequestIDFromContext(r *http.Request) string {
-	if requestID, ok := r.Context().Value("request_id").(string); ok {
+	if requestID, ok := r.Context().Value(requestIDContextKey).(string); ok {
 		return requestID
 	}
 	return ""

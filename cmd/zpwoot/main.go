@@ -59,7 +59,6 @@ var (
 	GitCommit = "unknown"
 )
 
-// commandFlags holds all command line flags
 type commandFlags struct {
 	migrateUp     bool
 	migrateDown   bool
@@ -68,7 +67,6 @@ type commandFlags struct {
 	version       bool
 }
 
-// managers holds all initialized managers
 type managers struct {
 	whatsapp        *wameow.Manager
 	webhook         *webhook.WebhookManager
@@ -77,49 +75,38 @@ type managers struct {
 }
 
 func main() {
-	// Parse command line flags
 	flags := parseFlags()
 
-	// Handle version flag early
 	if flags.version {
 		showVersion()
 		return
 	}
 
-	// Initialize configuration and logger
 	cfg := config.Load()
 	appLogger := initializeLogger(cfg)
 
-	// Initialize database with migrations
 	database := initializeDatabase(cfg, appLogger)
 	defer closeDatabase(database, appLogger)
 
-	// Handle database operations (migrations, seed)
 	migrator := db.NewMigrator(database.GetDB().DB, appLogger)
 	if handled := handleDatabaseOperations(flags, migrator, database, appLogger); handled {
 		return
 	}
 
-	// Initialize core components
 	repositories := repository.NewRepositories(database.GetDB(), appLogger)
 	managerInstances := initializeManagers(database, repositories, appLogger)
 	container := createContainer(repositories, managerInstances, database, appLogger)
 
-	// Setup and start HTTP server with Chi
 	appLogger.Info("Starting server with Chi router")
 	chiHandler := setupHTTPServer(cfg, container, database, managerInstances.whatsapp, appLogger)
 
-	// Start background services
 	startBackgroundServices(container, appLogger)
 
-	// Setup graceful shutdown for Chi
 	setupGracefulShutdown(chiHandler, appLogger)
 
-	// Start Chi server
 	startServer(chiHandler, cfg, appLogger)
 }
 
-// parseFlags parses and returns command line flags
 func parseFlags() commandFlags {
 	flags := commandFlags{}
 	flag.BoolVar(&flags.migrateUp, "migrate-up", false, "Run database migrations up")
@@ -132,7 +119,6 @@ func parseFlags() commandFlags {
 	return flags
 }
 
-// initializeLogger creates and configures the application logger
 func initializeLogger(cfg *config.Config) *logger.Logger {
 	loggerConfig := &logger.LogConfig{
 		Level:  cfg.LogLevel,
@@ -149,7 +135,6 @@ func initializeLogger(cfg *config.Config) *logger.Logger {
 	return logger.NewWithConfig(loggerConfig)
 }
 
-// initializeDatabase connects to database and runs initial migrations
 func initializeDatabase(cfg *config.Config, appLogger *logger.Logger) *platformDB.DB {
 	database, err := platformDB.NewWithMigrations(cfg.DatabaseURL, appLogger)
 	if err != nil {
@@ -158,14 +143,12 @@ func initializeDatabase(cfg *config.Config, appLogger *logger.Logger) *platformD
 	return database
 }
 
-// closeDatabase safely closes database connection
 func closeDatabase(database *platformDB.DB, appLogger *logger.Logger) {
 	if err := database.Close(); err != nil {
 		appLogger.Error("Failed to close database connection: " + err.Error())
 	}
 }
 
-// handleDatabaseOperations processes database-related flags and returns true if operation was handled
 func handleDatabaseOperations(
 	flags commandFlags,
 	migrator *db.Migrator,
@@ -208,7 +191,6 @@ func handleDatabaseOperations(
 	return false
 }
 
-// initializeManagers creates and configures all application managers
 func initializeManagers(
 	database *platformDB.DB,
 	repositories *repository.Repositories,
@@ -218,7 +200,6 @@ func initializeManagers(
 	webhookManager := createWebhookManager(repositories.GetWebhookRepository(), appLogger)
 	chatwootIntegrationManager, chatwootManager := createChatwootIntegration(repositories, appLogger)
 
-	// Configure integrations
 	configureWebhookIntegration(whatsappManager, webhookManager, appLogger)
 	configureChatwootIntegration(whatsappManager, chatwootIntegrationManager, appLogger)
 
@@ -230,7 +211,6 @@ func initializeManagers(
 	}
 }
 
-// createWhatsAppManager initializes the WhatsApp manager
 func createWhatsAppManager(database *platformDB.DB, sessionRepo ports.SessionRepository, appLogger *logger.Logger) *wameow.Manager {
 	factory, err := wameow.NewFactory(appLogger, sessionRepo)
 	if err != nil {
@@ -246,7 +226,6 @@ func createWhatsAppManager(database *platformDB.DB, sessionRepo ports.SessionRep
 	return manager
 }
 
-// createWebhookManager initializes the webhook manager
 func createWebhookManager(webhookRepo ports.WebhookRepository, appLogger *logger.Logger) *webhook.WebhookManager {
 	const defaultWebhookWorkers = 5
 	webhookManager := webhook.NewWebhookManager(appLogger, webhookRepo, defaultWebhookWorkers)
@@ -259,7 +238,6 @@ func createWebhookManager(webhookRepo ports.WebhookRepository, appLogger *logger
 	return webhookManager
 }
 
-// createChatwootIntegration initializes the Chatwoot integration
 func createChatwootIntegration(repositories *repository.Repositories, appLogger *logger.Logger) (*chatwootIntegration.IntegrationManager, *chatwootIntegration.Manager) {
 	chatwootRepo := repositories.GetChatwootRepository()
 	chatwootMessageRepo := repositories.GetChatwootMessageRepository()
@@ -283,15 +261,11 @@ func createChatwootIntegration(repositories *repository.Repositories, appLogger 
 	return integrationManager, chatwootManager
 }
 
-// createContainer creates the application container with all dependencies
 func createContainer(repositories *repository.Repositories, managers managers, database *platformDB.DB, appLogger *logger.Logger) *app.Container {
-	// Create adapters and mappers
 	adapters := createAdapters(repositories, managers, appLogger)
 
-	// Create domain services
 	services := createDomainServices(repositories, managers, appLogger, adapters)
 
-	// Create container config
 	config := createContainerConfig(repositories, managers, database, appLogger, adapters, services)
 
 	return app.NewContainer(config)
@@ -339,7 +313,6 @@ func createDomainServices(repositories *repository.Repositories, managers manage
 		managers.whatsapp,
 	)
 
-	// Set MessageMapper if available
 	if adapters.chatwootMessageMapper != nil {
 		chatwootService.SetMessageMapper(adapters.chatwootMessageMapper)
 	}
@@ -369,13 +342,11 @@ type containerServices struct {
 
 func createContainerConfig(repositories *repository.Repositories, managers managers, database *platformDB.DB, appLogger *logger.Logger, adapters *containerAdapters, services *containerServices) *app.ContainerConfig {
 	return &app.ContainerConfig{
-		// Repositories
 		SessionRepo:         repositories.GetSessionRepository(),
 		WebhookRepo:         repositories.GetWebhookRepository(),
 		ChatwootRepo:        repositories.GetChatwootRepository(),
 		ChatwootMessageRepo: repositories.GetChatwootMessageRepository(),
 
-		// Managers and Integrations
 		WameowManager:         managers.whatsapp,
 		ChatwootIntegration:   nil, // IntegrationManager doesn't implement this interface
 		ChatwootManager:       managers.chatwootManager,
@@ -384,7 +355,6 @@ func createContainerConfig(repositories *repository.Repositories, managers manag
 		NewsletterManager:     adapters.newsletterManager,
 		CommunityManager:      adapters.communityManager,
 
-		// Domain Services
 		SessionService:    services.sessionService,
 		WebhookService:    services.webhookService,
 		ChatwootService:   services.chatwootService,
@@ -394,11 +364,9 @@ func createContainerConfig(repositories *repository.Repositories, managers manag
 		NewsletterService: services.newsletterService,
 		CommunityService:  services.communityService,
 
-		// Infrastructure
 		Logger: appLogger,
 		DB:     database.GetDB().DB,
 
-		// Build Info
 		Version:   Version,
 		BuildTime: BuildTime,
 		GitCommit: GitCommit,
@@ -409,12 +377,10 @@ func createContainerConfig(repositories *repository.Repositories, managers manag
 
 
 
-// startBackgroundServices starts all background services
 func startBackgroundServices(container *app.Container, appLogger *logger.Logger) {
 	go connectOnStartup(container, appLogger)
 }
 
-// setupGracefulShutdown configures graceful shutdown handling
 
 
 
@@ -514,21 +480,17 @@ func seedDatabase(database *platformDB.DB, logger *logger.Logger) error {
 	return nil
 }
 
-// configureWebhookIntegration configures webhook integration between WhatsApp and webhook manager
 func configureWebhookIntegration(wameowManager *wameow.Manager, webhookManager *webhook.WebhookManager, appLogger *logger.Logger) {
 	webhookHandler := wameow.NewWhatsmeowWebhookHandler(appLogger, webhookManager)
 	wameowManager.SetWebhookHandler(webhookHandler)
 	appLogger.Info("Webhook integration configured successfully")
 }
 
-// configureChatwootIntegration configures Chatwoot integration with WhatsApp manager
 func configureChatwootIntegration(whatsappManager *wameow.Manager, integrationManager *chatwootIntegration.IntegrationManager, appLogger *logger.Logger) {
-	// Register the integration manager as ChatwootManager with WhatsApp manager
 	whatsappManager.SetChatwootManager(integrationManager)
 	appLogger.Info("Chatwoot integration configured successfully")
 }
 
-// connectOnStartup automatically reconnects existing sessions on startup
 func connectOnStartup(container *app.Container, logger *logger.Logger) {
 	const (
 		startupDelay     = 3 * time.Second
@@ -569,14 +531,12 @@ func connectOnStartup(container *app.Container, logger *logger.Logger) {
 	})
 }
 
-// reconnectStats holds statistics for reconnection process
 type reconnectStats struct {
 	connected int
 	skipped   int
 	failed    int
 }
 
-// getExistingSessions retrieves existing sessions from repository
 func getExistingSessions(ctx context.Context, sessionRepo ports.SessionRepository, limit int, logger *logger.Logger) []*session.Session {
 	sessions, _, err := sessionRepo.List(ctx, &session.ListSessionsRequest{
 		Limit:  limit,
@@ -591,7 +551,6 @@ func getExistingSessions(ctx context.Context, sessionRepo ports.SessionRepositor
 	return sessions
 }
 
-// reconnectSessions attempts to reconnect all valid sessions
 func reconnectSessions(ctx context.Context, sessions []*session.Session, sessionUC sessionApp.UseCase, logger *logger.Logger, delay time.Duration) reconnectStats {
 	stats := reconnectStats{}
 
@@ -619,12 +578,10 @@ func reconnectSessions(ctx context.Context, sessions []*session.Session, session
 	return stats
 }
 
-// setupHTTPServer creates and configures the Chi HTTP server
 func setupHTTPServer(cfg *config.Config, container *app.Container, database *platformDB.DB, whatsappManager *wameow.Manager, appLogger *logger.Logger) http.Handler {
 	return routers.SetupRoutes(cfg, database, appLogger, whatsappManager, container)
 }
 
-// setupGracefulShutdown configures graceful shutdown handling for Chi
 func setupGracefulShutdown(handler http.Handler, appLogger *logger.Logger) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -632,12 +589,9 @@ func setupGracefulShutdown(handler http.Handler, appLogger *logger.Logger) {
 	go func() {
 		<-c
 		appLogger.Info("Shutting down Chi server...")
-		// Chi doesn't have a built-in shutdown method like Fiber
-		// The server shutdown will be handled by the HTTP server
 	}()
 }
 
-// startServer starts the Chi HTTP server
 func startServer(handler http.Handler, cfg *config.Config, appLogger *logger.Logger) {
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,

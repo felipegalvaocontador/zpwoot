@@ -66,7 +66,6 @@ func NewManager(
 	}
 }
 
-// CreateSession creates a new WhatsApp session with optional proxy configuration
 func (m *Manager) CreateSession(sessionID string, config *session.ProxyConfig) error {
 	if err := ValidateSessionID(sessionID); err != nil {
 		return fmt.Errorf("invalid session ID: %w", err)
@@ -94,17 +93,13 @@ func (m *Manager) CreateSession(sessionID string, config *session.ProxyConfig) e
 	return nil
 }
 
-// createWameowClient creates a new WameowClient instance
 func (m *Manager) createWameowClient(sessionID string) (*WameowClient, error) {
 	return NewWameowClient(sessionID, m.container, m.sessionMgr.GetSessionRepo(), m.logger)
 }
 
-// configureSession configures the session with event handlers and proxy
 func (m *Manager) configureSession(client *WameowClient, sessionID string, config *session.ProxyConfig) error {
-	// Setup WhatsApp event handlers
 	m.setupEventHandlers(client.GetClient(), sessionID)
 
-	// Create and set event handler for client QR code integration
 	eventHandler := NewEventHandler(m, m.sessionMgr, m.qrGenerator, m.logger)
 	if m.webhookHandler != nil {
 		eventHandler.SetWebhookHandler(m.webhookHandler)
@@ -120,7 +115,6 @@ func (m *Manager) configureSession(client *WameowClient, sessionID string, confi
 				"session_id": sessionID,
 				"error":      err.Error(),
 			})
-			// Don't fail the session creation for proxy config errors
 		}
 	}
 
@@ -165,10 +159,8 @@ func (m *Manager) DisconnectSession(sessionID string) error {
 		return fmt.Errorf("failed to disconnect session %s: %w", sessionID, err)
 	}
 
-	// Update connection status
 	m.sessionMgr.UpdateConnectionStatus(sessionID, false)
 
-	// Remove client from manager to prevent further operations
 	m.clientsMutex.Lock()
 	delete(m.clients, sessionID)
 	m.clientsMutex.Unlock()
@@ -218,7 +210,6 @@ func (m *Manager) GetQRCode(sessionID string) (*session.QRCodeResponse, error) {
 		return nil, fmt.Errorf("failed to get QR code for session %s: %w", sessionID, err)
 	}
 
-	// Generate QR code image
 	qrCodeImage := m.qrGenerator.GenerateQRCodeImage(qrCode)
 
 	return &session.QRCodeResponse{
@@ -361,29 +352,24 @@ func (m *Manager) GetSession(sessionID string) (*session.Session, error) {
 }
 
 func (m *Manager) SendMediaMessage(sessionID, to string, media []byte, mediaType, caption string) error {
-	// Validate session and client
 	client, recipientJID, err := m.validateMediaMessageRequest(sessionID, to)
 	if err != nil {
 		return err
 	}
 
-	// Upload media to WhatsApp servers
 	uploaded, err := m.uploadMedia(client, media, mediaType, sessionID, to)
 	if err != nil {
 		return err
 	}
 
-	// Create message based on media type
 	msg, err := m.createMediaMessage(mediaType, uploaded, caption)
 	if err != nil {
 		return err
 	}
 
-	// Send message and handle response
 	return m.sendMediaMessageAndLog(client, recipientJID, msg, sessionID, to, mediaType)
 }
 
-// validateMediaMessageRequest validates session and parses recipient JID
 func (m *Manager) validateMediaMessageRequest(sessionID, to string) (*WameowClient, types.JID, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -402,7 +388,6 @@ func (m *Manager) validateMediaMessageRequest(sessionID, to string) (*WameowClie
 	return client, recipientJID, nil
 }
 
-// uploadMedia uploads media to WhatsApp servers
 func (m *Manager) uploadMedia(client *WameowClient, media []byte, mediaType, sessionID, to string) (whatsmeow.UploadResponse, error) {
 	uploaded, err := client.GetClient().Upload(context.Background(), media, whatsmeow.MediaType(mediaType))
 	if err != nil {
@@ -417,7 +402,6 @@ func (m *Manager) uploadMedia(client *WameowClient, media []byte, mediaType, ses
 	return uploaded, nil
 }
 
-// createMediaMessage creates the appropriate message type based on media type
 func (m *Manager) createMediaMessage(mediaType string, uploaded whatsmeow.UploadResponse, caption string) (*waE2E.Message, error) {
 	switch mediaType {
 	case "image":
@@ -472,7 +456,6 @@ func (m *Manager) createMediaMessage(mediaType string, uploaded whatsmeow.Upload
 	}
 }
 
-// sendMediaMessageAndLog sends the message and logs the result
 func (m *Manager) sendMediaMessageAndLog(client *WameowClient, recipientJID types.JID, msg *waE2E.Message, sessionID, to, mediaType string) error {
 	_, err := client.GetClient().SendMessage(context.Background(), recipientJID, msg)
 	if err != nil {
@@ -497,13 +480,10 @@ func (m *Manager) sendMediaMessageAndLog(client *WameowClient, recipientJID type
 }
 
 func (m *Manager) RegisterEventHandler(sessionID string, handler ports.EventHandler) error {
-	// Register handler in registry
 	handlerID := m.registerHandlerInRegistry(sessionID, handler)
 
-	// Attach handler to client
 	m.attachHandlerToClient(sessionID, handlerID, handler)
 
-	// Log registration
 	m.logger.InfoWithFields("Event handler registered", map[string]interface{}{
 		"session_id": sessionID,
 		"handler_id": handlerID,
@@ -512,7 +492,6 @@ func (m *Manager) RegisterEventHandler(sessionID string, handler ports.EventHand
 	return nil
 }
 
-// registerHandlerInRegistry registers the handler in the internal registry
 func (m *Manager) registerHandlerInRegistry(sessionID string, handler ports.EventHandler) string {
 	m.handlersMutex.Lock()
 	defer m.handlersMutex.Unlock()
@@ -531,7 +510,6 @@ func (m *Manager) registerHandlerInRegistry(sessionID string, handler ports.Even
 	return handlerID
 }
 
-// attachHandlerToClient attaches the handler to the WhatsApp client
 func (m *Manager) attachHandlerToClient(sessionID, handlerID string, handler ports.EventHandler) {
 	client := m.getClient(sessionID)
 	if client != nil {
@@ -541,7 +519,6 @@ func (m *Manager) attachHandlerToClient(sessionID, handlerID string, handler por
 	}
 }
 
-// processEventForHandler processes an event for a specific handler
 func (m *Manager) processEventForHandler(evt interface{}, sessionID string, handler ports.EventHandler) {
 	switch e := evt.(type) {
 	case *events.Message:
@@ -557,7 +534,6 @@ func (m *Manager) processEventForHandler(evt interface{}, sessionID string, hand
 	}
 }
 
-// handleMessageEvent handles message events
 func (m *Manager) handleMessageEvent(e *events.Message, sessionID string, handler ports.EventHandler) {
 	m.incrementMessagesReceived(sessionID)
 	msg := &ports.WameowMessage{
@@ -574,7 +550,6 @@ func (m *Manager) handleMessageEvent(e *events.Message, sessionID string, handle
 	}
 }
 
-// handleConnectionEvent handles connection/disconnection events
 func (m *Manager) handleConnectionEvent(sessionID string, handler ports.EventHandler, connected bool) {
 	if err := handler.HandleConnection(sessionID, connected); err != nil {
 		m.logger.ErrorWithFields("Failed to handle connection event", map[string]interface{}{
@@ -585,7 +560,6 @@ func (m *Manager) handleConnectionEvent(sessionID string, handler ports.EventHan
 	}
 }
 
-// handleQREvent handles QR code events
 func (m *Manager) handleQREvent(e *events.QR, sessionID string, handler ports.EventHandler) {
 	if err := handler.HandleQRCode(sessionID, e.Codes[0]); err != nil {
 		m.logger.ErrorWithFields("Failed to handle QR code event", map[string]interface{}{
@@ -595,7 +569,6 @@ func (m *Manager) handleQREvent(e *events.QR, sessionID string, handler ports.Ev
 	}
 }
 
-// handlePairSuccessEvent handles pair success events
 func (m *Manager) handlePairSuccessEvent(sessionID string, handler ports.EventHandler) {
 	if err := handler.HandlePairSuccess(sessionID); err != nil {
 		m.logger.ErrorWithFields("Failed to handle pair success event", map[string]interface{}{
@@ -648,15 +621,12 @@ func (m *Manager) applyProxyConfig(client *whatsmeow.Client, config *session.Pro
 		return fmt.Errorf("proxy configuration is nil")
 	}
 
-	// Validate proxy configuration
 	switch config.Type {
 	case "http", "https", "socks5":
-		// Valid proxy types
 	default:
 		return fmt.Errorf("unsupported proxy type: %s", config.Type)
 	}
 
-	// Proxy configuration validated successfully
 
 	return nil
 }
@@ -765,7 +735,6 @@ func (m *Manager) MarkRead(sessionID, to, messageID string) error {
 	return client.MarkRead(ctx, to, messageID)
 }
 
-// RevokeMessage revokes a message using whatsmeow's RevokeMessage method
 func (m *Manager) RevokeMessage(sessionID, to, messageID string) (*message.SendResult, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -792,7 +761,6 @@ func (m *Manager) RevokeMessage(sessionID, to, messageID string) (*message.SendR
 	}, nil
 }
 
-// Group management methods
 func (m *Manager) CreateGroup(sessionID, name string, participants []string, description string) (*ports.GroupInfo, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1012,11 +980,7 @@ func (m *Manager) SetGroupMemberAddMode(sessionID, groupJID string, mode string)
 	return client.SetGroupMemberAddMode(ctx, groupJID, mode)
 }
 
-// ============================================================================
-// ADVANCED GROUP METHODS
-// ============================================================================
 
-// GetGroupInfoFromLink gets group information from an invite link
 func (m *Manager) GetGroupInfoFromLink(sessionID string, inviteLink string) (*types.GroupInfo, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1026,7 +990,6 @@ func (m *Manager) GetGroupInfoFromLink(sessionID string, inviteLink string) (*ty
 	return client.GetGroupInfoFromLink(context.Background(), inviteLink)
 }
 
-// GetGroupInfoFromInvite gets group information from an invite
 func (m *Manager) GetGroupInfoFromInvite(sessionID string, jid, inviter, code string, expiration int64) (*types.GroupInfo, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1036,7 +999,6 @@ func (m *Manager) GetGroupInfoFromInvite(sessionID string, jid, inviter, code st
 	return client.GetGroupInfoFromInvite(context.Background(), jid, inviter, code, expiration)
 }
 
-// JoinGroupWithInvite joins a group using a specific invite
 func (m *Manager) JoinGroupWithInvite(sessionID string, jid, inviter, code string, expiration int64) error {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1046,7 +1008,6 @@ func (m *Manager) JoinGroupWithInvite(sessionID string, jid, inviter, code strin
 	return client.JoinGroupWithInvite(context.Background(), jid, inviter, code, expiration)
 }
 
-// Poll management methods
 func (m *Manager) CreatePoll(sessionID, to, name string, options []string, selectableCount int) (*ports.MessageInfo, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1069,7 +1030,6 @@ func (m *Manager) CreatePoll(sessionID, to, name string, options []string, selec
 	}, nil
 }
 
-// SendPoll sends a poll message (compatible with message handlers)
 func (m *Manager) SendPoll(sessionID, to, name string, options []string, selectableCount int) (*MessageResult, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1079,13 +1039,11 @@ func (m *Manager) SendPoll(sessionID, to, name string, options []string, selecta
 		return nil, fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse recipient JID
 	toJID, err := ParseJID(to)
 	if err != nil {
 		return nil, fmt.Errorf("invalid recipient JID: %w", err)
 	}
 
-	// Validate poll parameters
 	if name == "" {
 		return nil, fmt.Errorf("poll name is required")
 	}
@@ -1106,13 +1064,10 @@ func (m *Manager) SendPoll(sessionID, to, name string, options []string, selecta
 		return nil, fmt.Errorf("selectable count cannot exceed number of options")
 	}
 
-	// Generate message ID
 	msgID := client.GetClient().GenerateMessageID()
 
-	// Build poll creation message using whatsmeow
 	pollMessage := client.GetClient().BuildPollCreation(name, options, selectableCount)
 
-	// Send the poll
 	resp, err := client.GetClient().SendMessage(context.Background(), toJID, pollMessage, whatsmeow.SendRequestExtra{ID: msgID})
 	if err != nil {
 		return nil, fmt.Errorf("failed to send poll: %w", err)
@@ -1125,7 +1080,6 @@ func (m *Manager) SendPoll(sessionID, to, name string, options []string, selecta
 	}, nil
 }
 
-// GetUserJID returns the current user's JID for the session
 func (m *Manager) GetUserJID(sessionID string) (string, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1197,26 +1151,21 @@ type TextMessageResult struct {
 }
 
 func (m *Manager) SendTextMessage(sessionID, to, text string, contextInfo *appMessage.ContextInfo) (*TextMessageResult, error) {
-	// Validate session and parse JID
 	client, recipientJID, err := m.validateTextMessageRequest(sessionID, to)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create message with optional context
 	messageID, msg := m.createTextMessage(client, text, contextInfo)
 
-	// Send message with Brazilian number fallback
 	resp, finalJID, err := m.sendTextMessageWithFallback(client, recipientJID, msg, messageID, sessionID, to)
 	if err != nil {
 		return nil, err
 	}
 
-	// Log success and return result
 	return m.logAndReturnTextResult(sessionID, to, messageID, contextInfo, resp, finalJID)
 }
 
-// validateTextMessageRequest validates session and parses recipient JID
 func (m *Manager) validateTextMessageRequest(sessionID, to string) (*WameowClient, types.JID, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1227,13 +1176,11 @@ func (m *Manager) validateTextMessageRequest(sessionID, to string) (*WameowClien
 		return nil, types.EmptyJID, fmt.Errorf("session %s is not connected", sessionID)
 	}
 
-	// Use our improved JID parser that handles +, spaces, etc.
 	recipientJID, err := ParseJID(to)
 	if err != nil {
 		return nil, types.EmptyJID, fmt.Errorf("invalid recipient JID: %w", err)
 	}
 
-	// Debug logging for Brazilian numbers
 	m.logger.InfoWithFields("Sending text message - JID details", map[string]interface{}{
 		"session_id":  sessionID,
 		"original_to": to,
@@ -1245,7 +1192,6 @@ func (m *Manager) validateTextMessageRequest(sessionID, to string) (*WameowClien
 	return client, recipientJID, nil
 }
 
-// createTextMessage creates a text message with optional context info
 func (m *Manager) createTextMessage(client *WameowClient, text string, contextInfo *appMessage.ContextInfo) (string, *waE2E.Message) {
 	messageID := client.GetClient().GenerateMessageID()
 
@@ -1274,11 +1220,9 @@ func (m *Manager) createTextMessage(client *WameowClient, text string, contextIn
 	return messageID, msg
 }
 
-// sendTextMessageWithFallback sends text message with Brazilian number fallback
 func (m *Manager) sendTextMessageWithFallback(client *WameowClient, recipientJID types.JID, msg *waE2E.Message, messageID, sessionID, to string) (whatsmeow.SendResponse, types.JID, error) {
 	resp, err := client.GetClient().SendMessage(context.Background(), recipientJID, msg, whatsmeow.SendRequestExtra{ID: messageID})
 	if err != nil {
-		// Try Brazilian alternative number format
 		if altResp, altJID, altErr := m.tryBrazilianAlternative(client, msg, messageID, sessionID, to); altErr == nil {
 			return altResp, altJID, nil
 		}
@@ -1288,7 +1232,6 @@ func (m *Manager) sendTextMessageWithFallback(client *WameowClient, recipientJID
 	return resp, recipientJID, nil
 }
 
-// tryBrazilianAlternative attempts to send with Brazilian alternative number format
 func (m *Manager) tryBrazilianAlternative(client *WameowClient, msg *waE2E.Message, messageID, sessionID, to string) (whatsmeow.SendResponse, types.JID, error) {
 	alternativeNumber := GetBrazilianAlternativeNumber(to)
 	if alternativeNumber == "" {
@@ -1301,13 +1244,11 @@ func (m *Manager) tryBrazilianAlternative(client *WameowClient, msg *waE2E.Messa
 		"alternative_number": alternativeNumber,
 	})
 
-	// Try parsing the alternative number
 	altRecipientJID, altErr := ParseJID(alternativeNumber)
 	if altErr != nil {
 		return whatsmeow.SendResponse{}, types.EmptyJID, altErr
 	}
 
-	// Try sending with the alternative number
 	resp, err := client.GetClient().SendMessage(context.Background(), altRecipientJID, msg, whatsmeow.SendRequestExtra{ID: messageID})
 	if err != nil {
 		return whatsmeow.SendResponse{}, types.EmptyJID, err
@@ -1323,7 +1264,6 @@ func (m *Manager) tryBrazilianAlternative(client *WameowClient, msg *waE2E.Messa
 	return resp, altRecipientJID, nil
 }
 
-// logAndReturnTextResult logs success and returns the result
 func (m *Manager) logAndReturnTextResult(sessionID, to, messageID string, contextInfo *appMessage.ContextInfo, resp whatsmeow.SendResponse, recipientJID types.JID) (*TextMessageResult, error) {
 	m.logger.InfoWithFields("Text message sent", map[string]interface{}{
 		"session_id": sessionID,
@@ -1340,7 +1280,6 @@ func (m *Manager) logAndReturnTextResult(sessionID, to, messageID string, contex
 	}, nil
 }
 
-// SendMessage sends a message with optional context info for replies
 func (m *Manager) SendMessage(sessionID, to, messageType, body, caption, file, filename string, latitude, longitude float64, contactName, contactPhone string, contextInfo *message.ContextInfo) (*message.SendResult, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1355,7 +1294,6 @@ func (m *Manager) SendMessage(sessionID, to, messageType, body, caption, file, f
 	var resp *whatsmeow.SendResponse
 	var err error
 
-	// Convert message.ContextInfo to appMessage.ContextInfo
 	var appContextInfo *appMessage.ContextInfo
 	if contextInfo != nil {
 		appContextInfo = &appMessage.ContextInfo{
@@ -1512,7 +1450,6 @@ func (m *Manager) SendContactListBusiness(sessionID, to string, contacts []Conta
 	return result, nil
 }
 
-// sendSingleContactGeneric is a generic helper for sending single contact messages
 func (m *Manager) sendSingleContactGeneric(
 	sessionID, to string,
 	contact ContactInfo,
@@ -1582,7 +1519,6 @@ func (m *Manager) SendSingleContactBusinessFormat(sessionID, to string, contact 
 	return m.sendSingleContactGeneric(sessionID, to, contact, client.SendSingleContactMessageBusiness, "failed to send WhatsApp Business single contact")
 }
 
-// IsOnWhatsApp checks if phone numbers are registered on WhatsApp
 func (m *Manager) IsOnWhatsApp(ctx context.Context, sessionID string, phoneNumbers []string) (map[string]interface{}, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1592,7 +1528,6 @@ func (m *Manager) IsOnWhatsApp(ctx context.Context, sessionID string, phoneNumbe
 	return client.IsOnWhatsApp(ctx, phoneNumbers)
 }
 
-// GetAllContacts gets all contacts from the WhatsApp store
 func (m *Manager) GetAllContacts(ctx context.Context, sessionID string) (map[string]interface{}, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1602,7 +1537,6 @@ func (m *Manager) GetAllContacts(ctx context.Context, sessionID string) (map[str
 	return client.GetAllContacts(ctx)
 }
 
-// GetProfilePictureInfo gets profile picture information for a contact
 func (m *Manager) GetProfilePictureInfo(ctx context.Context, sessionID, jid string, preview bool) (map[string]interface{}, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1612,7 +1546,6 @@ func (m *Manager) GetProfilePictureInfo(ctx context.Context, sessionID, jid stri
 	return client.GetProfilePictureInfo(ctx, jid, preview)
 }
 
-// GetUserInfo gets detailed information about WhatsApp users
 func (m *Manager) GetUserInfo(ctx context.Context, sessionID string, jids []string) ([]map[string]interface{}, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1622,7 +1555,6 @@ func (m *Manager) GetUserInfo(ctx context.Context, sessionID string, jids []stri
 	return client.GetUserInfo(ctx, jids)
 }
 
-// GetBusinessProfile gets business profile information
 func (m *Manager) GetBusinessProfile(ctx context.Context, sessionID, jid string) (map[string]interface{}, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
@@ -1635,12 +1567,10 @@ func (m *Manager) GetBusinessProfile(ctx context.Context, sessionID, jid string)
 func (m *Manager) SetupEventHandlers(client *whatsmeow.Client, sessionID string) {
 	eventHandler := NewEventHandler(m, m.sessionMgr, m.qrGenerator, m.logger)
 
-	// Set webhook handler if available
 	if m.webhookHandler != nil {
 		eventHandler.SetWebhookHandler(m.webhookHandler)
 	}
 
-	// Set Chatwoot manager if available
 	if m.chatwootManager != nil {
 		eventHandler.SetChatwootManager(m.chatwootManager)
 	}
@@ -1650,23 +1580,18 @@ func (m *Manager) SetupEventHandlers(client *whatsmeow.Client, sessionID string)
 	})
 }
 
-// SetWebhookHandler sets the global webhook handler for all sessions
 func (m *Manager) SetWebhookHandler(handler WebhookEventHandler) {
 	m.webhookHandler = handler
 	m.logger.Info("Webhook handler configured for wameow manager")
 }
 
-// SetChatwootManager sets the global Chatwoot manager for all sessions
 func (m *Manager) SetChatwootManager(manager ChatwootManager) {
 	m.chatwootManager = manager
 	m.logger.Info("Chatwoot manager configured for wameow manager")
 }
 
-// convertToPortsGroupInfo converts whatsmeow GroupInfo to ports GroupInfo
 func convertToPortsGroupInfo(groupInfo interface{}) *ports.GroupInfo {
-	// Convert from whatsmeow types.GroupInfo to ports.GroupInfo
 	if gi, ok := groupInfo.(*types.GroupInfo); ok {
-		// Convert participants
 		participants := make([]ports.GroupParticipant, len(gi.Participants))
 		for i, p := range gi.Participants {
 			participants[i] = ports.GroupParticipant{
@@ -1691,7 +1616,6 @@ func convertToPortsGroupInfo(groupInfo interface{}) *ports.GroupInfo {
 		}
 	}
 
-	// Fallback for unknown types
 	return &ports.GroupInfo{
 		GroupJID:     "unknown@g.us",
 		Name:         "Unknown Group",

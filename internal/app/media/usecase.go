@@ -11,11 +11,9 @@ import (
 )
 
 const (
-	// Media cache duration
 	defaultCacheDuration = 24 * time.Hour
 )
 
-// UseCase defines the interface for media use cases
 type UseCase interface {
 	DownloadMedia(ctx context.Context, req *DownloadMediaRequest) (*DownloadMediaResponse, error)
 	GetMediaInfo(ctx context.Context, req *GetMediaInfoRequest) (*MediaInfoResponse, error)
@@ -30,7 +28,6 @@ type useCaseImpl struct {
 	logger       *logger.Logger
 }
 
-// NewUseCase creates a new media use case
 func NewUseCase(mediaService media.Service, mediaRepo ports.MediaRepository, logger *logger.Logger) UseCase {
 	return &useCaseImpl{
 		mediaService: mediaService,
@@ -39,20 +36,16 @@ func NewUseCase(mediaService media.Service, mediaRepo ports.MediaRepository, log
 	}
 }
 
-// DownloadMedia downloads media from a WhatsApp message
 func (uc *useCaseImpl) DownloadMedia(ctx context.Context, req *DownloadMediaRequest) (*DownloadMediaResponse, error) {
 	uc.logDownloadRequest(req)
 
-	// Try to serve from cache first
 	if response, served := uc.tryServeFromCache(ctx, req); served {
 		return response, nil
 	}
 
-	// Download fresh media and cache it
 	return uc.downloadAndCacheMedia(ctx, req)
 }
 
-// logDownloadRequest logs the download request
 func (uc *useCaseImpl) logDownloadRequest(req *DownloadMediaRequest) {
 	uc.logger.InfoWithFields("Downloading media", map[string]interface{}{
 		"session_id": req.SessionID,
@@ -61,14 +54,12 @@ func (uc *useCaseImpl) logDownloadRequest(req *DownloadMediaRequest) {
 	})
 }
 
-// tryServeFromCache attempts to serve media from cache
 func (uc *useCaseImpl) tryServeFromCache(ctx context.Context, req *DownloadMediaRequest) (*DownloadMediaResponse, bool) {
 	cached, err := uc.mediaRepo.GetCachedMedia(ctx, req.SessionID, req.MessageID)
 	if err != nil || cached == nil {
 		return nil, false
 	}
 
-	// Check if cache is still valid
 	if !time.Now().Before(cached.ExpiresAt) {
 		return nil, false
 	}
@@ -79,10 +70,8 @@ func (uc *useCaseImpl) tryServeFromCache(ctx context.Context, req *DownloadMedia
 		"file_path":  cached.FilePath,
 	})
 
-	// Update last access time
 	uc.updateCacheAccessTime(ctx, cached, req)
 
-	// Read cached file
 	data, err := uc.mediaService.ReadCachedFile(ctx, cached.FilePath)
 	if err != nil {
 		uc.logger.WarnWithFields("Failed to read cached file, downloading fresh", map[string]interface{}{
@@ -101,7 +90,6 @@ func (uc *useCaseImpl) tryServeFromCache(ctx context.Context, req *DownloadMedia
 	}, true
 }
 
-// updateCacheAccessTime updates the last access time for cached media
 func (uc *useCaseImpl) updateCacheAccessTime(ctx context.Context, cached *media.CachedMediaItem, req *DownloadMediaRequest) {
 	cached.LastAccess = time.Now()
 	if err := uc.mediaRepo.UpdateCachedMedia(ctx, cached); err != nil {
@@ -113,9 +101,7 @@ func (uc *useCaseImpl) updateCacheAccessTime(ctx context.Context, cached *media.
 	}
 }
 
-// downloadAndCacheMedia downloads fresh media and caches it
 func (uc *useCaseImpl) downloadAndCacheMedia(ctx context.Context, req *DownloadMediaRequest) (*DownloadMediaResponse, error) {
-	// Download fresh media
 	domainReq := &media.DownloadMediaRequest{
 		SessionID: req.SessionID,
 		MessageID: req.MessageID,
@@ -132,7 +118,6 @@ func (uc *useCaseImpl) downloadAndCacheMedia(ctx context.Context, req *DownloadM
 		return nil, err
 	}
 
-	// Cache the downloaded media
 	uc.cacheDownloadedMedia(ctx, req, result)
 
 	return &DownloadMediaResponse{
@@ -143,7 +128,6 @@ func (uc *useCaseImpl) downloadAndCacheMedia(ctx context.Context, req *DownloadM
 	}, nil
 }
 
-// cacheDownloadedMedia caches the downloaded media
 func (uc *useCaseImpl) cacheDownloadedMedia(ctx context.Context, req *DownloadMediaRequest, result *media.DownloadMediaResponse) {
 	cacheItem := &media.CachedMediaItem{
 		SessionID:  req.SessionID,
@@ -167,7 +151,6 @@ func (uc *useCaseImpl) cacheDownloadedMedia(ctx context.Context, req *DownloadMe
 	}
 }
 
-// GetMediaInfo gets information about media in a message without downloading it
 func (uc *useCaseImpl) GetMediaInfo(ctx context.Context, req *GetMediaInfoRequest) (*MediaInfoResponse, error) {
 	uc.logger.InfoWithFields("Getting media info", map[string]interface{}{
 		"session_id": req.SessionID,
@@ -189,7 +172,6 @@ func (uc *useCaseImpl) GetMediaInfo(ctx context.Context, req *GetMediaInfoReques
 		return nil, err
 	}
 
-	// Check if media is cached
 	cached, err := uc.mediaRepo.GetCachedMedia(ctx, req.SessionID, req.MessageID)
 	if err != nil {
 		uc.logger.WarnWithFields("Failed to check cached media", map[string]interface{}{
@@ -197,7 +179,6 @@ func (uc *useCaseImpl) GetMediaInfo(ctx context.Context, req *GetMediaInfoReques
 			"message_id": req.MessageID,
 			"error":      err.Error(),
 		})
-		// Continue without cache info
 		cached = nil
 	}
 	isDownloaded := cached != nil && time.Now().Before(cached.ExpiresAt)
@@ -220,7 +201,6 @@ func (uc *useCaseImpl) GetMediaInfo(ctx context.Context, req *GetMediaInfoReques
 	}, nil
 }
 
-// ListCachedMedia lists cached media files for a session
 func (uc *useCaseImpl) ListCachedMedia(ctx context.Context, req *ListCachedMediaRequest) (*ListCachedMediaResponse, error) {
 	uc.logger.InfoWithFields("Listing cached media", map[string]interface{}{
 		"session_id": req.SessionID,
@@ -245,7 +225,6 @@ func (uc *useCaseImpl) ListCachedMedia(ctx context.Context, req *ListCachedMedia
 		return nil, err
 	}
 
-	// Convert domain items to DTO items
 	items := make([]CachedMediaItem, len(result.Items))
 	for i, item := range result.Items {
 		items[i] = CachedMediaItem{
@@ -271,7 +250,6 @@ func (uc *useCaseImpl) ListCachedMedia(ctx context.Context, req *ListCachedMedia
 	}, nil
 }
 
-// ClearCache clears cached media files for a session
 func (uc *useCaseImpl) ClearCache(ctx context.Context, req *ClearCacheRequest) (*ClearCacheResponse, error) {
 	uc.logger.InfoWithFields("Clearing media cache", map[string]interface{}{
 		"session_id": req.SessionID,
@@ -303,7 +281,6 @@ func (uc *useCaseImpl) ClearCache(ctx context.Context, req *ClearCacheRequest) (
 	}, nil
 }
 
-// GetMediaStats gets statistics about media usage for a session
 func (uc *useCaseImpl) GetMediaStats(ctx context.Context, req *GetMediaStatsRequest) (*GetMediaStatsResponse, error) {
 	uc.logger.InfoWithFields("Getting media stats", map[string]interface{}{
 		"session_id": req.SessionID,

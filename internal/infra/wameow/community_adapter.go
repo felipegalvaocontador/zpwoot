@@ -12,13 +12,11 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// CommunityAdapter implements the CommunityManager interface
 type CommunityAdapter struct {
 	wameowManager ports.WameowManager
 	logger        logger.Logger
 }
 
-// NewCommunityAdapter creates a new community adapter
 func NewCommunityAdapter(wameowManager ports.WameowManager, logger logger.Logger) *CommunityAdapter {
 	return &CommunityAdapter{
 		wameowManager: wameowManager,
@@ -26,9 +24,7 @@ func NewCommunityAdapter(wameowManager ports.WameowManager, logger logger.Logger
 	}
 }
 
-// LinkGroup links a group to a community
 func (ca *CommunityAdapter) LinkGroup(ctx context.Context, sessionID string, communityJID, groupJID string) error {
-	// Cast to Manager to access internal client
 	manager, ok := ca.wameowManager.(*Manager)
 	if !ok {
 		return fmt.Errorf("wameow manager is not a Manager instance")
@@ -42,9 +38,7 @@ func (ca *CommunityAdapter) LinkGroup(ctx context.Context, sessionID string, com
 	return client.LinkGroup(ctx, communityJID, groupJID)
 }
 
-// UnlinkGroup unlinks a group from a community
 func (ca *CommunityAdapter) UnlinkGroup(ctx context.Context, sessionID string, communityJID, groupJID string) error {
-	// Cast to Manager to access internal client
 	manager, ok := ca.wameowManager.(*Manager)
 	if !ok {
 		return fmt.Errorf("wameow manager is not a Manager instance")
@@ -58,9 +52,7 @@ func (ca *CommunityAdapter) UnlinkGroup(ctx context.Context, sessionID string, c
 	return client.UnlinkGroup(ctx, communityJID, groupJID)
 }
 
-// GetCommunityInfo gets information about a community
 func (ca *CommunityAdapter) GetCommunityInfo(ctx context.Context, sessionID string, communityJID string) (*community.CommunityInfo, error) {
-	// Cast to Manager to access internal client
 	manager, ok := ca.wameowManager.(*Manager)
 	if !ok {
 		return nil, fmt.Errorf("wameow manager is not a Manager instance")
@@ -71,16 +63,12 @@ func (ca *CommunityAdapter) GetCommunityInfo(ctx context.Context, sessionID stri
 		return nil, fmt.Errorf("session %s not found", sessionID)
 	}
 
-	// For now, we'll simulate getting community info since whatsmeow might not have direct community info method
-	// This would need to be implemented based on actual whatsmeow capabilities
 
-	// Try to get group info as communities are essentially special groups
 	groupInfo, err := client.GetGroupInfo(ctx, communityJID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get community info: %w", err)
 	}
 
-	// Convert group info to community info
 	communityInfo := &community.CommunityInfo{
 		ID:               extractIDFromJID(communityJID),
 		JID:              communityJID,
@@ -97,9 +85,7 @@ func (ca *CommunityAdapter) GetCommunityInfo(ctx context.Context, sessionID stri
 	return communityInfo, nil
 }
 
-// GetSubGroups gets all sub-groups (linked groups) of a community
 func (ca *CommunityAdapter) GetSubGroups(ctx context.Context, sessionID string, communityJID string) ([]*community.LinkedGroup, error) {
-	// Cast to Manager to access internal client
 	manager, ok := ca.wameowManager.(*Manager)
 	if !ok {
 		return nil, fmt.Errorf("wameow manager is not a Manager instance")
@@ -110,13 +96,11 @@ func (ca *CommunityAdapter) GetSubGroups(ctx context.Context, sessionID string, 
 		return nil, fmt.Errorf("session %s not found", sessionID)
 	}
 
-	// Get sub-groups using whatsmeow
 	subGroupsInfo, err := client.GetSubGroups(ctx, communityJID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sub-groups: %w", err)
 	}
 
-	// Convert whatsmeow group link targets to domain linked groups
 	linkedGroups := make([]*community.LinkedGroup, len(subGroupsInfo))
 	for i, groupTarget := range subGroupsInfo {
 		linkedGroups[i] = convertToLinkedGroupFromTarget(groupTarget)
@@ -125,9 +109,7 @@ func (ca *CommunityAdapter) GetSubGroups(ctx context.Context, sessionID string, 
 	return linkedGroups, nil
 }
 
-// Helper functions
 
-// extractIDFromJID extracts the ID part from a JID
 func extractIDFromJID(jid string) string {
 	if len(jid) > 5 && jid[len(jid)-5:] == "@g.us" {
 		return jid[:len(jid)-5]
@@ -135,7 +117,6 @@ func extractIDFromJID(jid string) string {
 	return jid
 }
 
-// convertToLinkedGroupFromTarget converts whatsmeow GroupLinkTarget to domain LinkedGroup
 func convertToLinkedGroupFromTarget(groupTarget *types.GroupLinkTarget) *community.LinkedGroup {
 	return &community.LinkedGroup{
 		JID:              groupTarget.JID.String(),
@@ -148,9 +129,7 @@ func convertToLinkedGroupFromTarget(groupTarget *types.GroupLinkTarget) *communi
 	}
 }
 
-// GetLinkedGroupsParticipants gets participants from all linked groups in a community
 func (ca *CommunityAdapter) GetLinkedGroupsParticipants(ctx context.Context, sessionID string, communityJID string) ([]string, error) {
-	// Cast to Manager to access internal client
 	manager, ok := ca.wameowManager.(*Manager)
 	if !ok {
 		return nil, fmt.Errorf("wameow manager is not a Manager instance")
@@ -161,13 +140,11 @@ func (ca *CommunityAdapter) GetLinkedGroupsParticipants(ctx context.Context, ses
 		return nil, fmt.Errorf("session %s not found", sessionID)
 	}
 
-	// Get linked groups participants using whatsmeow
 	participants, err := client.GetLinkedGroupsParticipants(ctx, communityJID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get linked groups participants: %w", err)
 	}
 
-	// Convert JIDs to strings
 	participantJIDs := make([]string, len(participants))
 	for i, jid := range participants {
 		participantJIDs[i] = jid.String()

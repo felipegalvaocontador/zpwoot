@@ -17,12 +17,10 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// WebhookEventProcessor defines the interface for processing webhook events
 type WebhookEventProcessor interface {
 	ProcessWebhookEvent(ctx context.Context, event *webhook.WebhookEvent) error
 }
 
-// WebhookDeliveryService handles the delivery of webhook events to external endpoints
 type WebhookDeliveryService struct {
 	webhookRepo   ports.WebhookRepository
 	logger        *logger.Logger
@@ -34,7 +32,6 @@ type WebhookDeliveryService struct {
 	workers       int
 }
 
-// DeliveryTask represents a webhook delivery task
 type DeliveryTask struct {
 	WebhookConfig *webhook.WebhookConfig
 	Event         *webhook.WebhookEvent
@@ -42,7 +39,6 @@ type DeliveryTask struct {
 	MaxAttempts   int
 }
 
-// WebhookPayload represents the payload sent to webhook endpoints
 type WebhookPayload struct {
 	Data      map[string]interface{} `json:"data"`
 	Event     string                 `json:"event"`
@@ -50,7 +46,6 @@ type WebhookPayload struct {
 	Timestamp int64                  `json:"timestamp"`
 }
 
-// DeliveryResult represents the result of a webhook delivery attempt
 type DeliveryResult struct {
 	ResponseBody string        `json:"response_body"`
 	Error        string        `json:"error,omitempty"`
@@ -60,7 +55,6 @@ type DeliveryResult struct {
 	Success      bool          `json:"success"`
 }
 
-// NewWebhookDeliveryService creates a new webhook delivery service
 func NewWebhookDeliveryService(
 	logger *logger.Logger,
 	webhookRepo ports.WebhookRepository,
@@ -83,24 +77,20 @@ func NewWebhookDeliveryService(
 	}
 }
 
-// AddProcessor adds a webhook event processor
 func (s *WebhookDeliveryService) AddProcessor(processor WebhookEventProcessor) {
 	s.processors = append(s.processors, processor)
 }
 
-// Start initializes the webhook delivery workers
 func (s *WebhookDeliveryService) Start(ctx context.Context) {
 	s.logger.InfoWithFields("Starting webhook delivery service", map[string]interface{}{
 		"workers": s.workers,
 	})
 
-	// Start worker goroutines
 	for i := 0; i < s.workers; i++ {
 		go s.worker(ctx, i)
 	}
 }
 
-// worker processes webhook delivery tasks
 func (s *WebhookDeliveryService) worker(ctx context.Context, workerID int) {
 	s.logger.InfoWithFields("Starting webhook worker", map[string]interface{}{
 		"worker_id": workerID,
@@ -119,9 +109,7 @@ func (s *WebhookDeliveryService) worker(ctx context.Context, workerID int) {
 	}
 }
 
-// DeliverEvent delivers a webhook event to all subscribed endpoints
 func (s *WebhookDeliveryService) DeliverEvent(ctx context.Context, event *webhook.WebhookEvent) error {
-	// Only log important events at INFO level, others at DEBUG
 	logLevel := "DEBUG"
 	if event.Type == "Message" || event.Type == "Connected" || event.Type == "Disconnected" {
 		logLevel = "INFO"
@@ -141,7 +129,6 @@ func (s *WebhookDeliveryService) DeliverEvent(ctx context.Context, event *webhoo
 		})
 	}
 
-	// Process event with additional processors (like Chatwoot)
 	for _, processor := range s.processors {
 		if err := processor.ProcessWebhookEvent(ctx, event); err != nil {
 			s.logger.ErrorWithFields("Processor failed to handle event", map[string]interface{}{
@@ -150,11 +137,9 @@ func (s *WebhookDeliveryService) DeliverEvent(ctx context.Context, event *webhoo
 				"session_id": event.SessionID,
 				"error":      err.Error(),
 			})
-			// Continue with other processors even if one fails
 		}
 	}
 
-	// Get webhooks that should receive this event
 	webhooks, err := s.getWebhooksForEvent(ctx, event)
 	if err != nil {
 		return fmt.Errorf("failed to get webhooks for event: %w", err)
@@ -168,7 +153,6 @@ func (s *WebhookDeliveryService) DeliverEvent(ctx context.Context, event *webhoo
 		return nil
 	}
 
-	// Queue delivery tasks for each webhook
 	for _, webhookConfig := range webhooks {
 		task := &DeliveryTask{
 			WebhookConfig: webhookConfig,
@@ -194,11 +178,9 @@ func (s *WebhookDeliveryService) DeliverEvent(ctx context.Context, event *webhoo
 	return nil
 }
 
-// getWebhooksForEvent retrieves webhooks that should receive the given event
 func (s *WebhookDeliveryService) getWebhooksForEvent(ctx context.Context, event *webhook.WebhookEvent) ([]*webhook.WebhookConfig, error) {
 	var webhooks []*webhook.WebhookConfig
 
-	// Get session-specific webhooks (only if not empty sessionID)
 	if event.SessionID != "" {
 		sessionWebhooks, err := s.webhookRepo.GetBySessionID(ctx, event.SessionID)
 		if err != nil {
@@ -215,7 +197,6 @@ func (s *WebhookDeliveryService) getWebhooksForEvent(ctx context.Context, event 
 		}
 	}
 
-	// Get global webhooks only if we have session webhooks or no session-specific ones
 	if len(webhooks) == 0 {
 		globalWebhooks, err := s.webhookRepo.GetGlobalWebhooks(ctx)
 		if err != nil {
@@ -234,7 +215,6 @@ func (s *WebhookDeliveryService) getWebhooksForEvent(ctx context.Context, event 
 	return webhooks, nil
 }
 
-// processDeliveryTask processes a single webhook delivery task
 func (s *WebhookDeliveryService) processDeliveryTask(ctx context.Context, task *DeliveryTask, workerID int) {
 	s.logger.DebugWithFields("Processing webhook delivery task", map[string]interface{}{
 		"worker_id":  workerID,
@@ -246,10 +226,8 @@ func (s *WebhookDeliveryService) processDeliveryTask(ctx context.Context, task *
 	result := s.deliverWebhook(ctx, task.WebhookConfig, task.Event)
 
 	if !result.Success && task.Attempt < task.MaxAttempts {
-		// Retry the delivery
 		task.Attempt++
 
-		// Add exponential backoff
 		delay := time.Duration(task.Attempt) * s.retryDelay
 
 		s.logger.InfoWithFields("Retrying webhook delivery", map[string]interface{}{
@@ -270,7 +248,6 @@ func (s *WebhookDeliveryService) processDeliveryTask(ctx context.Context, task *
 			}
 		})
 	} else {
-		// Log final result
 		if result.Success {
 			s.logger.InfoWithFields("Webhook delivered successfully", map[string]interface{}{
 				"webhook_id":  task.WebhookConfig.ID.String(),
@@ -291,11 +268,9 @@ func (s *WebhookDeliveryService) processDeliveryTask(ctx context.Context, task *
 	}
 }
 
-// deliverWebhook performs the actual HTTP request to deliver the webhook
 func (s *WebhookDeliveryService) deliverWebhook(ctx context.Context, webhookConfig *webhook.WebhookConfig, event *webhook.WebhookEvent) *DeliveryResult {
 	startTime := time.Now()
 
-	// Create payload
 	payload := &WebhookPayload{
 		Event:     event.Type,
 		SessionID: event.SessionID,
@@ -303,7 +278,6 @@ func (s *WebhookDeliveryService) deliverWebhook(ctx context.Context, webhookConf
 		Data:      event.Data,
 	}
 
-	// Marshal payload to JSON
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return &DeliveryResult{
@@ -313,7 +287,6 @@ func (s *WebhookDeliveryService) deliverWebhook(ctx context.Context, webhookConf
 		}
 	}
 
-	// Create HTTP request
 	req, err := http.NewRequestWithContext(ctx, "POST", webhookConfig.URL, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return &DeliveryResult{
@@ -323,20 +296,17 @@ func (s *WebhookDeliveryService) deliverWebhook(ctx context.Context, webhookConf
 		}
 	}
 
-	// Set headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "zpwoot-webhook/1.0")
 	req.Header.Set("X-Webhook-Event", event.Type)
 	req.Header.Set("X-Webhook-Session", event.SessionID)
 	req.Header.Set("X-Webhook-Timestamp", fmt.Sprintf("%d", event.Timestamp.Unix()))
 
-	// Add HMAC signature if secret is configured
 	if webhookConfig.Secret != "" {
 		signature := s.generateSignature(payloadBytes, webhookConfig.Secret)
 		req.Header.Set("X-Webhook-Signature", signature)
 	}
 
-	// Perform request
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return &DeliveryResult{
@@ -347,13 +317,11 @@ func (s *WebhookDeliveryService) deliverWebhook(ctx context.Context, webhookConf
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	// Read response body
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		responseBody = []byte("failed to read response body")
 	}
 
-	// Determine success based on status code
 	success := resp.StatusCode >= 200 && resp.StatusCode < 300
 
 	return &DeliveryResult{
@@ -365,7 +333,6 @@ func (s *WebhookDeliveryService) deliverWebhook(ctx context.Context, webhookConf
 	}
 }
 
-// generateSignature generates HMAC-SHA256 signature for webhook payload
 func (s *WebhookDeliveryService) generateSignature(payload []byte, secret string) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write(payload)

@@ -9,7 +9,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// ImportManager handles importing historical data from WhatsApp to Chatwoot
 type ImportManager struct {
 	logger           *logger.Logger
 	client           ports.ChatwootClient
@@ -18,7 +17,6 @@ type ImportManager struct {
 	messageFormatter *MessageFormatter
 }
 
-// NewImportManager creates a new import manager
 func NewImportManager(
 	logger *logger.Logger,
 	client ports.ChatwootClient,
@@ -35,7 +33,6 @@ func NewImportManager(
 	}
 }
 
-// ImportHistoricalMessages imports historical messages from WhatsApp to Chatwoot
 func (im *ImportManager) ImportHistoricalMessages(ctx context.Context, sessionID string, daysLimit int, inboxID int) (*ImportResult, error) {
 	im.logger.InfoWithFields("Starting historical message import", map[string]interface{}{
 		"session_id": sessionID,
@@ -51,7 +48,6 @@ func (im *ImportManager) ImportHistoricalMessages(ctx context.Context, sessionID
 		Status:    "running",
 	}
 
-	// Calculate date range
 	cutoffDate := time.Now().AddDate(0, 0, -daysLimit)
 
 	im.logger.InfoWithFields("Import date range", map[string]interface{}{
@@ -59,14 +55,7 @@ func (im *ImportManager) ImportHistoricalMessages(ctx context.Context, sessionID
 		"days_limit":  daysLimit,
 	})
 
-	// TODO: Implement actual message import from WhatsApp
-	// This would involve:
-	// 1. Getting historical messages from WhatsApp/wameow
-	// 2. Processing each message
-	// 3. Creating contacts and conversations in Chatwoot
-	// 4. Sending messages to Chatwoot
 
-	// For now, simulate the process
 	result.Status = "completed"
 	result.EndTime = time.Now()
 	result.Duration = result.EndTime.Sub(result.StartTime)
@@ -82,7 +71,6 @@ func (im *ImportManager) ImportHistoricalMessages(ctx context.Context, sessionID
 	return result, nil
 }
 
-// ImportContacts imports contacts from WhatsApp to Chatwoot
 func (im *ImportManager) ImportContacts(ctx context.Context, sessionID string, inboxID int, mergeBrazilContacts bool) (*ContactImportSummary, error) {
 	im.logger.InfoWithFields("Starting contact import", map[string]interface{}{
 		"session_id":            sessionID,
@@ -98,13 +86,7 @@ func (im *ImportManager) ImportContacts(ctx context.Context, sessionID string, i
 		Status:              "running",
 	}
 
-	// TODO: Implement actual contact import from WhatsApp
-	// This would involve:
-	// 1. Getting contacts from WhatsApp/wameow
-	// 2. Processing each contact
-	// 3. Creating contacts in Chatwoot with proper normalization
 
-	// For now, simulate the process
 	result.Status = "completed"
 	result.EndTime = time.Now()
 	result.Duration = result.EndTime.Sub(result.StartTime)
@@ -120,7 +102,6 @@ func (im *ImportManager) ImportContacts(ctx context.Context, sessionID string, i
 	return result, nil
 }
 
-// ProcessMessageForImport processes a single message for import
 func (im *ImportManager) ProcessMessageForImport(ctx context.Context, message WhatsAppMessage, inboxID int, mergeBrazilContacts bool) error {
 	im.logger.DebugWithFields("Processing message for import", map[string]interface{}{
 		"message_id": message.ID,
@@ -128,40 +109,31 @@ func (im *ImportManager) ProcessMessageForImport(ctx context.Context, message Wh
 		"timestamp":  message.Timestamp,
 	})
 
-	// Create or get contact
 	contact, err := im.contactSync.CreateOrUpdateContact(message.From, message.FromName, inboxID, mergeBrazilContacts)
 	if err != nil {
 		return fmt.Errorf("failed to create/update contact: %w", err)
 	}
 
-	// Create or get conversation
 	conversation, err := im.conversationMgr.CreateOrGetConversation(contact.ID, inboxID)
 	if err != nil {
 		return fmt.Errorf("failed to create/get conversation: %w", err)
 	}
 
-	// Format message content
 	content := im.messageFormatter.FormatMarkdownForChatwoot(message.Content)
 
-	// Handle different message types
 	switch message.Type {
 	case "text":
-		// Send text message
 		_, err = im.conversationMgr.SendMessage(conversation.ID, content)
 	case "image", "video", "audio", "document":
-		// Handle media messages
 		mediaContent := fmt.Sprintf("📎 **%s**\n%s", message.Type, content)
 		_, err = im.conversationMgr.SendMessage(conversation.ID, mediaContent)
 	case "contact":
-		// Handle contact messages
 		contactContent := im.messageFormatter.FormatContactMessage(message.ContactName, message.ContactPhone)
 		_, err = im.conversationMgr.SendMessage(conversation.ID, contactContent)
 	case "location":
-		// Handle location messages
 		locationContent := im.messageFormatter.FormatLocationMessage(message.Latitude, message.Longitude, message.Address)
 		_, err = im.conversationMgr.SendMessage(conversation.ID, locationContent)
 	default:
-		// Handle unknown message types
 		unknownContent := fmt.Sprintf("📄 **%s message**\n%s", message.Type, content)
 		_, err = im.conversationMgr.SendMessage(conversation.ID, unknownContent)
 	}
@@ -173,10 +145,7 @@ func (im *ImportManager) ProcessMessageForImport(ctx context.Context, message Wh
 	return nil
 }
 
-// GetImportProgress returns the progress of an ongoing import
 func (im *ImportManager) GetImportProgress(sessionID string) (*ImportProgress, error) {
-	// TODO: Implement progress tracking
-	// This would involve storing import state and progress in database or cache
 
 	return &ImportProgress{
 		SessionID:         sessionID,
@@ -188,19 +157,15 @@ func (im *ImportManager) GetImportProgress(sessionID string) (*ImportProgress, e
 	}, nil
 }
 
-// CancelImport cancels an ongoing import
 func (im *ImportManager) CancelImport(sessionID string) error {
 	im.logger.InfoWithFields("Canceling import", map[string]interface{}{
 		"session_id": sessionID,
 	})
 
-	// TODO: Implement import cancellation
-	// This would involve setting a cancellation flag and stopping the import process
 
 	return nil
 }
 
-// ImportResult represents the result of a historical message import
 type ImportResult struct {
 	SessionID            string        `json:"session_id"`
 	InboxID              int           `json:"inbox_id"`
@@ -215,7 +180,6 @@ type ImportResult struct {
 	Errors               []string      `json:"errors,omitempty"`
 }
 
-// ContactImportSummary represents the result of a contact import
 type ContactImportSummary struct {
 	SessionID           string        `json:"session_id"`
 	InboxID             int           `json:"inbox_id"`
@@ -230,7 +194,6 @@ type ContactImportSummary struct {
 	Errors              []string      `json:"errors,omitempty"`
 }
 
-// ImportProgress represents the progress of an ongoing import
 type ImportProgress struct {
 	SessionID         string `json:"session_id"`
 	Status            string `json:"status"` // running, completed, failed, canceled, not_found
@@ -241,7 +204,6 @@ type ImportProgress struct {
 	CurrentOperation  string `json:"current_operation"`
 }
 
-// WhatsAppMessage represents a WhatsApp message for import
 type WhatsAppMessage struct {
 	ID        string    `json:"id"`
 	From      string    `json:"from"`
@@ -252,30 +214,22 @@ type WhatsAppMessage struct {
 	Timestamp time.Time `json:"timestamp"`
 	IsFromMe  bool      `json:"is_from_me"`
 
-	// Media fields
 	MediaURL string `json:"media_url,omitempty"`
 	MimeType string `json:"mime_type,omitempty"`
 	FileName string `json:"file_name,omitempty"`
 
-	// Contact fields
 	ContactName  string `json:"contact_name,omitempty"`
 	ContactPhone string `json:"contact_phone,omitempty"`
 
-	// Location fields
 	Latitude  string `json:"latitude,omitempty"`
 	Longitude string `json:"longitude,omitempty"`
 	Address   string `json:"address,omitempty"`
 
-	// Quoted message
 	QuotedMessageID string `json:"quoted_message_id,omitempty"`
 	QuotedContent   string `json:"quoted_content,omitempty"`
 }
 
-// ValidateImportRequest validates an import request using domain service
 func (im *ImportManager) ValidateImportRequest(sessionID string, daysLimit int, inboxID int) error {
-	// This method now delegates to domain service for business rule validation
-	// The ImportManager should receive a domain service in the future
-	// For now, we keep basic validation here until proper refactoring
 	if sessionID == "" {
 		return fmt.Errorf("session_id is required")
 	}

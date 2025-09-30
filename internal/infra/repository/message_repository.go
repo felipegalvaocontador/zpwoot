@@ -13,13 +13,11 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// MessageRepository handles zpMessage table operations
 type MessageRepository struct {
 	db     *sqlx.DB
 	logger *logger.Logger
 }
 
-// NewMessageRepository creates a new zpMessage repository
 func NewMessageRepository(db *sqlx.DB, logger *logger.Logger) ports.ChatwootMessageRepository {
 	return &MessageRepository{
 		db:     db,
@@ -27,7 +25,6 @@ func NewMessageRepository(db *sqlx.DB, logger *logger.Logger) ports.ChatwootMess
 	}
 }
 
-// zpMessageModel represents the complete database model for zpMessage table
 type zpMessageModel struct {
 	CreatedAt        time.Time     `db:"createdAt"`
 	ZpTimestamp      time.Time     `db:"zpTimestamp"`
@@ -46,7 +43,6 @@ type zpMessageModel struct {
 	ZpFromMe         bool          `db:"zpFromMe"`
 }
 
-// CreateMessage creates a new message mapping
 func (r *MessageRepository) CreateMessage(ctx context.Context, message *ports.ZpMessage) error {
 	r.logger.InfoWithFields("Creating zpMessage mapping", map[string]interface{}{
 		"session_id":    message.SessionID,
@@ -81,7 +77,6 @@ func (r *MessageRepository) CreateMessage(ctx context.Context, message *ports.Zp
 	return nil
 }
 
-// GetMessageByZpID gets a message by WhatsApp message ID
 func (r *MessageRepository) GetMessageByZpID(ctx context.Context, sessionID, zpMessageID string) (*ports.ZpMessage, error) {
 	r.logger.DebugWithFields("Getting zpMessage by ZP ID", map[string]interface{}{
 		"session_id":    sessionID,
@@ -112,7 +107,6 @@ func (r *MessageRepository) GetMessageByZpID(ctx context.Context, sessionID, zpM
 	return message, nil
 }
 
-// GetMessageByCwID gets a message by Chatwoot message ID
 func (r *MessageRepository) GetMessageByCwID(ctx context.Context, cwMessageID int) (*ports.ZpMessage, error) {
 	r.logger.DebugWithFields("Getting zpMessage by CW ID", map[string]interface{}{
 		"cw_message_id": cwMessageID,
@@ -141,7 +135,6 @@ func (r *MessageRepository) GetMessageByCwID(ctx context.Context, cwMessageID in
 	return message, nil
 }
 
-// UpdateSyncStatus updates the sync status of a message
 func (r *MessageRepository) UpdateSyncStatus(ctx context.Context, id string, status string, cwMessageID, cwConversationID *int) error {
 	r.logger.InfoWithFields("Updating zpMessage sync status", map[string]interface{}{
 		"id":                 id,
@@ -197,7 +190,6 @@ func (r *MessageRepository) UpdateSyncStatus(ctx context.Context, id string, sta
 	return nil
 }
 
-// GetMessagesBySession gets messages by session ID
 func (r *MessageRepository) GetMessagesBySession(ctx context.Context, sessionID string, limit, offset int) ([]*ports.ZpMessage, error) {
 	r.logger.DebugWithFields("Getting zpMessages by session", map[string]interface{}{
 		"session_id": sessionID,
@@ -238,7 +230,6 @@ func (r *MessageRepository) GetMessagesBySession(ctx context.Context, sessionID 
 	return messages, nil
 }
 
-// GetMessagesByChat gets messages by chat JID
 func (r *MessageRepository) GetMessagesByChat(ctx context.Context, sessionID, chatJID string, limit, offset int) ([]*ports.ZpMessage, error) {
 	r.logger.DebugWithFields("Getting zpMessages by chat", map[string]interface{}{
 		"session_id": sessionID,
@@ -281,7 +272,6 @@ func (r *MessageRepository) GetMessagesByChat(ctx context.Context, sessionID, ch
 	return messages, nil
 }
 
-// GetPendingSyncMessages gets messages with pending sync status
 func (r *MessageRepository) GetPendingSyncMessages(ctx context.Context, sessionID string, limit int) ([]*ports.ZpMessage, error) {
 	r.logger.DebugWithFields("Getting pending sync zpMessages", map[string]interface{}{
 		"session_id": sessionID,
@@ -321,7 +311,6 @@ func (r *MessageRepository) GetPendingSyncMessages(ctx context.Context, sessionI
 	return messages, nil
 }
 
-// DeleteMessage deletes a message
 func (r *MessageRepository) DeleteMessage(ctx context.Context, id string) error {
 	r.logger.InfoWithFields("Deleting zpMessage", map[string]interface{}{
 		"id": id,
@@ -350,7 +339,6 @@ func (r *MessageRepository) DeleteMessage(ctx context.Context, id string) error 
 	return nil
 }
 
-// messageToModel converts domain model to database model
 func (r *MessageRepository) messageToModel(message *ports.ZpMessage) *zpMessageModel {
 	model := &zpMessageModel{
 		ID:          message.ID,
@@ -382,7 +370,6 @@ func (r *MessageRepository) messageToModel(message *ports.ZpMessage) *zpMessageM
 	return model
 }
 
-// messageFromModel converts database model to domain model
 func (r *MessageRepository) messageFromModel(model *zpMessageModel) (*ports.ZpMessage, error) {
 	message := &ports.ZpMessage{
 		ID:          model.ID,

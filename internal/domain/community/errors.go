@@ -2,22 +2,18 @@ package community
 
 import "errors"
 
-// Domain errors for community operations
 var (
-	// General errors
 	ErrCommunityNotFound     = errors.New("community not found")
 	ErrCommunityExists       = errors.New("community already exists")
 	ErrInvalidCommunityJID   = errors.New("invalid community JID")
 	ErrInvalidGroupJID       = errors.New("invalid group JID")
 	ErrCommunityNotConnected = errors.New("community is not connected")
 
-	// Permission errors
 	ErrInsufficientPermissions = errors.New("insufficient permissions")
 	ErrNotCommunityOwner       = errors.New("user is not community owner")
 	ErrNotCommunityAdmin       = errors.New("user is not community admin")
 	ErrNotCommunityMember      = errors.New("user is not community member")
 
-	// Group linking errors
 	ErrGroupNotFound        = errors.New("group not found")
 	ErrGroupAlreadyLinked   = errors.New("group is already linked to this community")
 	ErrGroupLinkedElsewhere = errors.New("group is already linked to another community")
@@ -25,7 +21,6 @@ var (
 	ErrGroupNotLinked       = errors.New("group is not linked to this community")
 	ErrMaxGroupsReached     = errors.New("maximum number of linked groups reached")
 
-	// Validation errors
 	ErrEmptyCommunityJID    = errors.New("community JID cannot be empty")
 	ErrEmptyGroupJID        = errors.New("group JID cannot be empty")
 	ErrEmptyCommunityName   = errors.New("community name cannot be empty")
@@ -33,25 +28,21 @@ var (
 	ErrDescriptionTooLong   = errors.New("community description is too long")
 	ErrInvalidJIDFormat     = errors.New("invalid JID format")
 
-	// Operation errors
 	ErrLinkOperationFailed   = errors.New("group link operation failed")
 	ErrUnlinkOperationFailed = errors.New("group unlink operation failed")
 	ErrCommunityInfoFailed   = errors.New("failed to get community information")
 	ErrSubGroupsFailed       = errors.New("failed to get community sub-groups")
 
-	// Network/API errors
 	ErrCommunityAPIUnavailable = errors.New("community API is unavailable")
 	ErrCommunityTimeout        = errors.New("community operation timed out")
 	ErrCommunityRateLimited    = errors.New("community operation rate limited")
 
-	// Business logic errors
 	ErrCommunityFull       = errors.New("community has reached maximum capacity")
 	ErrCommunityPrivate    = errors.New("community is private")
 	ErrCommunityArchived   = errors.New("community is archived")
 	ErrCommunityRestricted = errors.New("community access is restricted")
 )
 
-// CommunityError represents a community-specific error with additional context
 type CommunityError struct {
 	Cause   error                  `json:"-"`
 	Context map[string]interface{} `json:"context,omitempty"`
@@ -60,7 +51,6 @@ type CommunityError struct {
 	Details string                 `json:"details,omitempty"`
 }
 
-// Error implements the error interface
 func (e *CommunityError) Error() string {
 	if e.Details != "" {
 		return e.Message + ": " + e.Details
@@ -68,12 +58,10 @@ func (e *CommunityError) Error() string {
 	return e.Message
 }
 
-// Unwrap returns the underlying error
 func (e *CommunityError) Unwrap() error {
 	return e.Cause
 }
 
-// NewCommunityError creates a new community error
 func NewCommunityError(code, message string, cause error) *CommunityError {
 	return &CommunityError{
 		Code:    code,
@@ -83,13 +71,11 @@ func NewCommunityError(code, message string, cause error) *CommunityError {
 	}
 }
 
-// WithDetails adds details to the error
 func (e *CommunityError) WithDetails(details string) *CommunityError {
 	e.Details = details
 	return e
 }
 
-// WithContext adds context to the error
 func (e *CommunityError) WithContext(key string, value interface{}) *CommunityError {
 	if e.Context == nil {
 		e.Context = make(map[string]interface{})
@@ -98,7 +84,6 @@ func (e *CommunityError) WithContext(key string, value interface{}) *CommunityEr
 	return e
 }
 
-// Error codes for different types of community errors
 const (
 	ErrCodeCommunityNotFound   = "COMMUNITY_NOT_FOUND"
 	ErrCodeCommunityExists     = "COMMUNITY_EXISTS"
@@ -117,9 +102,7 @@ const (
 	ErrCodeCommunityRestricted = "COMMUNITY_RESTRICTED"
 )
 
-// Helper functions to create specific errors
 
-// NewNotFoundError creates a community not found error
 func NewNotFoundError(communityJID string) *CommunityError {
 	return NewCommunityError(
 		ErrCodeCommunityNotFound,
@@ -128,7 +111,6 @@ func NewNotFoundError(communityJID string) *CommunityError {
 	).WithContext("communityJID", communityJID)
 }
 
-// NewInvalidJIDError creates an invalid JID error
 func NewInvalidJIDError(jid string, reason string) *CommunityError {
 	return NewCommunityError(
 		ErrCodeInvalidJID,
@@ -137,7 +119,6 @@ func NewInvalidJIDError(jid string, reason string) *CommunityError {
 	).WithContext("jid", jid).WithDetails(reason)
 }
 
-// NewInsufficientPermissionsError creates an insufficient permissions error
 func NewInsufficientPermissionsError(userJID, operation string) *CommunityError {
 	return NewCommunityError(
 		ErrCodeInsufficientPerms,
@@ -146,7 +127,6 @@ func NewInsufficientPermissionsError(userJID, operation string) *CommunityError 
 	).WithContext("userJID", userJID).WithContext("operation", operation)
 }
 
-// NewGroupAlreadyLinkedError creates a group already linked error
 func NewGroupAlreadyLinkedError(groupJID, communityJID string) *CommunityError {
 	return NewCommunityError(
 		ErrCodeGroupAlreadyLinked,
@@ -155,7 +135,6 @@ func NewGroupAlreadyLinkedError(groupJID, communityJID string) *CommunityError {
 	).WithContext("groupJID", groupJID).WithContext("communityJID", communityJID)
 }
 
-// NewGroupNotLinkedError creates a group not linked error
 func NewGroupNotLinkedError(groupJID, communityJID string) *CommunityError {
 	return NewCommunityError(
 		ErrCodeGroupNotLinked,
@@ -164,7 +143,6 @@ func NewGroupNotLinkedError(groupJID, communityJID string) *CommunityError {
 	).WithContext("groupJID", groupJID).WithContext("communityJID", communityJID)
 }
 
-// NewValidationError creates a validation error
 func NewValidationError(field, reason string) *CommunityError {
 	return NewCommunityError(
 		ErrCodeValidationFailed,
@@ -173,7 +151,6 @@ func NewValidationError(field, reason string) *CommunityError {
 	).WithContext("field", field).WithDetails(reason)
 }
 
-// NewOperationFailedError creates an operation failed error
 func NewOperationFailedError(operation string, cause error) *CommunityError {
 	return NewCommunityError(
 		ErrCodeOperationFailed,
@@ -182,7 +159,6 @@ func NewOperationFailedError(operation string, cause error) *CommunityError {
 	).WithContext("operation", operation)
 }
 
-// NewAPIUnavailableError creates an API unavailable error
 func NewAPIUnavailableError(cause error) *CommunityError {
 	return NewCommunityError(
 		ErrCodeAPIUnavailable,
@@ -191,7 +167,6 @@ func NewAPIUnavailableError(cause error) *CommunityError {
 	)
 }
 
-// NewTimeoutError creates a timeout error
 func NewTimeoutError(operation string) *CommunityError {
 	return NewCommunityError(
 		ErrCodeTimeout,
@@ -200,7 +175,6 @@ func NewTimeoutError(operation string) *CommunityError {
 	).WithContext("operation", operation)
 }
 
-// NewRateLimitedError creates a rate limited error
 func NewRateLimitedError() *CommunityError {
 	return NewCommunityError(
 		ErrCodeRateLimited,
@@ -209,14 +183,12 @@ func NewRateLimitedError() *CommunityError {
 	)
 }
 
-// IsCommunityError checks if an error is a community error
 func IsCommunityError(err error) bool {
 	communityError := &CommunityError{}
 	ok := errors.As(err, &communityError)
 	return ok
 }
 
-// GetCommunityError extracts a community error from an error
 func GetCommunityError(err error) (*CommunityError, bool) {
 	communityErr := &CommunityError{}
 	ok := errors.As(err, &communityErr)

@@ -30,7 +30,6 @@ func NewGroupHandler(appLogger *logger.Logger, groupUC group.UseCase, sessionRep
 	}
 }
 
-// handleGroupActionWithValidation handles group actions with field validation
 func (h *GroupHandler) handleGroupActionWithValidation(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -72,7 +71,6 @@ func (h *GroupHandler) handleGroupActionWithValidation(
 	h.writeSuccessResponse(w, response, successMessage)
 }
 
-// handleGroupActionWithTwoFields handles group actions with two field validation
 func (h *GroupHandler) handleGroupActionWithTwoFields(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -121,7 +119,6 @@ func (h *GroupHandler) handleGroupActionWithTwoFields(
 	h.writeSuccessResponse(w, response, successMessage)
 }
 
-// GetGroupInviteLink gets the invite link for a group
 func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
@@ -143,14 +140,12 @@ func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Use wameow manager directly since this might not be in use case yet
 	h.logger.InfoWithFields("Getting group invite link", map[string]interface{}{
 		"session_id":   sess.ID.String(),
 		"session_name": sess.Name,
 		"group_jid":    groupJid,
 	})
 
-	// For now, return a placeholder response until the use case is implemented
 	response := map[string]interface{}{
 		"groupJid":    groupJid,
 		"inviteLink":  "https://chat.whatsapp.com/placeholder",
@@ -162,7 +157,6 @@ func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group invite link retrieved successfully"))
 }
 
-// JoinGroupViaLink joins a group using an invite link
 func (h *GroupHandler) JoinGroupViaLink(w http.ResponseWriter, r *http.Request) {
 	h.handleGroupActionWithValidation(
 		w,
@@ -181,7 +175,6 @@ func (h *GroupHandler) JoinGroupViaLink(w http.ResponseWriter, r *http.Request) 
 	)
 }
 
-// LeaveGroup leaves a group
 func (h *GroupHandler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 	h.handleGroupActionWithValidation(
 		w,
@@ -200,7 +193,6 @@ func (h *GroupHandler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-// UpdateGroupSettings updates group settings (announce, locked, etc.)
 func (h *GroupHandler) UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -241,7 +233,6 @@ func (h *GroupHandler) UpdateGroupSettings(w http.ResponseWriter, r *http.Reques
 		"locked":       req.Locked,
 	})
 
-	// For now, return a placeholder response until the use case is implemented
 	response := map[string]interface{}{
 		"groupJid": req.GroupJID,
 		"announce": req.Announce,
@@ -255,7 +246,6 @@ func (h *GroupHandler) UpdateGroupSettings(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group settings updated successfully"))
 }
 
-// GetGroupRequestParticipants gets participants that have requested to join the group
 func (h *GroupHandler) GetGroupRequestParticipants(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -283,7 +273,6 @@ func (h *GroupHandler) GetGroupRequestParticipants(w http.ResponseWriter, r *htt
 		"group_jid":    groupJid,
 	})
 
-	// For now, return a placeholder response until the use case is implemented
 	response := map[string]interface{}{
 		"groupJid":     groupJid,
 		"participants": []interface{}{},
@@ -295,7 +284,6 @@ func (h *GroupHandler) GetGroupRequestParticipants(w http.ResponseWriter, r *htt
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group request participants retrieved successfully"))
 }
 
-// UpdateGroupRequestParticipants approves or rejects group join requests
 func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -350,7 +338,6 @@ func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *
 		"participants": len(req.Participants),
 	})
 
-	// For now, return a placeholder response until the use case is implemented
 	response := map[string]interface{}{
 		"groupJid":     req.GroupJID,
 		"action":       req.Action,
@@ -364,7 +351,6 @@ func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group request participants updated successfully"))
 }
 
-// SetGroupJoinApprovalMode sets the group join approval mode
 func (h *GroupHandler) SetGroupJoinApprovalMode(w http.ResponseWriter, r *http.Request) {
 	h.handleGroupActionWithTwoFields(
 		w,
@@ -386,7 +372,6 @@ func (h *GroupHandler) SetGroupJoinApprovalMode(w http.ResponseWriter, r *http.R
 	)
 }
 
-// SetGroupMemberAddMode sets the group member add mode
 func (h *GroupHandler) SetGroupMemberAddMode(w http.ResponseWriter, r *http.Request) {
 	h.handleGroupActionWithTwoFields(
 		w,
@@ -408,7 +393,6 @@ func (h *GroupHandler) SetGroupMemberAddMode(w http.ResponseWriter, r *http.Requ
 	)
 }
 
-// GetGroupInfoFromLink gets group information from an invite link
 func (h *GroupHandler) GetGroupInfoFromLink(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -436,7 +420,6 @@ func (h *GroupHandler) GetGroupInfoFromLink(w http.ResponseWriter, r *http.Reque
 		"invite_link":  inviteLink,
 	})
 
-	// For now, return a placeholder response until the use case is implemented
 	response := map[string]interface{}{
 		"inviteLink": inviteLink,
 		"groupInfo": map[string]interface{}{
@@ -452,7 +435,6 @@ func (h *GroupHandler) GetGroupInfoFromLink(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group info retrieved from link successfully"))
 }
 
-// GetGroupInfoFromInvite gets group information from an invite
 func (h *GroupHandler) GetGroupInfoFromInvite(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -491,7 +473,6 @@ func (h *GroupHandler) GetGroupInfoFromInvite(w http.ResponseWriter, r *http.Req
 		"code":         req.Code,
 	})
 
-	// For now, return a placeholder response until the use case is implemented
 	response := map[string]interface{}{
 		"groupJid": req.GroupJID,
 		"code":     req.Code,
@@ -508,7 +489,6 @@ func (h *GroupHandler) GetGroupInfoFromInvite(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group info retrieved from invite successfully"))
 }
 
-// JoinGroupWithInvite joins a group using a specific invite
 func (h *GroupHandler) JoinGroupWithInvite(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -547,7 +527,6 @@ func (h *GroupHandler) JoinGroupWithInvite(w http.ResponseWriter, r *http.Reques
 		"code":         req.Code,
 	})
 
-	// For now, return a placeholder response until the use case is implemented
 	response := map[string]interface{}{
 		"groupJid": req.GroupJID,
 		"code":     req.Code,
@@ -560,7 +539,6 @@ func (h *GroupHandler) JoinGroupWithInvite(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Joined group with invite successfully"))
 }
 
-// handleGroupActionWithJID handles common group action logic for requests with GroupJID
 func (h *GroupHandler) handleGroupActionWithJID(
 	w http.ResponseWriter,
 	r *http.Request,

@@ -32,7 +32,6 @@ func NewWebhookHandler(appLogger *logger.Logger, webhookUC webhook.UseCase, sess
 	}
 }
 
-// resolveSession resolves session from URL parameter
 func (h *WebhookHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
 	idOrName := chi.URLParam(r, "sessionId")
 
@@ -50,7 +49,6 @@ func (h *WebhookHandler) resolveSession(r *http.Request) (*domainSession.Session
 	return sess, nil
 }
 
-// handleWebhookAction handles common webhook action logic
 func (h *WebhookHandler) handleWebhookAction(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -198,7 +196,6 @@ func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 		"event_type":   req.EventType,
 	})
 
-	// For testing, we need to find the webhook first to get its ID
 	webhookConfig, err := h.webhookUC.FindConfig(r.Context(), sess.ID.String())
 	if err != nil {
 		h.logger.Error("Failed to find webhook configuration for testing: " + err.Error())

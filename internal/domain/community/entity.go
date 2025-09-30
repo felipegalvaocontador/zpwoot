@@ -4,7 +4,6 @@ import (
 	"time"
 )
 
-// Community represents a WhatsApp community
 type Community struct {
 	CreatedAt        time.Time      `json:"createdAt"`
 	UpdatedAt        time.Time      `json:"updatedAt"`
@@ -21,7 +20,6 @@ type Community struct {
 	IsAnnouncement   bool           `json:"isAnnouncement"`
 }
 
-// LinkedGroup represents a group linked to a community
 type LinkedGroup struct {
 	LinkedAt         time.Time `json:"linkedAt"`
 	JID              string    `json:"jid"`
@@ -32,7 +30,6 @@ type LinkedGroup struct {
 	IsAdmin          bool      `json:"isAdmin"`
 }
 
-// CommunityInfo represents basic community information
 type CommunityInfo struct {
 	ID               string `json:"id"`
 	JID              string `json:"jid"`
@@ -46,7 +43,6 @@ type CommunityInfo struct {
 	IsAnnouncement   bool   `json:"isAnnouncement"`
 }
 
-// GroupLinkInfo represents information about linking a group to a community
 type GroupLinkInfo struct {
 	LinkedAt     time.Time `json:"linkedAt"`
 	CommunityJID string    `json:"communityJid"`
@@ -55,7 +51,6 @@ type GroupLinkInfo struct {
 	Success      bool      `json:"success"`
 }
 
-// CommunityParticipant represents a participant in a community
 type CommunityParticipant struct {
 	JoinedAt time.Time `json:"joinedAt"`
 	JID      string    `json:"jid"`
@@ -64,7 +59,6 @@ type CommunityParticipant struct {
 	IsAdmin  bool      `json:"isAdmin"`
 }
 
-// CommunitySettings represents community settings
 type CommunitySettings struct {
 	WhoCanAddGroups    string `json:"whoCanAddGroups"`
 	WhoCanSendMessages string `json:"whoCanSendMessages"`
@@ -73,7 +67,6 @@ type CommunitySettings struct {
 	IsMuted            bool   `json:"isMuted"`
 }
 
-// CommunityInviteInfo represents community invite information
 type CommunityInviteInfo struct {
 	ExpiresAt  time.Time `json:"expiresAt,omitempty"`
 	CreatedAt  time.Time `json:"createdAt"`
@@ -82,7 +75,6 @@ type CommunityInviteInfo struct {
 	CreatedBy  string    `json:"createdBy"`
 }
 
-// CommunityStats represents community statistics
 type CommunityStats struct {
 	TotalParticipants int `json:"totalParticipants"`
 	TotalGroups       int `json:"totalGroups"`
@@ -90,7 +82,6 @@ type CommunityStats struct {
 	RecentActivity    int `json:"recentActivity"`
 }
 
-// CommunityEvent represents a community event
 type CommunityEvent struct {
 	Timestamp    time.Time              `json:"timestamp"`
 	Data         map[string]interface{} `json:"data,omitempty"`
@@ -101,15 +92,12 @@ type CommunityEvent struct {
 	TargetJID    string                 `json:"targetJid,omitempty"`
 }
 
-// CommunityEventType represents the type of community event
 type CommunityEventType string
 
 const (
-	// JID suffixes for WhatsApp entities
 	GroupJIDSuffix      = "@g.us"
 	NewsletterJIDSuffix = "@newsletter"
 
-	// Community event types
 	CommunityEventGroupLinked       CommunityEventType = "group_linked"
 	CommunityEventGroupUnlinked     CommunityEventType = "group_unlinked"
 	CommunityEventParticipantJoined CommunityEventType = "participant_joined"
@@ -118,24 +106,17 @@ const (
 	CommunityEventInfoUpdated       CommunityEventType = "info_updated"
 )
 
-// Validation methods
 
-// IsValidCommunityJID checks if a JID is a valid community JID
 func IsValidCommunityJID(jid string) bool {
-	// Community JIDs typically end with @g.us but have specific patterns
-	// This is a basic validation - may need to be refined based on WhatsApp's actual format
 	return len(jid) > 0 && (jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix ||
 		jid[len(jid)-len(NewsletterJIDSuffix):] == NewsletterJIDSuffix)
 }
 
-// IsValidGroupJID checks if a JID is a valid group JID
 func IsValidGroupJID(jid string) bool {
 	return len(jid) > 0 && jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix
 }
 
-// Helper methods
 
-// GetCommunityID extracts the community ID from a JID
 func GetCommunityID(jid string) string {
 	if len(jid) > len(GroupJIDSuffix) && jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix {
 		return jid[:len(jid)-len(GroupJIDSuffix)]
@@ -143,7 +124,6 @@ func GetCommunityID(jid string) string {
 	return jid
 }
 
-// FormatCommunityJID formats a community ID to a full JID
 func FormatCommunityJID(id string) string {
 	if len(id) > len(GroupJIDSuffix) && id[len(id)-len(GroupJIDSuffix):] == GroupJIDSuffix {
 		return id
@@ -151,7 +131,6 @@ func FormatCommunityJID(id string) string {
 	return id + GroupJIDSuffix
 }
 
-// GetGroupID extracts the group ID from a JID
 func GetGroupID(jid string) string {
 	if len(jid) > len(GroupJIDSuffix) && jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix {
 		return jid[:len(jid)-len(GroupJIDSuffix)]
@@ -159,7 +138,6 @@ func GetGroupID(jid string) string {
 	return jid
 }
 
-// FormatGroupJID formats a group ID to a full JID
 func FormatGroupJID(id string) string {
 	if len(id) > len(GroupJIDSuffix) && id[len(id)-len(GroupJIDSuffix):] == GroupJIDSuffix {
 		return id

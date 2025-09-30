@@ -13,13 +13,11 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// NewsletterAdapter adapts WameowManager to implement NewsletterManager interface
 type NewsletterAdapter struct {
 	wameowManager ports.WameowManager
 	logger        logger.Logger
 }
 
-// NewNewsletterAdapter creates a new newsletter adapter
 func NewNewsletterAdapter(wameowManager ports.WameowManager, logger logger.Logger) ports.NewsletterManager {
 	return &NewsletterAdapter{
 		wameowManager: wameowManager,
@@ -27,9 +25,7 @@ func NewNewsletterAdapter(wameowManager ports.WameowManager, logger logger.Logge
 	}
 }
 
-// CreateNewsletter creates a new WhatsApp newsletter/channel
 func (na *NewsletterAdapter) CreateNewsletter(ctx context.Context, sessionID string, name, description string) (*newsletter.NewsletterInfo, error) {
-	// Cast to Manager to access internal client
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
 		return nil, fmt.Errorf("wameow manager is not a Manager instance")
@@ -48,7 +44,6 @@ func (na *NewsletterAdapter) CreateNewsletter(ctx context.Context, sessionID str
 	return convertNewsletterMetadata(metadata), nil
 }
 
-// GetNewsletterInfo gets information about a newsletter by JID
 func (na *NewsletterAdapter) GetNewsletterInfo(ctx context.Context, sessionID string, jid string) (*newsletter.NewsletterInfo, error) {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -68,7 +63,6 @@ func (na *NewsletterAdapter) GetNewsletterInfo(ctx context.Context, sessionID st
 	return convertNewsletterMetadata(metadata), nil
 }
 
-// GetNewsletterInfoWithInvite gets newsletter information using an invite key
 func (na *NewsletterAdapter) GetNewsletterInfoWithInvite(ctx context.Context, sessionID string, inviteKey string) (*newsletter.NewsletterInfo, error) {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -88,7 +82,6 @@ func (na *NewsletterAdapter) GetNewsletterInfoWithInvite(ctx context.Context, se
 	return convertNewsletterMetadata(metadata), nil
 }
 
-// FollowNewsletter makes the user follow (subscribe to) a newsletter
 func (na *NewsletterAdapter) FollowNewsletter(ctx context.Context, sessionID string, jid string) error {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -103,7 +96,6 @@ func (na *NewsletterAdapter) FollowNewsletter(ctx context.Context, sessionID str
 	return client.FollowNewsletter(ctx, jid)
 }
 
-// UnfollowNewsletter makes the user unfollow (unsubscribe from) a newsletter
 func (na *NewsletterAdapter) UnfollowNewsletter(ctx context.Context, sessionID string, jid string) error {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -118,7 +110,6 @@ func (na *NewsletterAdapter) UnfollowNewsletter(ctx context.Context, sessionID s
 	return client.UnfollowNewsletter(ctx, jid)
 }
 
-// GetSubscribedNewsletters gets all newsletters the user is subscribed to
 func (na *NewsletterAdapter) GetSubscribedNewsletters(ctx context.Context, sessionID string) ([]*newsletter.NewsletterInfo, error) {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -143,7 +134,6 @@ func (na *NewsletterAdapter) GetSubscribedNewsletters(ctx context.Context, sessi
 	return newsletters, nil
 }
 
-// GetNewsletterMessages gets messages from a newsletter
 func (na *NewsletterAdapter) GetNewsletterMessages(ctx context.Context, sessionID string, jid string, count int, before string) ([]*newsletter.NewsletterMessage, error) {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -160,7 +150,6 @@ func (na *NewsletterAdapter) GetNewsletterMessages(ctx context.Context, sessionI
 		return nil, err
 	}
 
-	// Convert whatsmeow messages to domain messages
 	domainMessages := make([]*newsletter.NewsletterMessage, len(messages))
 	for i, msg := range messages {
 		domainMessages[i] = convertNewsletterMessage(msg)
@@ -169,7 +158,6 @@ func (na *NewsletterAdapter) GetNewsletterMessages(ctx context.Context, sessionI
 	return domainMessages, nil
 }
 
-// GetNewsletterMessageUpdates gets message updates from a newsletter (view counts, reactions)
 func (na *NewsletterAdapter) GetNewsletterMessageUpdates(ctx context.Context, sessionID string, jid string, count int, since string, after string) ([]*newsletter.NewsletterMessage, error) {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -186,7 +174,6 @@ func (na *NewsletterAdapter) GetNewsletterMessageUpdates(ctx context.Context, se
 		return nil, err
 	}
 
-	// Convert whatsmeow messages to domain messages
 	domainUpdates := make([]*newsletter.NewsletterMessage, len(updates))
 	for i, update := range updates {
 		domainUpdates[i] = convertNewsletterMessage(update)
@@ -195,7 +182,6 @@ func (na *NewsletterAdapter) GetNewsletterMessageUpdates(ctx context.Context, se
 	return domainUpdates, nil
 }
 
-// NewsletterMarkViewed marks newsletter messages as viewed
 func (na *NewsletterAdapter) NewsletterMarkViewed(ctx context.Context, sessionID string, jid string, serverIDs []string) error {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -210,7 +196,6 @@ func (na *NewsletterAdapter) NewsletterMarkViewed(ctx context.Context, sessionID
 	return client.NewsletterMarkViewed(ctx, jid, serverIDs)
 }
 
-// NewsletterSendReaction sends a reaction to a newsletter message
 func (na *NewsletterAdapter) NewsletterSendReaction(ctx context.Context, sessionID string, jid string, serverID string, reaction string, messageID string) error {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -225,7 +210,6 @@ func (na *NewsletterAdapter) NewsletterSendReaction(ctx context.Context, session
 	return client.NewsletterSendReaction(ctx, jid, serverID, reaction, messageID)
 }
 
-// NewsletterSubscribeLiveUpdates subscribes to live updates from a newsletter
 func (na *NewsletterAdapter) NewsletterSubscribeLiveUpdates(ctx context.Context, sessionID string, jid string) (int64, error) {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -240,7 +224,6 @@ func (na *NewsletterAdapter) NewsletterSubscribeLiveUpdates(ctx context.Context,
 	return client.NewsletterSubscribeLiveUpdates(ctx, jid)
 }
 
-// NewsletterToggleMute toggles mute status of a newsletter
 func (na *NewsletterAdapter) NewsletterToggleMute(ctx context.Context, sessionID string, jid string, mute bool) error {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -255,7 +238,6 @@ func (na *NewsletterAdapter) NewsletterToggleMute(ctx context.Context, sessionID
 	return client.NewsletterToggleMute(ctx, jid, mute)
 }
 
-// AcceptTOSNotice accepts a terms of service notice
 func (na *NewsletterAdapter) AcceptTOSNotice(ctx context.Context, sessionID string, noticeID string, stage string) error {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -270,7 +252,6 @@ func (na *NewsletterAdapter) AcceptTOSNotice(ctx context.Context, sessionID stri
 	return client.AcceptTOSNotice(ctx, noticeID, stage)
 }
 
-// UploadNewsletter uploads media for newsletters
 func (na *NewsletterAdapter) UploadNewsletter(ctx context.Context, sessionID string, data []byte, mimeType string, mediaType string) (*newsletter.UploadNewsletterResponse, error) {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -287,11 +268,9 @@ func (na *NewsletterAdapter) UploadNewsletter(ctx context.Context, sessionID str
 		return nil, err
 	}
 
-	// Convert whatsmeow UploadResponse to domain UploadNewsletterResponse
 	return convertUploadResponse(uploaded), nil
 }
 
-// UploadNewsletterReader uploads media for newsletters from a reader
 func (na *NewsletterAdapter) UploadNewsletterReader(ctx context.Context, sessionID string, data []byte, mimeType string, mediaType string) (*newsletter.UploadNewsletterResponse, error) {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
@@ -308,11 +287,9 @@ func (na *NewsletterAdapter) UploadNewsletterReader(ctx context.Context, session
 		return nil, err
 	}
 
-	// Convert whatsmeow UploadResponse to domain UploadNewsletterResponse
 	return convertUploadResponse(uploaded), nil
 }
 
-// convertUploadResponse converts whatsmeow UploadResponse to domain UploadNewsletterResponse
 func convertUploadResponse(uploaded *whatsmeow.UploadResponse) *newsletter.UploadNewsletterResponse {
 	if uploaded == nil {
 		return nil
@@ -328,7 +305,6 @@ func convertUploadResponse(uploaded *whatsmeow.UploadResponse) *newsletter.Uploa
 	}
 }
 
-// convertNewsletterMessage converts whatsmeow NewsletterMessage to domain NewsletterMessage
 func convertNewsletterMessage(msg *types.NewsletterMessage) *newsletter.NewsletterMessage {
 	if msg == nil {
 		return nil
@@ -342,15 +318,12 @@ func convertNewsletterMessage(msg *types.NewsletterMessage) *newsletter.Newslett
 		Type:      msg.Type,
 	}
 
-	// Extract message body if available
 	if msg.Message != nil && msg.Message.GetConversation() != "" {
 		domainMsg.Body = msg.Message.GetConversation()
 	}
 
-	// Set view count
 	domainMsg.ViewsCount = msg.ViewsCount
 
-	// Convert reaction counts to simple reactions list
 	if len(msg.ReactionCounts) > 0 {
 		reactions := make([]string, 0, len(msg.ReactionCounts))
 		for reaction := range msg.ReactionCounts {
@@ -362,7 +335,6 @@ func convertNewsletterMessage(msg *types.NewsletterMessage) *newsletter.Newslett
 	return domainMsg
 }
 
-// convertNewsletterMetadata converts whatsmeow types to domain types
 func convertNewsletterMetadata(metadata *types.NewsletterMetadata) *newsletter.NewsletterInfo {
 	if metadata == nil {
 		return nil
@@ -375,16 +347,12 @@ func convertNewsletterMetadata(metadata *types.NewsletterMetadata) *newsletter.N
 		SubscriberCount: metadata.ThreadMeta.SubscriberCount,
 	}
 
-	// Set name
 	info.Name = metadata.ThreadMeta.Name.Text
 
-	// Set description
 	info.Description = metadata.ThreadMeta.Description.Text
 
-	// Set invite code
 	info.InviteCode = metadata.ThreadMeta.InviteCode
 
-	// Set state
 	switch metadata.State.Type {
 	case types.NewsletterStateActive:
 		info.State = newsletter.NewsletterStateActive
@@ -396,9 +364,7 @@ func convertNewsletterMetadata(metadata *types.NewsletterMetadata) *newsletter.N
 		info.State = newsletter.NewsletterStateActive
 	}
 
-	// Set role and mute state if ViewerMeta is available
 	if metadata.ViewerMeta != nil {
-		// Set role
 		switch metadata.ViewerMeta.Role {
 		case types.NewsletterRoleSubscriber:
 			info.Role = newsletter.NewsletterRoleSubscriber
@@ -412,7 +378,6 @@ func convertNewsletterMetadata(metadata *types.NewsletterMetadata) *newsletter.N
 			info.Role = newsletter.NewsletterRoleGuest
 		}
 
-		// Set mute state
 		switch metadata.ViewerMeta.Mute {
 		case types.NewsletterMuteOn:
 			info.Muted = true
@@ -425,13 +390,11 @@ func convertNewsletterMetadata(metadata *types.NewsletterMetadata) *newsletter.N
 			info.MuteState = newsletter.NewsletterMuteOff
 		}
 	} else {
-		// Default values when ViewerMeta is nil
 		info.Role = newsletter.NewsletterRoleGuest
 		info.Muted = false
 		info.MuteState = newsletter.NewsletterMuteOff
 	}
 
-	// Set verification
 	if metadata.ThreadMeta.VerificationState == types.NewsletterVerificationStateVerified {
 		info.Verified = true
 		info.VerificationState = newsletter.NewsletterVerificationStateVerified
@@ -440,7 +403,6 @@ func convertNewsletterMetadata(metadata *types.NewsletterMetadata) *newsletter.N
 		info.VerificationState = newsletter.NewsletterVerificationStateUnverified
 	}
 
-	// Set picture info
 	if metadata.ThreadMeta.Picture != nil {
 		info.Picture = &newsletter.ProfilePictureInfo{
 			URL:    metadata.ThreadMeta.Picture.URL,
@@ -450,7 +412,6 @@ func convertNewsletterMetadata(metadata *types.NewsletterMetadata) *newsletter.N
 		}
 	}
 
-	// Set preview info - Note: Preview is not a pointer in the struct
 	info.Preview = &newsletter.ProfilePictureInfo{
 		URL:    metadata.ThreadMeta.Preview.URL,
 		ID:     metadata.ThreadMeta.Preview.ID,

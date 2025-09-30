@@ -299,9 +299,7 @@ type ContextInfo struct {
 	Participant string `json:"participant,omitempty" example:"5511999999999@s.whatsapp.net"`
 } // @name ContextInfo
 
-// Poll-related DTOs
 
-// CreatePollRequest represents a request to create a poll
 type CreatePollRequest struct {
 	RemoteJID             string   `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 	Name                  string   `json:"name" validate:"required,min=1,max=100" example:"What's your favorite color?"`
@@ -310,7 +308,6 @@ type CreatePollRequest struct {
 	AllowMultipleAnswers  bool     `json:"allowMultipleAnswers" example:"false"`
 } // @name CreatePollRequest
 
-// CreatePollResponse represents the response after creating a poll
 type CreatePollResponse struct {
 	Timestamp time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	MessageID string    `json:"messageId" example:"3EB0C767D71D"`
@@ -320,14 +317,12 @@ type CreatePollResponse struct {
 	Options   []string  `json:"options" example:"Red,Blue,Green"`
 } // @name CreatePollResponse
 
-// VotePollRequest represents a request to vote in a poll
 type VotePollRequest struct {
 	RemoteJID       string   `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 	PollMessageID   string   `json:"pollMessageId" validate:"required" example:"3EB0C767D71D"`
 	SelectedOptions []string `json:"selectedOptions" validate:"required,min=1,dive,required" example:"Red"`
 } // @name VotePollRequest
 
-// VotePollResponse represents the response after voting in a poll
 type VotePollResponse struct {
 	Timestamp       time.Time `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 	PollMessageID   string    `json:"pollMessageId" example:"3EB0C767D71D"`
@@ -336,20 +331,17 @@ type VotePollResponse struct {
 	SelectedOptions []string  `json:"selectedOptions" example:"Red"`
 } // @name VotePollResponse
 
-// GetPollResultsRequest represents a request to get poll results
 type GetPollResultsRequest struct {
 	RemoteJID     string `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 	PollMessageID string `json:"pollMessageId" validate:"required" example:"3EB0C767D71D"`
 } // @name GetPollResultsRequest
 
-// PollOption represents a poll option with vote count
 type PollOption struct {
 	Name      string   `json:"name" example:"Red"`
 	Voters    []string `json:"voters,omitempty" example:"5511999999999@s.whatsapp.net"`
 	VoteCount int      `json:"voteCount" example:"5"`
 } // @name PollOption
 
-// GetPollResultsResponse represents poll results
 type GetPollResultsResponse struct {
 	CreatedAt             time.Time    `json:"createdAt" example:"2024-01-01T12:00:00Z"`
 	PollMessageID         string       `json:"pollMessageId" example:"3EB0C767D71D"`
@@ -361,13 +353,11 @@ type GetPollResultsResponse struct {
 	AllowMultipleAnswers  bool         `json:"allowMultipleAnswers" example:"false"`
 } // @name GetPollResultsResponse
 
-// MarkReadRequest represents a request to mark a message as read
 type MarkReadRequest struct {
 	RemoteJID string `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 	MessageID string `json:"messageId" validate:"required" example:"3EB0C431C26A1916E07E"`
 } // @name MarkReadRequest
 
-// MarkReadResponse represents the response for marking a message as read
 type MarkReadResponse struct {
 	MarkedAt  time.Time `json:"markedAt" example:"2024-01-01T12:00:00Z"`
 	MessageID string    `json:"messageId" example:"3EB0C431C26A1916E07E"`

@@ -4,7 +4,6 @@ import (
 	"context"
 )
 
-// ChatwootRepository defines the interface for Chatwoot data operations
 type ChatwootRepository interface {
 	CreateConfig(ctx context.Context, config *ChatwootConfig) error
 	GetConfig(ctx context.Context) (*ChatwootConfig, error)
@@ -48,7 +47,6 @@ type ChatwootRepository interface {
 	GetStatsForPeriod(ctx context.Context, from, to int64) (*ChatwootStats, error)
 }
 
-// SyncRecord represents a synchronization record between Wameow and Chatwoot
 type SyncRecord struct {
 	ID           string `json:"id" db:"id"`
 	SessionID    string `json:"session_id" db:"session_id"`
@@ -63,7 +61,6 @@ type SyncRecord struct {
 	UpdatedAt    int64  `json:"updated_at" db:"updated_at"`
 }
 
-// ChatwootStats represents statistics for Chatwoot operations
 type ChatwootStats struct {
 	TotalContacts       int   `json:"total_contacts"`
 	TotalConversations  int   `json:"total_conversations"`

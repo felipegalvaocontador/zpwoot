@@ -42,7 +42,6 @@ func NewMessageHandler(
 	}
 }
 
-// handleMessageActionWithTwoFields handles message actions with two field validation
 func (h *MessageHandler) handleMessageActionWithTwoFields(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -120,7 +119,6 @@ func (h *MessageHandler) handleMessageActionWithTwoFields(
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, successMessage))
 }
 
-// handleMediaMessage handles common media message logic
 func (h *MessageHandler) handleMediaMessage(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -179,7 +177,6 @@ func (h *MessageHandler) handleMediaMessage(
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("%s message sent successfully", titleCase(messageType))))
 }
 
-// parseMediaRequest parses common media request fields
 func parseMediaRequest(r *http.Request, messageType string, parseBody func(*http.Request) (string, string, string, string, string, *message.ContextInfo, error)) (*message.SendMessageRequest, error) {
 	remoteJID, file, caption, mimeType, filename, contextInfo, err := parseBody(r)
 	if err != nil {
@@ -255,7 +252,6 @@ func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// MediaMessageRequest doesn't have ContextInfo field
 
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
@@ -265,7 +261,6 @@ func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Detect media type from file extension or MIME type
 	mediaType := h.detectMediaType(mediaReq.File, mediaReq.MimeType)
 
 	req := &message.SendMessageRequest{
@@ -306,7 +301,6 @@ func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Media message sent successfully"))
 }
 
-// detectMediaType detects media type from file extension or MIME type
 func (h *MessageHandler) detectMediaType(file, mimeType string) string {
 	if mimeType != "" {
 		if strings.HasPrefix(mimeType, "image/") {
@@ -321,7 +315,6 @@ func (h *MessageHandler) detectMediaType(file, mimeType string) string {
 		return "document"
 	}
 
-	// Fallback to file extension
 	file = strings.ToLower(file)
 	if strings.HasSuffix(file, ".jpg") || strings.HasSuffix(file, ".jpeg") || 
 	   strings.HasSuffix(file, ".png") || strings.HasSuffix(file, ".gif") || 
@@ -337,7 +330,6 @@ func (h *MessageHandler) detectMediaType(file, mimeType string) string {
 		return "audio"
 	}
 
-	// Default to image if can't detect
 	return "image"
 }
 
@@ -713,7 +705,6 @@ func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
 	h.sendSpecificMessageType(w, r, "location")
 }
 
-// sendSpecificMessageType handles sending specific message types
 func (h *MessageHandler) sendSpecificMessageType(w http.ResponseWriter, r *http.Request, messageType string) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
@@ -824,7 +815,6 @@ func (h *MessageHandler) sendSpecificMessageType(w http.ResponseWriter, r *http.
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("%s message sent successfully", titleCase(messageType))))
 }
 
-// handleSendMessageError handles errors from sending messages with appropriate status codes
 func (h *MessageHandler) handleSendMessageError(w http.ResponseWriter, err error, messageType, sessionID, remoteJID string) {
 	h.logger.ErrorWithFields("Failed to send "+messageType+" message", map[string]interface{}{
 		"session_id": sessionID,
@@ -875,17 +865,14 @@ func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Try to parse as contact list first
 	var contactListReq message.ContactListMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&contactListReq); err == nil && len(contactListReq.Contacts) > 0 {
 		h.handleContactList(w, r, sessionIdentifier)
 	} else {
-		// Try as single contact
 		h.handleSingleContact(w, r, sessionIdentifier)
 	}
 }
 
-// handleSingleContact handles sending a single contact
 func (h *MessageHandler) handleSingleContact(w http.ResponseWriter, r *http.Request, sessionIdentifier string) {
 	var contactReq message.ContactMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&contactReq); err != nil {
@@ -916,7 +903,6 @@ func (h *MessageHandler) handleSingleContact(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// ContactMessageRequest doesn't have ContextInfo field
 
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
@@ -963,9 +949,7 @@ func (h *MessageHandler) handleSingleContact(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Contact message sent successfully"))
 }
 
-// handleContactList handles sending multiple contacts
 func (h *MessageHandler) handleContactList(w http.ResponseWriter, r *http.Request, sessionIdentifier string) {
-	// Parse and validate request
 	contactListReq, err := h.parseContactListRequest(r)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -982,18 +966,15 @@ func (h *MessageHandler) handleContactList(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Send contact list using wameow manager
 	result, err := h.sendContactListViaWameow(r.Context(), sess.ID.String(), contactListReq)
 	if err != nil {
 		h.handleContactSendError(w, err)
 		return
 	}
 
-	// Build and return response
 	h.buildContactListResponse(w, result, sess.ID.String(), contactListReq.RemoteJID, len(contactListReq.Contacts))
 }
 
-// parseContactListRequest parses and validates contact list request
 func (h *MessageHandler) parseContactListRequest(r *http.Request) (*message.ContactListMessageRequest, error) {
 	var contactListReq message.ContactListMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&contactListReq); err != nil {
@@ -1021,12 +1002,10 @@ func (h *MessageHandler) parseContactListRequest(r *http.Request) (*message.Cont
 		}
 	}
 
-	// ContactListMessageRequest doesn't have ContextInfo field
 
 	return &contactListReq, nil
 }
 
-// sendContactListViaWameow sends contact list using wameow manager
 func (h *MessageHandler) sendContactListViaWameow(ctx context.Context, sessionID string, contactListReq *message.ContactListMessageRequest) (*wameow.ContactListResult, error) {
 	if h.wameowManager == nil {
 		return nil, fmt.Errorf("wameow manager not available")
@@ -1040,11 +1019,9 @@ func (h *MessageHandler) sendContactListViaWameow(ctx context.Context, sessionID
 		}
 	}
 
-	// Use message use case instead of wameow manager directly
 	req := &message.SendMessageRequest{
 		RemoteJID: contactListReq.RemoteJID,
 		Type:      "contact_list",
-		// Convert contacts to the format expected by the use case
 	}
 
 	response, err := h.messageUC.SendMessage(ctx, sessionID, req)
@@ -1052,7 +1029,6 @@ func (h *MessageHandler) sendContactListViaWameow(ctx context.Context, sessionID
 		return nil, err
 	}
 
-	// Create a mock result for compatibility
 	result := &wameow.ContactListResult{
 		Results: make([]wameow.ContactResult, len(contactListReq.Contacts)),
 	}
@@ -1068,7 +1044,6 @@ func (h *MessageHandler) sendContactListViaWameow(ctx context.Context, sessionID
 	return result, nil
 }
 
-// handleContactSendError handles errors from contact sending
 func (h *MessageHandler) handleContactSendError(w http.ResponseWriter, err error) {
 	if strings.Contains(err.Error(), "not connected") {
 		w.Header().Set("Content-Type", "application/json")
@@ -1081,9 +1056,7 @@ func (h *MessageHandler) handleContactSendError(w http.ResponseWriter, err error
 	json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send contact list"))
 }
 
-// buildContactListResponse builds the final response for contact list sending
 func (h *MessageHandler) buildContactListResponse(w http.ResponseWriter, result *wameow.ContactListResult, sessionID, remoteJID string, contactCount int) {
-	// Create simple contact results
 	contactResults := make([]map[string]interface{}, 0, len(result.Results))
 	for _, r := range result.Results {
 		contactResults = append(contactResults, map[string]interface{}{
@@ -1227,7 +1200,6 @@ func (h *MessageHandler) SendButtonMessage(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// ButtonMessageRequest doesn't have ContextInfo field
 
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
@@ -1237,7 +1209,6 @@ func (h *MessageHandler) SendButtonMessage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Convert buttons to body text since SendMessageRequest doesn't support buttons
 	buttonText := buttonReq.Body + "\n\nOptions:\n"
 	for i, button := range buttonReq.Buttons {
 		buttonText += fmt.Sprintf("%d. %s (ID: %s)\n", i+1, button.Text, button.ID)
@@ -1382,7 +1353,6 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// ListMessageRequest doesn't have ContextInfo field
 
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
@@ -1392,7 +1362,6 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Convert list to body text since SendMessageRequest doesn't support lists
 	listText := listReq.Body + "\n\n" + listReq.ButtonText + ":\n"
 	for _, section := range listReq.Sections {
 		listText += fmt.Sprintf("\n%s:\n", section.Title)
@@ -1857,7 +1826,6 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 	h.sendPollAndRespond(w, r, sess.ID.String(), pollReq)
 }
 
-// parsePollRequest parses poll request from request body
 func (h *MessageHandler) parsePollRequest(r *http.Request) (*message.CreatePollRequest, error) {
 	var pollReq message.CreatePollRequest
 	if err := json.NewDecoder(r.Body).Decode(&pollReq); err != nil {
@@ -1867,7 +1835,6 @@ func (h *MessageHandler) parsePollRequest(r *http.Request) (*message.CreatePollR
 	return &pollReq, nil
 }
 
-// validatePollRequest validates poll request fields
 func (h *MessageHandler) validatePollRequest(w http.ResponseWriter, pollReq *message.CreatePollRequest) error {
 	if pollReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
@@ -1900,7 +1867,6 @@ func (h *MessageHandler) validatePollRequest(w http.ResponseWriter, pollReq *mes
 	return nil
 }
 
-// sendPollAndRespond sends the poll and returns the response
 func (h *MessageHandler) sendPollAndRespond(w http.ResponseWriter, r *http.Request, sessionID string, pollReq *message.CreatePollRequest) {
 	h.logger.InfoWithFields("Sending poll", map[string]interface{}{
 		"session_id":       sessionID,
@@ -1910,7 +1876,6 @@ func (h *MessageHandler) sendPollAndRespond(w http.ResponseWriter, r *http.Reque
 		"selectable_count": pollReq.SelectableOptionCount,
 	})
 
-	// Convert poll to text since SendMessageRequest doesn't support polls
 	pollText := fmt.Sprintf("Poll: %s\n\nOptions:\n", pollReq.Name)
 	for i, option := range pollReq.Options {
 		pollText += fmt.Sprintf("%d. %s\n", i+1, option)
@@ -1930,11 +1895,9 @@ func (h *MessageHandler) sendPollAndRespond(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Log success and return response
 	h.returnPollSuccess(w, sessionID, pollReq)
 }
 
-// handlePollSendError handles errors from poll sending
 func (h *MessageHandler) handlePollSendError(w http.ResponseWriter, sessionID string, pollReq *message.CreatePollRequest, err error) {
 	h.logger.ErrorWithFields("Failed to send poll", map[string]interface{}{
 		"session_id": sessionID,
@@ -1955,7 +1918,6 @@ func (h *MessageHandler) handlePollSendError(w http.ResponseWriter, sessionID st
 	json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send poll"))
 }
 
-// returnPollSuccess logs success and returns the poll response
 func (h *MessageHandler) returnPollSuccess(w http.ResponseWriter, sessionID string, pollReq *message.CreatePollRequest) {
 	h.logger.InfoWithFields("Poll sent successfully", map[string]interface{}{
 		"session_id": sessionID,
@@ -2091,7 +2053,6 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Poll results retrieved successfully"))
 }
 
-// SendContactList sends a list of contacts
 func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
@@ -2148,7 +2109,6 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 		"contact_count": len(req.Contacts),
 	})
 
-	// For now, return placeholder response until implemented in use case
 	response := map[string]interface{}{
 		"sessionId":    sess.ID.String(),
 		"to":           req.Phone,
@@ -2163,7 +2123,6 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Contact list sent successfully"))
 }
 
-// SendContactListBusiness sends a business contact list
 func (h *MessageHandler) SendContactListBusiness(w http.ResponseWriter, r *http.Request) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
@@ -2221,7 +2180,6 @@ func (h *MessageHandler) SendContactListBusiness(w http.ResponseWriter, r *http.
 		"contact_count": len(req.Contacts),
 	})
 
-	// For now, return placeholder response until implemented in use case
 	response := map[string]interface{}{
 		"sessionId":    sess.ID.String(),
 		"to":           req.Phone,
@@ -2236,7 +2194,6 @@ func (h *MessageHandler) SendContactListBusiness(w http.ResponseWriter, r *http.
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Business contact list sent successfully"))
 }
 
-// SendSingleContact sends a single contact
 func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Request) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
@@ -2285,7 +2242,6 @@ func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Reques
 		"contact_phone":  req.ContactPhone,
 	})
 
-	// For now, return placeholder response until implemented in use case
 	response := map[string]interface{}{
 		"sessionId":    sess.ID.String(),
 		"to":           req.Phone,
@@ -2301,7 +2257,6 @@ func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Single contact sent successfully"))
 }
 
-// SendSingleContactBusiness sends a single business contact
 func (h *MessageHandler) SendSingleContactBusiness(w http.ResponseWriter, r *http.Request) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
@@ -2352,7 +2307,6 @@ func (h *MessageHandler) SendSingleContactBusiness(w http.ResponseWriter, r *htt
 		"business_name":  req.BusinessName,
 	})
 
-	// For now, return placeholder response until implemented in use case
 	response := map[string]interface{}{
 		"sessionId":     sess.ID.String(),
 		"to":            req.Phone,

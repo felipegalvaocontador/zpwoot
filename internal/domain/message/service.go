@@ -31,14 +31,12 @@ func NewMediaProcessor(logger *logger.Logger) *MediaProcessor {
 	}
 }
 
-// ProcessMediaForType processes media with type-specific validations
 func (mp *MediaProcessor) ProcessMediaForType(ctx context.Context, file string, messageType MessageType) (*ProcessedMedia, error) {
 	media, err := mp.ProcessMedia(ctx, file)
 	if err != nil {
 		return nil, err
 	}
 
-	// Apply type-specific validations
 	if err := mp.validateMediaForType(media, messageType); err != nil {
 		if media.Cleanup != nil {
 			if cleanupErr := media.Cleanup(); cleanupErr != nil {
@@ -54,11 +52,9 @@ func (mp *MediaProcessor) ProcessMediaForType(ctx context.Context, file string, 
 	return media, nil
 }
 
-// validateMediaForType validates media based on message type
 func (mp *MediaProcessor) validateMediaForType(media *ProcessedMedia, messageType MessageType) error {
 	switch messageType {
 	case MessageTypeSticker:
-		// Stickers must be WebP and <= 100KB
 		if !strings.Contains(media.MimeType, "webp") {
 			return fmt.Errorf("stickers must be WebP format, got: %s", media.MimeType)
 		}
@@ -70,14 +66,12 @@ func (mp *MediaProcessor) validateMediaForType(media *ProcessedMedia, messageTyp
 			"file_size": media.FileSize,
 		})
 	case MessageTypeImage:
-		// Images should be reasonable size
 		if media.FileSize > 10*1024*1024 { // 10MB
 			mp.logger.WarnWithFields("Large image file", map[string]interface{}{
 				"file_size": media.FileSize,
 			})
 		}
 	case MessageTypeVideo:
-		// Videos can be larger but warn if very large
 		if media.FileSize > 50*1024*1024 { // 50MB
 			mp.logger.WarnWithFields("Large video file", map[string]interface{}{
 				"file_size": media.FileSize,
@@ -168,31 +162,26 @@ func (mp *MediaProcessor) processBase64(data string) (*ProcessedMedia, error) {
 func (mp *MediaProcessor) processURL(ctx context.Context, url string) (*ProcessedMedia, error) {
 	mp.logURLProcessing(url)
 
-	// Download from URL
 	resp, err := mp.downloadFromURL(ctx, url)
 	if err != nil {
 		return nil, err
 	}
 	defer mp.closeResponse(resp)
 
-	// Validate response and get mime type
 	mimeType, err := mp.validateResponse(resp)
 	if err != nil {
 		return nil, err
 	}
 
-	// Save to temporary file
 	return mp.saveToTempFile(resp, url, mimeType)
 }
 
-// logURLProcessing logs URL processing start
 func (mp *MediaProcessor) logURLProcessing(url string) {
 	mp.logger.InfoWithFields("Processing URL media", map[string]interface{}{
 		"url": url,
 	})
 }
 
-// downloadFromURL downloads content from URL
 func (mp *MediaProcessor) downloadFromURL(ctx context.Context, url string) (*http.Response, error) {
 	client := &http.Client{Timeout: mp.timeout}
 
@@ -211,7 +200,6 @@ func (mp *MediaProcessor) downloadFromURL(ctx context.Context, url string) (*htt
 	return resp, nil
 }
 
-// closeResponse safely closes HTTP response
 func (mp *MediaProcessor) closeResponse(resp *http.Response) {
 	if err := resp.Body.Close(); err != nil {
 		mp.logger.WarnWithFields("Failed to close response body", map[string]interface{}{
@@ -220,7 +208,6 @@ func (mp *MediaProcessor) closeResponse(resp *http.Response) {
 	}
 }
 
-// validateResponse validates HTTP response and returns mime type
 func (mp *MediaProcessor) validateResponse(resp *http.Response) (string, error) {
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("failed to download file: HTTP %d", resp.StatusCode)
@@ -238,7 +225,6 @@ func (mp *MediaProcessor) validateResponse(resp *http.Response) (string, error) 
 	return mimeType, nil
 }
 
-// saveToTempFile saves response content to temporary file
 func (mp *MediaProcessor) saveToTempFile(resp *http.Response, url, mimeType string) (*ProcessedMedia, error) {
 	tempFile, err := os.CreateTemp(mp.tempDir, "whatsmeow-media-*")
 	if err != nil {
@@ -273,13 +259,11 @@ func (mp *MediaProcessor) saveToTempFile(resp *http.Response, url, mimeType stri
 	}, nil
 }
 
-// cleanupTempFile cleans up temporary file on error
 func (mp *MediaProcessor) cleanupTempFile(tempFile *os.File) {
 	_ = tempFile.Close()
 	_ = os.Remove(tempFile.Name())
 }
 
-// logURLProcessingSuccess logs successful URL processing
 func (mp *MediaProcessor) logURLProcessingSuccess(url, filePath, mimeType string, fileSize int64) {
 	mp.logger.InfoWithFields("URL media processed", map[string]interface{}{
 		"url":       url,

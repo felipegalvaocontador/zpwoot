@@ -62,7 +62,6 @@ func (h *SessionHandler) resolveSession(r *http.Request) (*domainSession.Session
 	return sess, nil
 }
 
-// handleSessionAction handles common session action logic
 func (h *SessionHandler) handleSessionAction(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -103,7 +102,6 @@ func (h *SessionHandler) handleSessionAction(
 	json.NewEncoder(w).Encode(response)
 }
 
-// handleSessionActionNoReturn handles session actions that don't return data
 func (h *SessionHandler) handleSessionActionNoReturn(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -134,7 +132,6 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
 
-		// Handle specific error types
 		appErr := &pkgErrors.AppError{}
 		if errors.As(err, &appErr) {
 			w.Header().Set("Content-Type", "application/json")
@@ -579,7 +576,6 @@ func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// GetSessionStats gets session statistics
 func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -598,7 +594,6 @@ func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request)
 		"session_name": sess.Name,
 	})
 
-	// For now, return placeholder stats until implemented in use case
 	response := map[string]interface{}{
 		"sessionId":        sess.ID.String(),
 		"sessionName":      sess.Name,
@@ -614,7 +609,6 @@ func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Session stats retrieved successfully"))
 }
 
-// GetUserJID gets the current user's JID
 func (h *SessionHandler) GetUserJID(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -633,7 +627,6 @@ func (h *SessionHandler) GetUserJID(w http.ResponseWriter, r *http.Request) {
 		"session_name": sess.Name,
 	})
 
-	// For now, return placeholder JID until implemented in use case
 	response := map[string]interface{}{
 		"sessionId": sess.ID.String(),
 		"userJid":   "placeholder@s.whatsapp.net",
@@ -645,7 +638,6 @@ func (h *SessionHandler) GetUserJID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "User JID retrieved successfully"))
 }
 
-// GetDeviceInfo gets device information
 func (h *SessionHandler) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -664,7 +656,6 @@ func (h *SessionHandler) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		"session_name": sess.Name,
 	})
 
-	// For now, return placeholder device info until implemented in use case
 	response := map[string]interface{}{
 		"sessionId":    sess.ID.String(),
 		"deviceId":     "placeholder-device-id",

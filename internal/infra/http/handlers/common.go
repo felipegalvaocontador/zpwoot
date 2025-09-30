@@ -19,7 +19,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// titleCase converts a string to title case using the modern Go approach
 func titleCase(s string) string {
 	caser := cases.Title(language.English)
 	return caser.String(s)
@@ -220,13 +219,11 @@ func (sr *SessionResolver) ResolveSession(ctx context.Context, idOrName string) 
 	return sess, nil
 }
 
-// BaseHandler provides common functionality for all handlers
 type BaseHandler struct {
 	logger          *logger.Logger
 	sessionResolver *SessionResolver
 }
 
-// NewBaseHandler creates a new base handler
 func NewBaseHandler(logger *logger.Logger, sessionResolver *SessionResolver) *BaseHandler {
 	return &BaseHandler{
 		logger:          logger,
@@ -234,17 +231,13 @@ func NewBaseHandler(logger *logger.Logger, sessionResolver *SessionResolver) *Ba
 	}
 }
 
-// resolveSession resolves a session from URL parameter using chi router
 func (h *BaseHandler) resolveSession(r *http.Request) (*session.Session, error) {
-	// Try to get session from context first (set by middleware)
 	if sess, ok := r.Context().Value("session").(*session.Session); ok {
 		return sess, nil
 	}
 
-	// Get session identifier from URL parameter
 	sessionIdentifier := r.URL.Query().Get("sessionId")
 	if sessionIdentifier == "" {
-		// Try chi URL param as fallback
 		if urlParam := r.Context().Value("sessionId"); urlParam != nil {
 			if sessionID, ok := urlParam.(string); ok {
 				sessionIdentifier = sessionID
@@ -259,7 +252,6 @@ func (h *BaseHandler) resolveSession(r *http.Request) (*session.Session, error) 
 	return h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 }
 
-// resolveSessionFromURL resolves session from URL parameter
 func (h *BaseHandler) resolveSessionFromURL(r *http.Request) (*session.Session, error) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
@@ -279,7 +271,6 @@ func (h *BaseHandler) resolveSessionFromURL(r *http.Request) (*session.Session, 
 	return sess, nil
 }
 
-// handleActionRequest handles action requests with simple JSON body parsing
 func (h *BaseHandler) handleActionRequest(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -320,7 +311,6 @@ func (h *BaseHandler) handleActionRequest(
 	h.writeSuccessResponse(w, result, successMessage)
 }
 
-// handleSimpleGetRequest handles GET requests that only need session resolution
 func (h *BaseHandler) handleSimpleGetRequest(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -361,7 +351,6 @@ func (h *BaseHandler) handleSimpleGetRequest(
 
 
 
-// writeErrorResponse writes an error response
 func (h *BaseHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -370,7 +359,6 @@ func (h *BaseHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, 
 	}
 }
 
-// writeSuccessResponse writes a success response
 func (h *BaseHandler) writeSuccessResponse(w http.ResponseWriter, data interface{}, message string) {
 	response := common.NewSuccessResponse(data, message)
 	w.Header().Set("Content-Type", "application/json")

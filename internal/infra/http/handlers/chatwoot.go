@@ -36,7 +36,6 @@ func NewChatwootHandler(
 	}
 }
 
-// handleChatwootAction is a helper function for chatwoot-specific actions
 func (h *ChatwootHandler) handleChatwootAction(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -62,7 +61,6 @@ func (h *ChatwootHandler) handleChatwootAction(
 	result, err := actionFunc(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
-		// Handle specific error types
 		if strings.Contains(err.Error(), "not found") {
 			h.writeErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -104,7 +102,6 @@ func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate required fields
 	if req.URL == "" {
 		h.writeErrorResponse(w, http.StatusBadRequest, "URL is required")
 		return
@@ -152,7 +149,6 @@ func (h *ChatwootHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 		func(ctx context.Context) (interface{}, error) {
 			result, err := h.chatwootUC.GetConfig(ctx)
 			if err != nil && strings.Contains(err.Error(), "not found") {
-				// Return a special error that the handler can detect
 				return nil, errors.New("chatwoot configuration not found")
 			}
 			return result, err
@@ -363,7 +359,6 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Resolve session
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		statusCode := 500

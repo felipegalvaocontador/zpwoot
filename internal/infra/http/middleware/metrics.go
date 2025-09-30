@@ -8,13 +8,11 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// Metrics middleware for Chi router
 func Metrics(container *app.Container, logger *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
-			// Create a response writer wrapper to capture status code
 			ww := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 			next.ServeHTTP(ww, r)
@@ -22,7 +20,6 @@ func Metrics(container *app.Container, logger *logger.Logger) func(http.Handler)
 			duration := time.Since(start)
 			statusCode := ww.statusCode
 
-			// Log metrics
 			fields := map[string]interface{}{
 				"component":    "metrics",
 				"method":       r.Method,
@@ -40,7 +37,6 @@ func Metrics(container *app.Container, logger *logger.Logger) func(http.Handler)
 				fields["session_id"] = sessionID
 			}
 
-			// Log based on status code
 			switch {
 			case statusCode >= 500:
 				logger.ErrorWithFields("HTTP request completed", fields)
@@ -50,9 +46,6 @@ func Metrics(container *app.Container, logger *logger.Logger) func(http.Handler)
 				logger.DebugWithFields("HTTP request completed", fields)
 			}
 
-			// Here you could add custom metrics collection
-			// For example, if you have a metrics service in the container:
-			// container.MetricsService.RecordHTTPRequest(r.Method, r.URL.Path, statusCode, duration)
 		})
 	}
 }

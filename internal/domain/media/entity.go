@@ -4,7 +4,6 @@ import (
 	"time"
 )
 
-// MediaType represents different types of media
 type MediaType string
 
 const (
@@ -15,14 +14,12 @@ const (
 	MediaTypeSticker  MediaType = "sticker"
 )
 
-// DownloadMediaRequest represents a request to download media
 type DownloadMediaRequest struct {
 	SessionID string
 	MessageID string
 	MediaType string // Optional filter
 }
 
-// DownloadMediaResponse represents the result of downloading media
 type DownloadMediaResponse struct {
 	MimeType  string
 	Filename  string
@@ -32,13 +29,11 @@ type DownloadMediaResponse struct {
 	FileSize  int64
 }
 
-// GetMediaInfoRequest represents a request to get media information
 type GetMediaInfoRequest struct {
 	SessionID string
 	MessageID string
 }
 
-// MediaInfo represents information about media in a message
 type MediaInfo struct {
 	Timestamp time.Time
 	MessageID string
@@ -50,7 +45,6 @@ type MediaInfo struct {
 	FileSize  int64
 }
 
-// CachedMediaItem represents a cached media file
 type CachedMediaItem struct {
 	CachedAt   time.Time
 	LastAccess time.Time
@@ -64,7 +58,6 @@ type CachedMediaItem struct {
 	FileSize   int64
 }
 
-// ListCachedMediaRequest represents a request to list cached media
 type ListCachedMediaRequest struct {
 	SessionID string
 	MediaType string
@@ -72,7 +65,6 @@ type ListCachedMediaRequest struct {
 	Offset    int
 }
 
-// ListCachedMediaResponse represents the result of listing cached media
 type ListCachedMediaResponse struct {
 	Items     []CachedMediaItem
 	Total     int
@@ -82,20 +74,17 @@ type ListCachedMediaResponse struct {
 	TotalSize int64
 }
 
-// ClearCacheRequest represents a request to clear media cache
 type ClearCacheRequest struct {
 	SessionID string
 	MediaType string
 	OlderThan int
 }
 
-// ClearCacheResponse represents the result of clearing cache
 type ClearCacheResponse struct {
 	FilesDeleted int
 	SpaceFreed   int64
 }
 
-// MediaStats represents statistics about media usage
 type MediaStats struct {
 	TotalFiles    int
 	TotalSize     int64
@@ -107,19 +96,16 @@ type MediaStats struct {
 	AvgFileSize   int64
 }
 
-// GetMediaStatsRequest represents a request to get media statistics
 type GetMediaStatsRequest struct {
 	SessionID string
 }
 
-// GetMediaStatsResponse represents media statistics
 type GetMediaStatsResponse struct {
 	UpdatedAt time.Time
 	SessionID string
 	Stats     MediaStats
 }
 
-// IsValidMediaType checks if a media type is valid
 func IsValidMediaType(mediaType string) bool {
 	switch MediaType(mediaType) {
 	case MediaTypeImage, MediaTypeVideo, MediaTypeAudio, MediaTypeDocument, MediaTypeSticker:
@@ -129,7 +115,6 @@ func IsValidMediaType(mediaType string) bool {
 	}
 }
 
-// GetMimeTypeForMediaType returns common MIME types for a media type
 func GetMimeTypeForMediaType(mediaType MediaType) []string {
 	switch mediaType {
 	case MediaTypeImage:
@@ -147,11 +132,9 @@ func GetMimeTypeForMediaType(mediaType MediaType) []string {
 	}
 }
 
-// GetMediaTypeFromMimeType determines media type from MIME type
 func GetMediaTypeFromMimeType(mimeType string) MediaType {
 	switch {
 	case mimeType == "image/webp":
-		// WebP could be sticker or image, default to image
 		return MediaTypeImage
 	case len(mimeType) >= 5 && mimeType[:5] == "image":
 		return MediaTypeImage
@@ -164,7 +147,6 @@ func GetMediaTypeFromMimeType(mimeType string) MediaType {
 	}
 }
 
-// ValidateDownloadRequest validates a download media request
 func ValidateDownloadRequest(req *DownloadMediaRequest) error {
 	if req.SessionID == "" {
 		return ErrInvalidSessionID
@@ -178,7 +160,6 @@ func ValidateDownloadRequest(req *DownloadMediaRequest) error {
 	return nil
 }
 
-// ValidateMediaInfoRequest validates a get media info request
 func ValidateMediaInfoRequest(req *GetMediaInfoRequest) error {
 	if req.SessionID == "" {
 		return ErrInvalidSessionID
@@ -189,7 +170,6 @@ func ValidateMediaInfoRequest(req *GetMediaInfoRequest) error {
 	return nil
 }
 
-// ValidateListCachedMediaRequest validates a list cached media request
 func ValidateListCachedMediaRequest(req *ListCachedMediaRequest) error {
 	if req.SessionID == "" {
 		return ErrInvalidSessionID
@@ -206,7 +186,6 @@ func ValidateListCachedMediaRequest(req *ListCachedMediaRequest) error {
 	return nil
 }
 
-// ValidateClearCacheRequest validates a clear cache request
 func ValidateClearCacheRequest(req *ClearCacheRequest) error {
 	if req.SessionID == "" {
 		return ErrInvalidSessionID

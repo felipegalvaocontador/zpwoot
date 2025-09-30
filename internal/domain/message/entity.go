@@ -105,7 +105,6 @@ func (req *SendMessageRequest) GetMediaSource() MediaSource {
 	return MediaSourceFile
 }
 
-// Poll domain errors
 var (
 	ErrInvalidPollName        = errors.New("invalid poll name")
 	ErrPollNameTooLong        = errors.New("poll name too long (max 100 characters)")
@@ -123,7 +122,6 @@ var (
 	ErrInvalidRecipient       = errors.New("invalid recipient")
 )
 
-// CreatePollRequest represents a request to create a poll
 type CreatePollRequest struct {
 	To                    string
 	Name                  string
@@ -132,20 +130,17 @@ type CreatePollRequest struct {
 	AllowMultipleAnswers  bool
 }
 
-// VotePollRequest represents a request to vote in a poll
 type VotePollRequest struct {
 	To              string
 	PollMessageID   string
 	SelectedOptions []string
 }
 
-// GetPollResultsRequest represents a request to get poll results
 type GetPollResultsRequest struct {
 	To            string
 	PollMessageID string
 }
 
-// PollInfo represents basic poll information
 type PollInfo struct {
 	CreatedAt             time.Time
 	MessageID             string
@@ -156,14 +151,12 @@ type PollInfo struct {
 	AllowMultipleAnswers  bool
 }
 
-// PollOption represents a poll option with vote information
 type PollOption struct {
 	Name      string
 	Voters    []string
 	VoteCount int
 }
 
-// PollResults represents poll results with vote counts
 type PollResults struct {
 	CreatedAt             time.Time
 	PollMessageID         string
@@ -175,7 +168,6 @@ type PollResults struct {
 	AllowMultipleAnswers  bool
 }
 
-// PollVote represents a vote in a poll
 type PollVote struct {
 	VotedAt         time.Time
 	PollMessageID   string
@@ -183,7 +175,6 @@ type PollVote struct {
 	SelectedOptions []string
 }
 
-// Poll represents a complete poll entity
 type Poll struct {
 	CreatedAt             time.Time
 	MessageID             string
@@ -195,9 +186,7 @@ type Poll struct {
 	AllowMultipleAnswers  bool
 }
 
-// Business logic methods for polls
 
-// ValidateCreatePollRequest validates a poll creation request
 func ValidateCreatePollRequest(req *CreatePollRequest) error {
 	if req.Name == "" {
 		return ErrInvalidPollName
@@ -215,7 +204,6 @@ func ValidateCreatePollRequest(req *CreatePollRequest) error {
 		return ErrTooManyOptions
 	}
 
-	// Check for duplicate options
 	optionMap := make(map[string]bool)
 	for _, option := range req.Options {
 		if option == "" {
@@ -241,7 +229,6 @@ func ValidateCreatePollRequest(req *CreatePollRequest) error {
 	return nil
 }
 
-// ValidateVotePollRequest validates a poll vote request
 func ValidateVotePollRequest(req *VotePollRequest) error {
 	if req.PollMessageID == "" {
 		return ErrInvalidPollMessageID

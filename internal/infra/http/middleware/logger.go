@@ -9,13 +9,11 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// HTTPLogger middleware for Chi router
 func HTTPLogger(logger *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
-			// Create a response writer wrapper to capture status code
 			ww := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 			next.ServeHTTP(ww, r)
@@ -69,7 +67,6 @@ func HTTPLogger(logger *logger.Logger) func(http.Handler) http.Handler {
 	}
 }
 
-// responseWriter wraps http.ResponseWriter to capture status code and bytes written
 type responseWriter struct {
 	http.ResponseWriter
 	statusCode   int
@@ -87,7 +84,6 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
-// getRoutePattern extracts the route pattern from Chi context
 func getRoutePattern(r *http.Request) string {
 	if routeCtx := chi.RouteContext(r.Context()); routeCtx != nil {
 		return routeCtx.RoutePattern()
@@ -95,18 +91,14 @@ func getRoutePattern(r *http.Request) string {
 	return r.URL.Path
 }
 
-// getLoggerClientIP extracts client IP from request
 func getLoggerClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		return xff
 	}
 
-	// Check X-Real-IP header
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
 		return xri
 	}
 
-	// Fall back to RemoteAddr
 	return r.RemoteAddr
 }

@@ -43,14 +43,12 @@ type Container struct {
 }
 
 type ContainerConfig struct {
-	// Repositories
 	SessionRepo         ports.SessionRepository
 	WebhookRepo         ports.WebhookRepository
 	ChatwootRepo        ports.ChatwootRepository
 	ChatwootMessageRepo ports.ChatwootMessageRepository
 	MediaRepo           ports.MediaRepository
 
-	// Managers and Integrations
 	WameowManager         ports.WameowManager
 	ChatwootIntegration   ports.ChatwootIntegration
 	ChatwootManager       ports.ChatwootManager
@@ -59,7 +57,6 @@ type ContainerConfig struct {
 	NewsletterManager     ports.NewsletterManager
 	CommunityManager      ports.CommunityManager
 
-	// Domain Services (pre-created)
 	SessionService    *domainSession.Service
 	WebhookService    *domainWebhook.Service
 	ChatwootService   *domainChatwoot.Service
@@ -69,18 +66,15 @@ type ContainerConfig struct {
 	NewsletterService *domainNewsletter.Service
 	CommunityService  domainCommunity.Service
 
-	// Infrastructure
 	Logger *logger.Logger
 	DB     *sql.DB
 
-	// Build Info
 	Version   string
 	BuildTime string
 	GitCommit string
 }
 
 func NewContainer(config *ContainerConfig) *Container {
-	// Domain services are now injected, so we create the services struct directly
 	services := &domainServices{
 		session:    config.SessionService,
 		webhook:    config.WebhookService,
@@ -110,7 +104,6 @@ func NewContainer(config *ContainerConfig) *Container {
 	}
 }
 
-// domainServices holds all domain services
 type domainServices struct {
 	session    *domainSession.Service
 	webhook    *domainWebhook.Service
@@ -122,7 +115,6 @@ type domainServices struct {
 	community  domainCommunity.Service
 }
 
-// useCases holds all use cases
 type useCases struct {
 	common     common.UseCase
 	session    session.UseCase
@@ -136,12 +128,9 @@ type useCases struct {
 	community  community.UseCase
 }
 
-// createUseCases creates all use cases
 func createUseCases(config *ContainerConfig, services *domainServices) *useCases {
-	// Create core use cases
 	coreUseCases := createCoreUseCases(config, services)
 
-	// Create business use cases
 	businessUseCases := createBusinessUseCases(config, services)
 
 	return &useCases{
@@ -158,7 +147,6 @@ func createUseCases(config *ContainerConfig, services *domainServices) *useCases
 	}
 }
 
-// coreUseCases holds core system use cases
 type coreUseCases struct {
 	common   common.UseCase
 	session  session.UseCase
@@ -166,7 +154,6 @@ type coreUseCases struct {
 	chatwoot chatwoot.UseCase
 }
 
-// businessUseCases holds business logic use cases
 type businessUseCases struct {
 	message    message.UseCase
 	media      media.UseCase
@@ -176,7 +163,6 @@ type businessUseCases struct {
 	community  community.UseCase
 }
 
-// createCoreUseCases creates core system use cases
 func createCoreUseCases(config *ContainerConfig, services *domainServices) *coreUseCases {
 	return &coreUseCases{
 		common: common.NewUseCase(
@@ -207,7 +193,6 @@ func createCoreUseCases(config *ContainerConfig, services *domainServices) *core
 	}
 }
 
-// createBusinessUseCases creates business logic use cases
 func createBusinessUseCases(config *ContainerConfig, services *domainServices) *businessUseCases {
 	return &businessUseCases{
 		message: message.NewUseCase(

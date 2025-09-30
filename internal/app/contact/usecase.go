@@ -8,7 +8,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// UseCase defines the interface for contact use cases
 type UseCase interface {
 	CheckWhatsApp(ctx context.Context, req *CheckWhatsAppRequest) (*CheckWhatsAppResponse, error)
 	GetProfilePicture(ctx context.Context, req *GetProfilePictureRequest) (*ProfilePictureResponse, error)
@@ -24,7 +23,6 @@ type useCaseImpl struct {
 	logger         *logger.Logger
 }
 
-// NewUseCase creates a new contact use case
 func NewUseCase(contactService contact.Service, logger *logger.Logger) UseCase {
 	return &useCaseImpl{
 		contactService: contactService,
@@ -32,7 +30,6 @@ func NewUseCase(contactService contact.Service, logger *logger.Logger) UseCase {
 	}
 }
 
-// CheckWhatsApp checks if phone numbers are registered on WhatsApp
 func (uc *useCaseImpl) CheckWhatsApp(ctx context.Context, req *CheckWhatsAppRequest) (*CheckWhatsAppResponse, error) {
 	uc.logger.InfoWithFields("Checking WhatsApp numbers", map[string]interface{}{
 		"session_id":  req.SessionID,
@@ -53,7 +50,6 @@ func (uc *useCaseImpl) CheckWhatsApp(ctx context.Context, req *CheckWhatsAppRequ
 		return nil, err
 	}
 
-	// Convert domain results to DTO
 	dtoResults := make([]WhatsAppStatus, len(result.Results))
 	for i, domainResult := range result.Results {
 		dtoResults[i] = WhatsAppStatus{
@@ -72,7 +68,6 @@ func (uc *useCaseImpl) CheckWhatsApp(ctx context.Context, req *CheckWhatsAppRequ
 	}, nil
 }
 
-// GetProfilePicture gets profile picture information for a contact
 func (uc *useCaseImpl) GetProfilePicture(ctx context.Context, req *GetProfilePictureRequest) (*ProfilePictureResponse, error) {
 	domainReq := &contact.GetProfilePictureRequest{
 		SessionID: req.SessionID,
@@ -96,7 +91,6 @@ func (uc *useCaseImpl) GetProfilePicture(ctx context.Context, req *GetProfilePic
 	}, nil
 }
 
-// GetUserInfo gets detailed information about WhatsApp users
 func (uc *useCaseImpl) GetUserInfo(ctx context.Context, req *GetUserInfoRequest) (*GetUserInfoResponse, error) {
 	domainReq := &contact.GetUserInfoRequest{
 		SessionID: req.SessionID,
@@ -108,7 +102,6 @@ func (uc *useCaseImpl) GetUserInfo(ctx context.Context, req *GetUserInfoRequest)
 		return nil, err
 	}
 
-	// Convert domain results to DTO
 	dtoUsers := make([]UserInfo, len(result.Users))
 	for i, domainUser := range result.Users {
 		dtoUsers[i] = UserInfo{
@@ -132,7 +125,6 @@ func (uc *useCaseImpl) GetUserInfo(ctx context.Context, req *GetUserInfoRequest)
 	}, nil
 }
 
-// ListContacts lists contacts from the WhatsApp account
 func (uc *useCaseImpl) ListContacts(ctx context.Context, req *ListContactsRequest) (*ListContactsResponse, error) {
 	domainReq := &contact.ListContactsRequest{
 		SessionID: req.SessionID,
@@ -146,7 +138,6 @@ func (uc *useCaseImpl) ListContacts(ctx context.Context, req *ListContactsReques
 		return nil, err
 	}
 
-	// Convert domain results to DTO
 	dtoContacts := make([]Contact, len(result.Contacts))
 	for i, domainContact := range result.Contacts {
 		dtoContacts[i] = Contact{
@@ -172,7 +163,6 @@ func (uc *useCaseImpl) ListContacts(ctx context.Context, req *ListContactsReques
 	}, nil
 }
 
-// SyncContacts synchronizes contacts from the device with WhatsApp
 func (uc *useCaseImpl) SyncContacts(ctx context.Context, req *SyncContactsRequest) (*SyncContactsResponse, error) {
 	domainReq := &contact.SyncContactsRequest{
 		SessionID: req.SessionID,
@@ -198,7 +188,6 @@ func (uc *useCaseImpl) SyncContacts(ctx context.Context, req *SyncContactsReques
 	}, nil
 }
 
-// GetBusinessProfile gets business profile information
 func (uc *useCaseImpl) GetBusinessProfile(ctx context.Context, req *GetBusinessProfileRequest) (*BusinessProfileResponse, error) {
 	domainReq := &contact.GetBusinessProfileRequest{
 		SessionID: req.SessionID,
@@ -228,7 +217,6 @@ func (uc *useCaseImpl) GetBusinessProfile(ctx context.Context, req *GetBusinessP
 	}, nil
 }
 
-// GetContactStats gets statistics about contacts
 func (uc *useCaseImpl) GetContactStats(ctx context.Context, req *GetContactStatsRequest) (*GetContactStatsResponse, error) {
 	domainReq := &contact.GetContactStatsRequest{
 		SessionID: req.SessionID,

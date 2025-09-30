@@ -16,7 +16,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// Error message constants
 const (
 	ErrSessionNotFound     = "session not found"
 	ErrSessionNotConnected = "session is not connected"
@@ -25,14 +24,12 @@ const (
 	ErrInvalidRequestData  = "Invalid request data"
 )
 
-// CommunityHandler handles community-related HTTP requests
 type CommunityHandler struct {
 	logger          *logger.Logger
 	communityUC     community.UseCase
 	sessionResolver *helpers.SessionResolver
 }
 
-// NewCommunityHandler creates a new community handler
 func NewCommunityHandler(appLogger *logger.Logger, communityUC community.UseCase, sessionRepo helpers.SessionRepository) *CommunityHandler {
 	return &CommunityHandler{
 		logger:          appLogger,
@@ -41,7 +38,6 @@ func NewCommunityHandler(appLogger *logger.Logger, communityUC community.UseCase
 	}
 }
 
-// resolveSession resolves session from URL parameter
 func (h *CommunityHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
 	idOrName := chi.URLParam(r, "sessionId")
 
@@ -59,7 +55,6 @@ func (h *CommunityHandler) resolveSession(r *http.Request) (*domainSession.Sessi
 	return sess, nil
 }
 
-// handleGroupLinkAction handles common group link/unlink action logic
 func (h *CommunityHandler) handleGroupLinkAction(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -121,7 +116,6 @@ func (h *CommunityHandler) handleGroupLinkAction(
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("Group %sed successfully", actionName)))
 }
 
-// handleCommunityQueryAction handles common community query action logic
 func (h *CommunityHandler) handleCommunityQueryAction(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -188,7 +182,6 @@ func (h *CommunityHandler) handleCommunityQueryAction(
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("%s completed successfully", actionName)))
 }
 
-// parseLinkGroupRequest parses link group request from HTTP request
 func (h *CommunityHandler) parseLinkGroupRequest(r *http.Request) (interface{}, error) {
 	var req community.LinkGroupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -197,7 +190,6 @@ func (h *CommunityHandler) parseLinkGroupRequest(r *http.Request) (interface{}, 
 	return &req, nil
 }
 
-// parseUnlinkGroupRequest parses unlink group request from HTTP request
 func (h *CommunityHandler) parseUnlinkGroupRequest(r *http.Request) (interface{}, error) {
 	var req community.UnlinkGroupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

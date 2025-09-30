@@ -1,4 +1,3 @@
-// Refactored: extracted message sending logic; reduced duplication; improved error handling
 package wameow
 
 import (
@@ -14,14 +13,12 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// messageSender implements MessageSender interface
 type messageSender struct {
 	client    *whatsmeow.Client
 	logger    *logger.Logger
 	validator *JIDValidator
 }
 
-// NewMessageSender creates a new message sender
 func NewMessageSender(client *whatsmeow.Client, logger *logger.Logger) MessageSender {
 	return &messageSender{
 		client:    client,
@@ -30,7 +27,6 @@ func NewMessageSender(client *whatsmeow.Client, logger *logger.Logger) MessageSe
 	}
 }
 
-// SendText sends a text message with optional context info
 func (ms *messageSender) SendText(ctx context.Context, to, body string, contextInfo *appMessage.ContextInfo) (*whatsmeow.SendResponse, error) {
 	if !ms.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -76,7 +72,6 @@ func (ms *messageSender) SendText(ctx context.Context, to, body string, contextI
 	return &resp, nil
 }
 
-// SendMedia sends a media message with the specified type and options
 func (ms *messageSender) SendMedia(ctx context.Context, to, filePath string, mediaType MediaType, options MediaOptions) (*whatsmeow.SendResponse, error) {
 	if !ms.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -126,7 +121,6 @@ func (ms *messageSender) SendMedia(ctx context.Context, to, filePath string, med
 	return &resp, nil
 }
 
-// SendContact sends a contact message
 func (ms *messageSender) SendContact(ctx context.Context, to string, contact ContactInfo) (*whatsmeow.SendResponse, error) {
 	if !ms.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -168,7 +162,6 @@ func (ms *messageSender) SendContact(ctx context.Context, to string, contact Con
 	return &resp, nil
 }
 
-// SendLocation sends a location message
 func (ms *messageSender) SendLocation(ctx context.Context, to string, lat, lng float64, address string) (*whatsmeow.SendResponse, error) {
 	if !ms.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -211,7 +204,6 @@ func (ms *messageSender) SendLocation(ctx context.Context, to string, lat, lng f
 	return &resp, nil
 }
 
-// createContextInfo creates WhatsApp ContextInfo from app ContextInfo
 func (ms *messageSender) createContextInfo(contextInfo *appMessage.ContextInfo) *waE2E.ContextInfo {
 	if contextInfo == nil {
 		return nil
@@ -229,7 +221,6 @@ func (ms *messageSender) createContextInfo(contextInfo *appMessage.ContextInfo) 
 	return waContextInfo
 }
 
-// convertMediaType converts our MediaType to whatsmeow MediaType
 func (ms *messageSender) convertMediaType(mediaType MediaType) whatsmeow.MediaType {
 	switch mediaType {
 	case MediaTypeImage:
@@ -245,7 +236,6 @@ func (ms *messageSender) convertMediaType(mediaType MediaType) whatsmeow.MediaTy
 	}
 }
 
-// createMediaMessage creates the appropriate media message based on type
 func (ms *messageSender) createMediaMessage(mediaType MediaType, uploaded whatsmeow.UploadResponse, options MediaOptions) *waE2E.Message {
 	contextInfo := ms.createContextInfo(options.ContextInfo)
 
@@ -265,7 +255,6 @@ func (ms *messageSender) createMediaMessage(mediaType MediaType, uploaded whatsm
 	}
 }
 
-// createImageMessage creates an image message
 func (ms *messageSender) createImageMessage(uploaded whatsmeow.UploadResponse, options MediaOptions, contextInfo *waE2E.ContextInfo) *waE2E.Message {
 	mimetype := options.MimeType
 	if mimetype == "" {
@@ -287,7 +276,6 @@ func (ms *messageSender) createImageMessage(uploaded whatsmeow.UploadResponse, o
 	}
 }
 
-// createAudioMessage creates an audio message
 func (ms *messageSender) createAudioMessage(uploaded whatsmeow.UploadResponse, options MediaOptions, contextInfo *waE2E.ContextInfo) *waE2E.Message {
 	mimetype := options.MimeType
 	if mimetype == "" {
@@ -308,7 +296,6 @@ func (ms *messageSender) createAudioMessage(uploaded whatsmeow.UploadResponse, o
 	}
 }
 
-// createVideoMessage creates a video message
 func (ms *messageSender) createVideoMessage(uploaded whatsmeow.UploadResponse, options MediaOptions, contextInfo *waE2E.ContextInfo) *waE2E.Message {
 	mimetype := options.MimeType
 	if mimetype == "" {
@@ -330,7 +317,6 @@ func (ms *messageSender) createVideoMessage(uploaded whatsmeow.UploadResponse, o
 	}
 }
 
-// createDocumentMessage creates a document message
 func (ms *messageSender) createDocumentMessage(uploaded whatsmeow.UploadResponse, options MediaOptions, contextInfo *waE2E.ContextInfo) *waE2E.Message {
 	mimetype := options.MimeType
 	if mimetype == "" {
@@ -355,7 +341,6 @@ func (ms *messageSender) createDocumentMessage(uploaded whatsmeow.UploadResponse
 		ContextInfo:   contextInfo,
 	}
 
-	// Add caption if provided
 	if options.Caption != "" {
 		documentMessage.Caption = &options.Caption
 	}
@@ -365,7 +350,6 @@ func (ms *messageSender) createDocumentMessage(uploaded whatsmeow.UploadResponse
 	}
 }
 
-// createStickerMessage creates a sticker message
 func (ms *messageSender) createStickerMessage(uploaded whatsmeow.UploadResponse, options MediaOptions) *waE2E.Message {
 	mimetype := options.MimeType
 	if mimetype == "" {

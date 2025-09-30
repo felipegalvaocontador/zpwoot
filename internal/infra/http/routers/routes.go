@@ -19,29 +19,23 @@ import (
 func SetupRoutes(cfg *config.Config, database *db.DB, logger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) http.Handler {
 	r := chi.NewRouter()
 
-	// Configure middlewares
 	setupMiddlewares(r, cfg, container, logger)
 
-	// Swagger documentation
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
 	))
 
-	// Health check endpoints
 	healthHandler := handlers.NewHealthHandler(logger, wameowManager)
 	r.Get("/health", healthHandler.GetHealth)
 	r.Get("/health/wameow", healthHandler.GetWameowHealth)
 
-	// Setup session routes
 	setupSessionRoutes(r, logger, wameowManager, container)
 
-	// Setup global routes
 	setupGlobalRoutes(r, logger, container)
 
 	return r
 }
 
-// logWameowAvailability logs Wameow manager availability
 func logWameowAvailability(appLogger *logger.Logger, wameowManager *wameow.Manager) {
 	if wameowManager != nil {
 		appLogger.Info("Wameow manager is available for session routes")
@@ -50,9 +44,7 @@ func logWameowAvailability(appLogger *logger.Logger, wameowManager *wameow.Manag
 	}
 }
 
-// setupMiddlewares configures all HTTP middlewares for Chi
 func setupMiddlewares(r *chi.Mux, cfg *config.Config, container *app.Container, logger *logger.Logger) {
-	// Recovery middleware
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
@@ -69,16 +61,12 @@ func setupMiddlewares(r *chi.Mux, cfg *config.Config, container *app.Container, 
 		})
 	})
 
-	// Request ID middleware
 	r.Use(middleware.RequestID(logger))
 
-	// HTTP Logger middleware
 	r.Use(middleware.HTTPLogger(logger))
 
-	// Metrics middleware
 	r.Use(middleware.Metrics(container, logger))
 
-	// CORS middleware
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -88,16 +76,13 @@ func setupMiddlewares(r *chi.Mux, cfg *config.Config, container *app.Container, 
 		MaxAge:           300,
 	}))
 
-	// API Key Auth middleware
 	r.Use(middleware.APIKeyAuth(cfg, logger))
 }
 
-// setupSessionRoutes sets up session-related routes
 func setupSessionRoutes(r *chi.Mux, appLogger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
 	logWameowAvailability(appLogger, wameowManager)
 
 	r.Route("/sessions", func(r chi.Router) {
-		// Setup all route groups
 		setupSessionManagementRoutes(r, container, appLogger)
 		setupMessageRoutes(r, container, wameowManager, appLogger)
 		setupGroupRoutes(r, container, appLogger)
@@ -110,7 +95,6 @@ func setupSessionRoutes(r *chi.Mux, appLogger *logger.Logger, wameowManager *wam
 	})
 }
 
-// setupSessionManagementRoutes sets up session management routes
 func setupSessionManagementRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
 	sessionHandler := handlers.NewSessionHandler(appLogger, container.GetSessionUseCase(), container.GetSessionRepository())
 
@@ -125,13 +109,11 @@ func setupSessionManagementRoutes(r chi.Router, container *app.Container, appLog
 	r.Post("/{sessionId}/proxy/set", sessionHandler.SetProxy)
 	r.Get("/{sessionId}/proxy/find", sessionHandler.GetProxy)
 
-	// Advanced session info
 	r.Get("/{sessionId}/stats", sessionHandler.GetSessionStats)
 	r.Get("/{sessionId}/user-jid", sessionHandler.GetUserJID)
 	r.Get("/{sessionId}/device-info", sessionHandler.GetDeviceInfo)
 }
 
-// setupMessageRoutes sets up message routes
 func setupMessageRoutes(r chi.Router, container *app.Container, wameowManager *wameow.Manager, appLogger *logger.Logger) {
 	messageHandler := handlers.NewMessageHandler(
 		container.GetMessageUseCase(),
@@ -140,7 +122,6 @@ func setupMessageRoutes(r chi.Router, container *app.Container, wameowManager *w
 		appLogger,
 	)
 
-	// Message sending routes
 	r.Route("/{sessionId}/messages", func(r chi.Router) {
 		r.Post("/send/text", messageHandler.SendText)
 		r.Post("/send/media", messageHandler.SendMedia)
@@ -168,7 +149,6 @@ func setupMessageRoutes(r chi.Router, container *app.Container, wameowManager *w
 	})
 }
 
-// setupGroupRoutes sets up group management routes
 func setupGroupRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
 	groupHandler := handlers.NewGroupHandler(appLogger, container.GetGroupUseCase(), container.GetSessionRepository())
 
@@ -181,7 +161,6 @@ func setupGroupRoutes(r chi.Router, container *app.Container, appLogger *logger.
 		r.Put("/description", groupHandler.SetGroupDescription)
 		r.Put("/photo", groupHandler.SetGroupPhoto)
 
-		// Advanced group operations
 		r.Get("/invite-link", groupHandler.GetGroupInviteLink)
 		r.Post("/join-via-link", groupHandler.JoinGroupViaLink)
 		r.Post("/leave", groupHandler.LeaveGroup)
@@ -196,7 +175,6 @@ func setupGroupRoutes(r chi.Router, container *app.Container, appLogger *logger.
 	})
 }
 
-// setupContactRoutes sets up contact management routes
 func setupContactRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
 	contactHandler := handlers.NewContactHandler(appLogger, container.GetContactUseCase(), container.GetSessionRepository())
 
@@ -208,7 +186,6 @@ func setupContactRoutes(r chi.Router, container *app.Container, appLogger *logge
 		r.Post("/sync", contactHandler.SyncContacts)
 		r.Get("/business", contactHandler.GetBusinessProfile)
 
-		// Advanced contact operations
 		r.Post("/is-on-whatsapp", contactHandler.IsOnWhatsApp)
 		r.Get("/all", contactHandler.GetAllContacts)
 		r.Get("/profile-picture-info", contactHandler.GetProfilePictureInfo)
@@ -216,7 +193,6 @@ func setupContactRoutes(r chi.Router, container *app.Container, appLogger *logge
 	})
 }
 
-// setupNewsletterRoutes sets up newsletter routes
 func setupNewsletterRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
 	newsletterHandler := handlers.NewNewsletterHandler(appLogger, container.GetNewsletterUseCase(), container.GetSessionRepository())
 
@@ -230,7 +206,6 @@ func setupNewsletterRoutes(r chi.Router, container *app.Container, appLogger *lo
 	})
 }
 
-// setupCommunityRoutes sets up community routes
 func setupCommunityRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
 	communityHandler := handlers.NewCommunityHandler(appLogger, container.GetCommunityUseCase(), container.GetSessionRepository())
 
@@ -242,7 +217,6 @@ func setupCommunityRoutes(r chi.Router, container *app.Container, appLogger *log
 	})
 }
 
-// setupWebhookRoutes sets up webhook routes
 func setupWebhookRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
 	webhookHandler := handlers.NewWebhookHandler(appLogger, container.GetWebhookUseCase(), container.GetSessionRepository())
 
@@ -253,7 +227,6 @@ func setupWebhookRoutes(r chi.Router, container *app.Container, appLogger *logge
 	})
 }
 
-// setupMediaRoutes sets up media management routes
 func setupMediaRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
 	mediaHandler := handlers.NewMediaHandler(appLogger, container.GetMediaUseCase(), container.GetSessionRepository())
 
@@ -266,7 +239,6 @@ func setupMediaRoutes(r chi.Router, container *app.Container, appLogger *logger.
 	})
 }
 
-// setupChatwootRoutes sets up chatwoot integration routes
 func setupChatwootRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
 	chatwootHandler := handlers.NewChatwootHandler(
 		container.GetChatwootUseCase(),
@@ -285,13 +257,10 @@ func setupChatwootRoutes(r chi.Router, container *app.Container, appLogger *logg
 	})
 }
 
-// setupGlobalRoutes sets up global routes
 func setupGlobalRoutes(r *chi.Mux, appLogger *logger.Logger, container *app.Container) {
-	// Global webhook info routes
 	webhookHandler := handlers.NewWebhookHandler(appLogger, container.GetWebhookUseCase(), container.GetSessionRepository())
 	r.Get("/webhook/events", webhookHandler.GetSupportedEvents)
 
-	// Chatwoot webhook routes
 	chatwootHandler := handlers.NewChatwootHandler(
 		container.GetChatwootUseCase(),
 		container.GetSessionRepository(),

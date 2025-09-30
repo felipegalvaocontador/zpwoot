@@ -25,7 +25,6 @@ type UseCase interface {
 	SetGroupJoinApprovalMode(ctx context.Context, sessionID string, groupJID string, requireApproval bool) error
 	SetGroupMemberAddMode(ctx context.Context, sessionID string, groupJID string, mode string) error
 
-	// Advanced group methods
 	GetGroupInfoFromLink(ctx context.Context, sessionID string, req *GetGroupInfoFromLinkRequest) (*GroupInfoFromLinkResponse, error)
 	GetGroupInfoFromInvite(ctx context.Context, sessionID string, req *GetGroupInfoFromInviteRequest) (*GroupInfoFromInviteResponse, error)
 	JoinGroupWithInvite(ctx context.Context, sessionID string, req *JoinGroupWithInviteRequest) (*JoinGroupWithInviteResponse, error)
@@ -50,12 +49,10 @@ func NewUseCase(
 func (uc *useCaseImpl) CreateGroup(ctx context.Context, sessionID string, req *CreateGroupRequest) (*CreateGroupResponse, error) {
 	domainReq := req.ToDomain()
 
-	// Validate through domain service
 	if err := uc.groupService.ValidateGroupCreation(domainReq); err != nil {
 		return nil, err
 	}
 
-	// Create group via wameow manager
 	groupInfo, err := uc.wameowMgr.CreateGroup(sessionID, domainReq.Name, domainReq.Participants, domainReq.Description)
 	if err != nil {
 		return nil, err
@@ -71,7 +68,6 @@ func (uc *useCaseImpl) CreateGroup(ctx context.Context, sessionID string, req *C
 }
 
 func (uc *useCaseImpl) GetGroupInfo(ctx context.Context, sessionID string, req *GetGroupInfoRequest) (*GetGroupInfoResponse, error) {
-	// Get group info via wameow manager
 	groupInfo, err := uc.wameowMgr.GetGroupInfo(sessionID, req.GroupJID)
 	if err != nil {
 		return nil, err
@@ -90,7 +86,6 @@ func (uc *useCaseImpl) GetGroupInfo(ctx context.Context, sessionID string, req *
 }
 
 func (uc *useCaseImpl) ListGroups(ctx context.Context, sessionID string) (*ListGroupsResponse, error) {
-	// List groups via wameow manager
 	groups, err := uc.wameowMgr.ListJoinedGroups(sessionID)
 	if err != nil {
 		return nil, err
@@ -121,12 +116,10 @@ func (uc *useCaseImpl) UpdateGroupParticipants(ctx context.Context, sessionID st
 		Action:       req.Action,
 	}
 
-	// Validate through domain service
 	if err := uc.groupService.ValidateParticipantUpdate(domainReq); err != nil {
 		return nil, err
 	}
 
-	// Update participants via wameow manager
 	success, failed, err := uc.wameowMgr.UpdateGroupParticipants(sessionID, req.GroupJID, req.Participants, req.Action)
 	if err != nil {
 		return nil, err
@@ -142,12 +135,10 @@ func (uc *useCaseImpl) UpdateGroupParticipants(ctx context.Context, sessionID st
 }
 
 func (uc *useCaseImpl) SetGroupName(ctx context.Context, sessionID string, req *SetGroupNameRequest) (*GroupActionResponse, error) {
-	// Validate through domain service
 	if err := uc.groupService.ValidateGroupName(req.Name); err != nil {
 		return nil, err
 	}
 
-	// Set group name via wameow manager
 	err := uc.wameowMgr.SetGroupName(sessionID, req.GroupJID, req.Name)
 	if err != nil {
 		return nil, err
@@ -162,12 +153,10 @@ func (uc *useCaseImpl) SetGroupName(ctx context.Context, sessionID string, req *
 }
 
 func (uc *useCaseImpl) SetGroupDescription(ctx context.Context, sessionID string, req *SetGroupDescriptionRequest) (*GroupActionResponse, error) {
-	// Validate through domain service
 	if err := uc.groupService.ValidateGroupDescription(req.Description); err != nil {
 		return nil, err
 	}
 
-	// Set group description via wameow manager
 	err := uc.wameowMgr.SetGroupDescription(sessionID, req.GroupJID, req.Description)
 	if err != nil {
 		return nil, err
@@ -182,15 +171,12 @@ func (uc *useCaseImpl) SetGroupDescription(ctx context.Context, sessionID string
 }
 
 func (uc *useCaseImpl) SetGroupPhoto(ctx context.Context, sessionID string, req *SetGroupPhotoRequest) (*GroupActionResponse, error) {
-	// Validate photo data (basic validation)
 	if req.Photo == "" {
 		return nil, group.ErrInvalidGroupJID // Use appropriate error
 	}
 
-	// Convert base64 photo to bytes (simplified)
 	photoBytes := []byte(req.Photo) // In real implementation, decode base64
 
-	// Set group photo via wameow manager
 	err := uc.wameowMgr.SetGroupPhoto(sessionID, req.GroupJID, photoBytes)
 	if err != nil {
 		return nil, err
@@ -205,7 +191,6 @@ func (uc *useCaseImpl) SetGroupPhoto(ctx context.Context, sessionID string, req 
 }
 
 func (uc *useCaseImpl) GetGroupInviteLink(ctx context.Context, sessionID string, req *GetGroupInviteLinkRequest) (*GetGroupInviteLinkResponse, error) {
-	// Get invite link via wameow manager
 	inviteLink, err := uc.wameowMgr.GetGroupInviteLink(sessionID, req.GroupJID, req.Reset)
 	if err != nil {
 		return nil, err
@@ -218,12 +203,10 @@ func (uc *useCaseImpl) GetGroupInviteLink(ctx context.Context, sessionID string,
 }
 
 func (uc *useCaseImpl) JoinGroup(ctx context.Context, sessionID string, req *JoinGroupRequest) (*JoinGroupResponse, error) {
-	// Validate invite link
 	if err := uc.groupService.ValidateInviteLink(req.InviteLink); err != nil {
 		return nil, err
 	}
 
-	// Join group via wameow manager
 	groupInfo, err := uc.wameowMgr.JoinGroupViaLink(sessionID, req.InviteLink)
 	if err != nil {
 		return nil, err
@@ -237,7 +220,6 @@ func (uc *useCaseImpl) JoinGroup(ctx context.Context, sessionID string, req *Joi
 }
 
 func (uc *useCaseImpl) LeaveGroup(ctx context.Context, sessionID string, req *LeaveGroupRequest) (*LeaveGroupResponse, error) {
-	// Leave group via wameow manager
 	err := uc.wameowMgr.LeaveGroup(sessionID, req.GroupJID)
 	if err != nil {
 		return nil, err
@@ -250,7 +232,6 @@ func (uc *useCaseImpl) LeaveGroup(ctx context.Context, sessionID string, req *Le
 }
 
 func (uc *useCaseImpl) UpdateGroupSettings(ctx context.Context, sessionID string, req *UpdateGroupSettingsRequest) (*GroupActionResponse, error) {
-	// Update group settings via wameow manager
 	err := uc.wameowMgr.UpdateGroupSettings(sessionID, req.GroupJID, req.Announce, req.Locked)
 	if err != nil {
 		return nil, err
@@ -264,7 +245,6 @@ func (uc *useCaseImpl) UpdateGroupSettings(ctx context.Context, sessionID string
 	}, nil
 }
 
-// Helper functions for conversion
 func convertParticipants(participants []ports.GroupParticipant) []GroupParticipant {
 	var result []GroupParticipant
 	for _, p := range participants {
@@ -284,15 +264,12 @@ func convertSettings(settings ports.GroupSettings) GroupSettings {
 	}
 }
 
-// isUserAdmin checks if the current user is an admin of the group
 func (uc *useCaseImpl) isUserAdmin(group *ports.GroupInfo, sessionID string) bool {
-	// Get current user's JID from session
 	userJID, err := uc.wameowMgr.GetUserJID(sessionID)
 	if err != nil {
 		return false
 	}
 
-	// Check if user is in the participants list as admin
 	for _, participant := range group.Participants {
 		if participant.JID == userJID && (participant.IsAdmin || participant.IsSuperAdmin) {
 			return true
@@ -308,7 +285,6 @@ func (uc *useCaseImpl) GetGroupRequestParticipants(ctx context.Context, sessionI
 		return nil, err
 	}
 
-	// Convert to interface{} slice for JSON response
 	result := make([]interface{}, len(participants))
 	for i, p := range participants {
 		result[i] = map[string]interface{}{
@@ -332,18 +308,12 @@ func (uc *useCaseImpl) SetGroupMemberAddMode(ctx context.Context, sessionID stri
 	return uc.wameowMgr.SetGroupMemberAddMode(sessionID, groupJID, mode)
 }
 
-// ============================================================================
-// ADVANCED GROUP METHODS
-// ============================================================================
 
-// GetGroupInfoFromLink gets group information from an invite link
 func (uc *useCaseImpl) GetGroupInfoFromLink(ctx context.Context, sessionID string, req *GetGroupInfoFromLinkRequest) (*GroupInfoFromLinkResponse, error) {
-	// Validate request
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Get group info from link via wameow manager
 	groupInfo, err := uc.wameowMgr.GetGroupInfoFromLink(sessionID, req.InviteLink)
 	if err != nil {
 		return nil, err
@@ -352,14 +322,11 @@ func (uc *useCaseImpl) GetGroupInfoFromLink(ctx context.Context, sessionID strin
 	return NewGroupInfoFromLinkResponse(groupInfo), nil
 }
 
-// GetGroupInfoFromInvite gets group information from an invite
 func (uc *useCaseImpl) GetGroupInfoFromInvite(ctx context.Context, sessionID string, req *GetGroupInfoFromInviteRequest) (*GroupInfoFromInviteResponse, error) {
-	// Validate request
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Get group info from invite via wameow manager
 	groupInfo, err := uc.wameowMgr.GetGroupInfoFromInvite(sessionID, req.GroupJID, req.Inviter, req.Code, req.Expiration)
 	if err != nil {
 		return nil, err
@@ -368,14 +335,11 @@ func (uc *useCaseImpl) GetGroupInfoFromInvite(ctx context.Context, sessionID str
 	return NewGroupInfoFromInviteResponse(groupInfo, req.Code, req.Inviter), nil
 }
 
-// JoinGroupWithInvite joins a group using a specific invite
 func (uc *useCaseImpl) JoinGroupWithInvite(ctx context.Context, sessionID string, req *JoinGroupWithInviteRequest) (*JoinGroupWithInviteResponse, error) {
-	// Validate request
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Join group with invite via wameow manager
 	err := uc.wameowMgr.JoinGroupWithInvite(sessionID, req.GroupJID, req.Inviter, req.Code, req.Expiration)
 	if err != nil {
 		return NewJoinGroupWithInviteResponse(req.GroupJID, false, "Failed to join group: "+err.Error()), err

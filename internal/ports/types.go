@@ -10,16 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// UnixTime is a custom type that can unmarshal both Unix timestamps and RFC3339 strings
 type UnixTime struct {
 	time.Time
 }
 
-// UnmarshalJSON implements json.Unmarshaler for UnixTime
 func (ut *UnixTime) UnmarshalJSON(data []byte) error {
-	// Try to unmarshal as Unix timestamp (number)
 	if len(data) > 0 && data[0] != '"' {
-		// Try as float64 first (for timestamps with decimals)
 		var timestampFloat float64
 		if err := json.Unmarshal(data, &timestampFloat); err == nil {
 			seconds := int64(timestampFloat)
@@ -28,7 +24,6 @@ func (ut *UnixTime) UnmarshalJSON(data []byte) error {
 			return nil
 		}
 
-		// Fallback to int64
 		var timestamp int64
 		if err := json.Unmarshal(data, &timestamp); err == nil {
 			ut.Time = time.Unix(timestamp, 0)
@@ -36,13 +31,11 @@ func (ut *UnixTime) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// Try to unmarshal as string (RFC3339 or other formats)
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {
 		return fmt.Errorf("cannot unmarshal %s into UnixTime", data)
 	}
 
-	// Try different time formats
 	formats := []string{
 		time.RFC3339,
 		time.RFC3339Nano,
@@ -57,7 +50,6 @@ func (ut *UnixTime) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// Try as Unix timestamp string
 	if timestamp, err := strconv.ParseInt(str, 10, 64); err == nil {
 		ut.Time = time.Unix(timestamp, 0)
 		return nil
@@ -66,18 +58,15 @@ func (ut *UnixTime) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("cannot parse %s as time", str)
 }
 
-// MarshalJSON implements json.Marshaler for UnixTime
 func (ut UnixTime) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ut.Unix())
 }
 
-// Errors
 var (
 	ErrConfigNotFound  = errors.New("chatwoot config not found")
 	ErrContactNotFound = errors.New("chatwoot contact not found")
 )
 
-// ChatwootConfig represents the Chatwoot configuration
 type ChatwootConfig struct {
 	UpdatedAt      time.Time `json:"updatedAt" db:"updatedAt"`
 	CreatedAt      time.Time `json:"createdAt" db:"createdAt"`
@@ -104,7 +93,6 @@ type ChatwootConfig struct {
 	SignMsg        bool      `json:"signMsg" db:"signMsg"`
 }
 
-// ChatwootContact represents a contact in Chatwoot
 type ChatwootContact struct {
 	CreatedAt            UnixTime               `json:"created_at"`
 	UpdatedAt            UnixTime               `json:"updated_at"`
@@ -117,7 +105,6 @@ type ChatwootContact struct {
 	ID                   int                    `json:"id"`
 }
 
-// ChatwootConversation represents a conversation in Chatwoot
 type ChatwootConversation struct {
 	CreatedAt UnixTime `json:"created_at"`
 	UpdatedAt UnixTime `json:"updated_at"`
@@ -127,7 +114,6 @@ type ChatwootConversation struct {
 	InboxID   int      `json:"inbox_id"`
 }
 
-// ChatwootMessage represents a message in Chatwoot
 type ChatwootMessage struct {
 	CreatedAt         UnixTime               `json:"created_at"`
 	ContentAttributes map[string]interface{} `json:"content_attributes,omitempty"`
@@ -142,7 +128,6 @@ type ChatwootMessage struct {
 	Private           bool                   `json:"private"`
 }
 
-// ChatwootAttachment represents an attachment in Chatwoot
 type ChatwootAttachment struct {
 	FileType string `json:"file_type"`
 	FileName string `json:"file_name"`
@@ -152,7 +137,6 @@ type ChatwootAttachment struct {
 	FileSize int    `json:"file_size,omitempty"`
 }
 
-// JIDValidator defines the interface for JID validation
 type JIDValidator interface {
 	IsValid(jid string) bool
 	Normalize(jid string) string

@@ -1,4 +1,3 @@
-// Refactored: separated responsibilities; extracted interfaces; standardized error handling
 package wameow
 
 import (
@@ -26,20 +25,17 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// titleCase converts a string to title case using the modern Go approach
 func titleCase(s string) string {
 	caser := cases.Title(language.English)
 	return caser.String(s)
 }
 
-// VCard constants
 const (
 	VCardBegin   = "BEGIN:VCARD\n"
 	VCardVersion = "VERSION:3.0\n"
 	VCardEnd     = "END:VCARD"
 )
 
-// WhatsAppClient defines the interface for WhatsApp client operations
 type WhatsAppClient interface {
 	Connect() error
 	Disconnect() error
@@ -50,7 +46,6 @@ type WhatsAppClient interface {
 	SendMessage(ctx context.Context, to string, message interface{}) error
 }
 
-// MessageSender handles message sending operations
 type MessageSender interface {
 	SendText(ctx context.Context, to, body string, contextInfo *appMessage.ContextInfo) (*whatsmeow.SendResponse, error)
 	SendMedia(ctx context.Context, to, filePath string, mediaType MediaType, options MediaOptions) (*whatsmeow.SendResponse, error)
@@ -58,7 +53,6 @@ type MessageSender interface {
 	SendLocation(ctx context.Context, to string, lat, lng float64, address string) (*whatsmeow.SendResponse, error)
 }
 
-// MediaType represents different media types
 type MediaType int
 
 const (
@@ -69,7 +63,6 @@ const (
 	MediaTypeSticker
 )
 
-// MediaOptions contains options for media messages
 type MediaOptions struct {
 	ContextInfo *appMessage.ContextInfo
 	Caption     string
@@ -77,13 +70,11 @@ type MediaOptions struct {
 	MimeType    string
 }
 
-// QRGenerator defines the interface for QR code operations
 type QRGenerator interface {
 	GenerateQRCodeImage(qrText string) string
 	DisplayQRCodeInTerminal(qrCode, sessionID string)
 }
 
-// SessionUpdater defines the interface for session management operations
 type SessionUpdater interface {
 	UpdateConnectionStatus(sessionID string, isConnected bool)
 	GetSession(sessionID string) (*session.Session, error)
@@ -110,7 +101,6 @@ type QREventHandler interface {
 	HandleQRCode(sessionID string, qrCode string)
 }
 
-// QRState encapsulates QR code related state
 type QRState struct {
 	stopChannel chan bool
 	code        string
@@ -162,13 +152,11 @@ func NewWameowClient(
 		cancel: cancel,
 	}
 
-	// Initialize message sender
 	wameowClient.msgSender = NewMessageSender(client, logger)
 
 	return wameowClient, nil
 }
 
-// SetEventHandler sets the event handler for the client
 func (c *WameowClient) SetEventHandler(handler QREventHandler) {
 	c.eventHandler = handler
 }
@@ -211,7 +199,6 @@ func (c *WameowClient) Connect() error {
 		c.client.Disconnect()
 	}
 
-	// Update context without holding the main mutex
 	c.mu.Lock()
 	if c.cancel != nil {
 		c.cancel()
@@ -233,19 +220,16 @@ func (c *WameowClient) Disconnect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Step 1: Stop QR loop
 	c.logger.InfoWithFields("Stopping QR loop", map[string]interface{}{
 		"session_id": c.sessionID,
 	})
 	c.stopQRLoop()
 
-	// Step 2: Disconnect whatsmeow client with timeout
 	if c.client.IsConnected() {
 		c.logger.InfoWithFields("Disconnecting whatsmeow client", map[string]interface{}{
 			"session_id": c.sessionID,
 		})
 
-		// Use goroutine with timeout to prevent hanging
 		done := make(chan bool, 1)
 		go func() {
 			c.client.Disconnect()
@@ -268,7 +252,6 @@ func (c *WameowClient) Disconnect() error {
 		})
 	}
 
-	// Step 3: Cancel context
 	if c.cancel != nil {
 		c.logger.InfoWithFields("Canceling client context", map[string]interface{}{
 			"session_id": c.sessionID,
@@ -276,7 +259,6 @@ func (c *WameowClient) Disconnect() error {
 		c.cancel()
 	}
 
-	// Step 4: Update status
 	c.setStatus("disconnected")
 
 	c.logger.InfoWithFields("Client disconnection completed", map[string]interface{}{
@@ -464,7 +446,6 @@ func (c *WameowClient) handleQRLoop(qrChan <-chan whatsmeow.QRChannelItem) {
 func (c *WameowClient) handleQREvent(evt whatsmeow.QRChannelItem) {
 	switch evt.Event {
 	case "code":
-		// Update internal state and handle QR code display/storage
 		c.qrState.mu.RLock()
 		currentCode := c.qrState.code
 		c.qrState.mu.RUnlock()
@@ -477,8 +458,6 @@ func (c *WameowClient) handleQREvent(evt whatsmeow.QRChannelItem) {
 				"session_id": c.sessionID,
 			})
 
-			// Process QR code through event handler (single source of truth)
-			// This handles both first QR code and subsequent renewals
 			if c.eventHandler != nil {
 				c.eventHandler.HandleQRCode(c.sessionID, evt.Code)
 			}
@@ -525,7 +504,6 @@ func (c *WameowClient) clearQRCode() {
 	c.qrState.code = ""
 	c.qrState.codeBase64 = ""
 
-	// Limpa também o último QR code do gerador para permitir novos códigos
 	if qrGen, ok := c.qrGenerator.(*QRCodeGenerator); ok {
 		qrGen.mu.Lock()
 		qrGen.lastQRCode = ""
@@ -549,7 +527,6 @@ func (c *WameowClient) stopQRLoop() {
 		"session_id": c.sessionID,
 	})
 
-	// Try to send stop signal with timeout
 	select {
 	case c.qrState.stopChannel <- true:
 		c.logger.InfoWithFields("QR loop stop signal sent successfully", map[string]interface{}{
@@ -565,10 +542,8 @@ func (c *WameowClient) stopQRLoop() {
 		})
 	}
 
-	// Give some time for the loop to stop gracefully
 	time.Sleep(200 * time.Millisecond)
 
-	// Check if loop actually stopped
 	c.qrState.mu.RLock()
 	stillActive := c.qrState.loopActive
 	c.qrState.mu.RUnlock()
@@ -770,20 +745,16 @@ func (c *WameowClient) SendDetailedContactMessage(ctx context.Context, to string
 }
 
 func (c *WameowClient) SendContactListMessage(ctx context.Context, to string, contacts []ContactInfo) (*whatsmeow.SendResponse, error) {
-	// Validate request
 	jid, err := c.validateContactListRequest(to, contacts)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create contact messages
 	displayName, contactMessages := c.createContactMessages(contacts, "standard")
 
-	// Send message
 	return c.sendContactArrayMessage(ctx, jid, to, displayName, contactMessages, "WhatsApp native format")
 }
 
-// validateContactListRequest validates the contact list request
 func (c *WameowClient) validateContactListRequest(to string, contacts []ContactInfo) (types.JID, error) {
 	if !c.client.IsLoggedIn() {
 		return types.EmptyJID, fmt.Errorf("client is not logged in")
@@ -801,7 +772,6 @@ func (c *WameowClient) validateContactListRequest(to string, contacts []ContactI
 	return jid, nil
 }
 
-// createContactMessages creates contact messages with the specified format
 func (c *WameowClient) createContactMessages(contacts []ContactInfo, format string) (string, []*waE2E.ContactMessage) {
 	displayName := fmt.Sprintf("%d contatos", len(contacts))
 	if len(contacts) == 1 {
@@ -829,7 +799,6 @@ func (c *WameowClient) createContactMessages(contacts []ContactInfo, format stri
 	return displayName, contactMessages
 }
 
-// generateVCard generates a vCard string for a contact
 func (c *WameowClient) generateVCard(contact ContactInfo, format string) string {
 	vcard := VCardBegin
 	vcard += VCardVersion
@@ -854,7 +823,6 @@ func (c *WameowClient) generateVCard(contact ContactInfo, format string) string 
 		vcard += "item1.X-ABLabel:Celular\n"
 		vcard += fmt.Sprintf("X-WA-BIZ-NAME:%s\n", contact.Name)
 	} else {
-		// Standard format
 		vcard += fmt.Sprintf("FN:%s\n", contact.Name)
 		vcard += fmt.Sprintf("N:%s;;;;\n", contact.Name)
 		vcard += fmt.Sprintf("TEL:%s\n", contact.Phone)
@@ -880,7 +848,6 @@ func (c *WameowClient) generateVCard(contact ContactInfo, format string) string 
 	return vcard
 }
 
-// sendContactArrayMessage sends the contact array message
 func (c *WameowClient) sendContactArrayMessage(ctx context.Context, jid types.JID, to, displayName string, contactMessages []*waE2E.ContactMessage, formatType string) (*whatsmeow.SendResponse, error) {
 	message := &waE2E.Message{
 		ContactsArrayMessage: &waE2E.ContactsArrayMessage{
@@ -917,16 +884,13 @@ func (c *WameowClient) sendContactArrayMessage(ctx context.Context, jid types.JI
 }
 
 func (c *WameowClient) SendContactListMessageBusiness(ctx context.Context, to string, contacts []ContactInfo) (*whatsmeow.SendResponse, error) {
-	// Validate request
 	jid, err := c.validateContactListRequest(to, contacts)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create contact messages with business format
 	displayName, contactMessages := c.createContactMessages(contacts, "business")
 
-	// Send message
 	return c.sendContactArrayMessage(ctx, jid, to, displayName, contactMessages, "Business format")
 }
 
@@ -1071,7 +1035,6 @@ func (c *WameowClient) parseJID(jidStr string) (types.JID, error) {
 	return validator.Parse(jidStr)
 }
 
-// Helper function to create WhatsApp ContextInfo from our ContextInfo
 func (c *WameowClient) createContextInfo(contextInfo *appMessage.ContextInfo) *waE2E.ContextInfo {
 	if contextInfo == nil {
 		return nil
@@ -1089,7 +1052,6 @@ func (c *WameowClient) createContextInfo(contextInfo *appMessage.ContextInfo) *w
 	return waContextInfo
 }
 
-// sendMediaMessageWithContext is a generic helper for sending media messages with context
 func (c *WameowClient) sendMediaMessageWithContext(
 	ctx context.Context,
 	to, filePath, caption string,
@@ -1147,7 +1109,6 @@ func (c *WameowClient) sendMediaMessageWithContext(
 	return &resp, nil
 }
 
-// SendImageMessageWithContext sends an image message with optional context info for replies
 func (c *WameowClient) SendImageMessageWithContext(ctx context.Context, to, filePath, caption string, contextInfo *appMessage.ContextInfo) (*whatsmeow.SendResponse, error) {
 	return c.sendMediaMessageWithContext(
 		ctx, to, filePath, caption, contextInfo,
@@ -1172,7 +1133,6 @@ func (c *WameowClient) SendImageMessageWithContext(ctx context.Context, to, file
 	)
 }
 
-// SendAudioMessageWithContext sends an audio message with optional context info for replies
 func (c *WameowClient) SendAudioMessageWithContext(ctx context.Context, to, filePath string, contextInfo *appMessage.ContextInfo) (*whatsmeow.SendResponse, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -1233,7 +1193,6 @@ func (c *WameowClient) SendAudioMessageWithContext(ctx context.Context, to, file
 	return &resp, nil
 }
 
-// SendVideoMessageWithContext sends a video message with optional context info for replies
 func (c *WameowClient) SendVideoMessageWithContext(ctx context.Context, to, filePath, caption string, contextInfo *appMessage.ContextInfo) (*whatsmeow.SendResponse, error) {
 	return c.sendMediaMessageWithContext(
 		ctx, to, filePath, caption, contextInfo,
@@ -1258,7 +1217,6 @@ func (c *WameowClient) SendVideoMessageWithContext(ctx context.Context, to, file
 	)
 }
 
-// SendDocumentMessageWithContext sends a document message with optional context info for replies
 func (c *WameowClient) SendDocumentMessageWithContext(ctx context.Context, to, filePath, filename string, contextInfo *appMessage.ContextInfo) (*whatsmeow.SendResponse, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -1394,7 +1352,6 @@ func (c *WameowClient) SendButtonMessage(ctx context.Context, to, body string, b
 		return nil, fmt.Errorf("invalid JID: %w", err)
 	}
 
-	// Build buttons exactly like
 	buttonsList := make([]*waE2E.ButtonsMessage_Button, 0, len(buttons))
 	for _, button := range buttons {
 		buttonID := button["id"]
@@ -1449,20 +1406,16 @@ func (c *WameowClient) SendButtonMessage(ctx context.Context, to, body string, b
 }
 
 func (c *WameowClient) SendListMessage(ctx context.Context, to, body, buttonText string, sections []map[string]interface{}) (*whatsmeow.SendResponse, error) {
-	// Validate request
 	jid, err := c.validateListMessageRequest(to)
 	if err != nil {
 		return nil, err
 	}
 
-	// Build list sections
 	listSections := c.buildListSections(sections)
 
-	// Create and send message
 	return c.sendListMessage(ctx, jid, to, body, buttonText, listSections, len(sections))
 }
 
-// validateListMessageRequest validates the list message request
 func (c *WameowClient) validateListMessageRequest(to string) (types.JID, error) {
 	if !c.client.IsLoggedIn() {
 		return types.EmptyJID, fmt.Errorf("client is not logged in")
@@ -1476,7 +1429,6 @@ func (c *WameowClient) validateListMessageRequest(to string) (types.JID, error) 
 	return jid, nil
 }
 
-// buildListSections builds WhatsApp list sections from input data
 func (c *WameowClient) buildListSections(sections []map[string]interface{}) []*waE2E.ListMessage_Section {
 	var listSections []*waE2E.ListMessage_Section
 
@@ -1502,7 +1454,6 @@ func (c *WameowClient) buildListSections(sections []map[string]interface{}) []*w
 	return listSections
 }
 
-// buildListRows builds WhatsApp list rows from input data
 func (c *WameowClient) buildListRows(rows []interface{}) []*waE2E.ListMessage_Row {
 	var listRows []*waE2E.ListMessage_Row
 
@@ -1541,7 +1492,6 @@ func (c *WameowClient) buildListRows(rows []interface{}) []*waE2E.ListMessage_Ro
 	return listRows
 }
 
-// sendListMessage creates and sends the list message
 func (c *WameowClient) sendListMessage(ctx context.Context, jid types.JID, to, body, buttonText string, listSections []*waE2E.ListMessage_Section, sectionCount int) (*whatsmeow.SendResponse, error) {
 	listMsg := &waE2E.ListMessage{
 		Title:       &body,
@@ -1698,14 +1648,12 @@ func (c *WameowClient) EditMessage(ctx context.Context, to, messageID, newText s
 		"new_text":   newText,
 	})
 
-	// Create the new message content (following  implementation)
 	newMessage := &waE2E.Message{
 		ExtendedTextMessage: &waE2E.ExtendedTextMessage{
 			Text: &newText,
 		},
 	}
 
-	// Use whatsmeow's BuildEdit method (like  does)
 	editMessage := c.client.BuildEdit(jid, messageID, newMessage)
 
 	_, err = c.client.SendMessage(ctx, jid, editMessage)
@@ -1728,7 +1676,6 @@ func (c *WameowClient) EditMessage(ctx context.Context, to, messageID, newText s
 	return nil
 }
 
-// RevokeMessage revokes a message using whatsmeow's BuildRevoke method
 func (c *WameowClient) RevokeMessage(ctx context.Context, to, messageID string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -1749,7 +1696,6 @@ func (c *WameowClient) RevokeMessage(ctx context.Context, to, messageID string) 
 		"message_id": messageID,
 	})
 
-	// Use whatsmeow's BuildRevoke method to create a revoke message (following  implementation)
 	message := c.client.BuildRevoke(jid, types.EmptyJID, messageID)
 
 	_, err = c.client.SendMessage(ctx, jid, message)
@@ -1772,7 +1718,6 @@ func (c *WameowClient) RevokeMessage(ctx context.Context, to, messageID string) 
 	return nil
 }
 
-// IsOnWhatsApp checks if phone numbers are registered on WhatsApp
 func (c *WameowClient) IsOnWhatsApp(ctx context.Context, phoneNumbers []string) (map[string]interface{}, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -1783,7 +1728,6 @@ func (c *WameowClient) IsOnWhatsApp(ctx context.Context, phoneNumbers []string) 
 		"phone_count": len(phoneNumbers),
 	})
 
-	// Use whatsmeow's IsOnWhatsApp method
 	results, err := c.client.IsOnWhatsApp(phoneNumbers)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to check WhatsApp numbers", map[string]interface{}{
@@ -1793,7 +1737,6 @@ func (c *WameowClient) IsOnWhatsApp(ctx context.Context, phoneNumbers []string) 
 		return nil, err
 	}
 
-	// Convert results to map[string]interface{} for compatibility
 	resultMap := make(map[string]interface{})
 	for _, result := range results {
 		resultMap[result.Query] = map[string]interface{}{
@@ -1808,7 +1751,6 @@ func (c *WameowClient) IsOnWhatsApp(ctx context.Context, phoneNumbers []string) 
 	return resultMap, nil
 }
 
-// GetProfilePictureInfo gets profile picture information for a contact
 func (c *WameowClient) GetProfilePictureInfo(ctx context.Context, jid string, preview bool) (map[string]interface{}, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -1825,7 +1767,6 @@ func (c *WameowClient) GetProfilePictureInfo(ctx context.Context, jid string, pr
 		"preview":    preview,
 	})
 
-	// Use whatsmeow's GetProfilePictureInfo method
 	var params *whatsmeow.GetProfilePictureParams
 	if preview {
 		params = &whatsmeow.GetProfilePictureParams{
@@ -1843,7 +1784,6 @@ func (c *WameowClient) GetProfilePictureInfo(ctx context.Context, jid string, pr
 		return nil, err
 	}
 
-	// Convert result to map for compatibility
 	return map[string]interface{}{
 		"jid":         jid,
 		"url":         result.URL,
@@ -1855,7 +1795,6 @@ func (c *WameowClient) GetProfilePictureInfo(ctx context.Context, jid string, pr
 	}, nil
 }
 
-// GetUserInfo gets detailed information about WhatsApp users
 func (c *WameowClient) GetUserInfo(ctx context.Context, jids []string) ([]map[string]interface{}, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -1866,7 +1805,6 @@ func (c *WameowClient) GetUserInfo(ctx context.Context, jids []string) ([]map[st
 		"jid_count":  len(jids),
 	})
 
-	// Parse JIDs
 	parsedJIDs := make([]types.JID, len(jids))
 	for i, jid := range jids {
 		parsedJID, err := c.parseJID(jid)
@@ -1876,7 +1814,6 @@ func (c *WameowClient) GetUserInfo(ctx context.Context, jids []string) ([]map[st
 		parsedJIDs[i] = parsedJID
 	}
 
-	// Use whatsmeow's GetUserInfo method
 	results, err := c.client.GetUserInfo(parsedJIDs)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to get user info", map[string]interface{}{
@@ -1886,8 +1823,6 @@ func (c *WameowClient) GetUserInfo(ctx context.Context, jids []string) ([]map[st
 		return nil, err
 	}
 
-	// Convert results to slice of maps for compatibility
-	// Note: results is a map[types.JID]types.UserInfo, not a slice
 	userInfos := make([]map[string]interface{}, 0, len(results))
 	for jid, result := range results {
 		userInfo := map[string]interface{}{
@@ -1908,7 +1843,6 @@ func (c *WameowClient) GetUserInfo(ctx context.Context, jids []string) ([]map[st
 	return userInfos, nil
 }
 
-// GetBusinessProfile gets business profile information
 func (c *WameowClient) GetBusinessProfile(ctx context.Context, jid string) (map[string]interface{}, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -1924,7 +1858,6 @@ func (c *WameowClient) GetBusinessProfile(ctx context.Context, jid string) (map[
 		"jid":        jid,
 	})
 
-	// Use whatsmeow's GetBusinessProfile method
 	result, err := c.client.GetBusinessProfile(parsedJID)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to get business profile", map[string]interface{}{
@@ -1935,8 +1868,6 @@ func (c *WameowClient) GetBusinessProfile(ctx context.Context, jid string) (map[
 		return nil, err
 	}
 
-	// Convert result to map for compatibility
-	// BusinessProfile fields: JID, Address, Email, Categories, ProfileOptions, BusinessHoursTimeZone, BusinessHours
 	return map[string]interface{}{
 		"jid":         jid,
 		"name":        "", // Not available in BusinessProfile
@@ -1949,7 +1880,6 @@ func (c *WameowClient) GetBusinessProfile(ctx context.Context, jid string) (map[
 	}, nil
 }
 
-// Helper function to extract verified name string
 func getVerifiedNameString(verifiedName *types.VerifiedName) string {
 	if verifiedName == nil || verifiedName.Details == nil {
 		return ""
@@ -1957,7 +1887,6 @@ func getVerifiedNameString(verifiedName *types.VerifiedName) string {
 	return verifiedName.Details.GetVerifiedName()
 }
 
-// Helper function to extract categories string
 func getCategoriesString(categories []types.Category) string {
 	if len(categories) == 0 {
 		return ""
@@ -1965,7 +1894,6 @@ func getCategoriesString(categories []types.Category) string {
 	return categories[0].Name // Return first category name
 }
 
-// GetAllContacts gets all contacts from the WhatsApp store
 func (c *WameowClient) GetAllContacts(ctx context.Context) (map[string]interface{}, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -1975,7 +1903,6 @@ func (c *WameowClient) GetAllContacts(ctx context.Context) (map[string]interface
 		"session_id": c.sessionID,
 	})
 
-	// Use whatsmeow's Store.Contacts.GetAllContacts method
 	contacts, err := c.client.Store.Contacts.GetAllContacts(ctx)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to get all contacts", map[string]interface{}{
@@ -1990,7 +1917,6 @@ func (c *WameowClient) GetAllContacts(ctx context.Context) (map[string]interface
 		"contact_count": len(contacts),
 	})
 
-	// Convert map[types.JID]types.ContactInfo to map[string]interface{}
 	result := make(map[string]interface{})
 	contactList := make([]map[string]interface{}, 0, len(contacts))
 
@@ -2036,10 +1962,8 @@ func (c *WameowClient) MarkRead(ctx context.Context, to, messageID string) error
 		"message_id": messageID,
 	})
 
-	// Use messageID directly
 	msgID := messageID
 
-	// MarkRead expects a slice of message IDs, timestamp, chat JID, sender JID, and optional receipt type
 	err = c.client.MarkRead([]types.MessageID{msgID}, time.Now(), jid, jid, "")
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to mark message as read", map[string]interface{}{
@@ -2060,7 +1984,6 @@ func (c *WameowClient) MarkRead(ctx context.Context, to, messageID string) error
 	return nil
 }
 
-// CreateGroup creates a new WhatsApp group
 func (c *WameowClient) CreateGroup(ctx context.Context, name string, participants []string, description string) (*types.GroupInfo, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2074,7 +1997,6 @@ func (c *WameowClient) CreateGroup(ctx context.Context, name string, participant
 		return nil, fmt.Errorf("at least one participant is required")
 	}
 
-	// Convert participant strings to JIDs
 	participantJIDs := make([]types.JID, len(participants))
 	for i, participant := range participants {
 		jid, err := c.parseJID(participant)
@@ -2090,7 +2012,6 @@ func (c *WameowClient) CreateGroup(ctx context.Context, name string, participant
 		"participants": len(participantJIDs),
 	})
 
-	// Create the group
 	groupInfo, err := c.client.CreateGroup(ctx, whatsmeow.ReqCreateGroup{
 		Name:         name,
 		Participants: participantJIDs,
@@ -2104,7 +2025,6 @@ func (c *WameowClient) CreateGroup(ctx context.Context, name string, participant
 		return nil, err
 	}
 
-	// Set description if provided
 	if description != "" {
 		err = c.client.SetGroupTopic(groupInfo.JID, "", "", description)
 		if err != nil {
@@ -2125,7 +2045,6 @@ func (c *WameowClient) CreateGroup(ctx context.Context, name string, participant
 	return groupInfo, nil
 }
 
-// GetGroupInfo retrieves information about a specific group
 func (c *WameowClient) GetGroupInfo(ctx context.Context, groupJID string) (*types.GroupInfo, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2160,7 +2079,6 @@ func (c *WameowClient) GetGroupInfo(ctx context.Context, groupJID string) (*type
 	return groupInfo, nil
 }
 
-// ListJoinedGroups lists all groups the user is a member of
 func (c *WameowClient) ListJoinedGroups(ctx context.Context) ([]*types.GroupInfo, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2187,7 +2105,6 @@ func (c *WameowClient) ListJoinedGroups(ctx context.Context) ([]*types.GroupInfo
 	return groups, nil
 }
 
-// UpdateGroupParticipants adds, removes, promotes, or demotes group participants
 func (c *WameowClient) UpdateGroupParticipants(ctx context.Context, groupJID string, participants []string, action string) ([]string, []string, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, nil, fmt.Errorf("client is not logged in")
@@ -2202,7 +2119,6 @@ func (c *WameowClient) UpdateGroupParticipants(ctx context.Context, groupJID str
 		return nil, nil, fmt.Errorf("no participants provided")
 	}
 
-	// Convert participant strings to JIDs
 	participantJIDs := make([]types.JID, len(participants))
 	for i, participant := range participants {
 		participantJID, err := c.parseJID(participant)
@@ -2244,8 +2160,6 @@ func (c *WameowClient) UpdateGroupParticipants(ctx context.Context, groupJID str
 		return nil, nil, err
 	}
 
-	// For simplicity, assume all participants were successful if no error occurred
-	// In a real implementation, you might want to check individual results
 	for _, participantJID := range participantJIDs {
 		success = append(success, participantJID.String())
 	}
@@ -2261,7 +2175,6 @@ func (c *WameowClient) UpdateGroupParticipants(ctx context.Context, groupJID str
 	return success, failed, nil
 }
 
-// SetGroupName updates the group name
 func (c *WameowClient) SetGroupName(ctx context.Context, groupJID, name string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -2302,7 +2215,6 @@ func (c *WameowClient) SetGroupName(ctx context.Context, groupJID, name string) 
 	return nil
 }
 
-// SetGroupDescription updates the group description
 func (c *WameowClient) SetGroupDescription(ctx context.Context, groupJID, description string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -2337,7 +2249,6 @@ func (c *WameowClient) SetGroupDescription(ctx context.Context, groupJID, descri
 	return nil
 }
 
-// GetGroupInviteLink retrieves or generates a group invite link
 func (c *WameowClient) GetGroupInviteLink(ctx context.Context, groupJID string, reset bool) (string, error) {
 	if !c.client.IsLoggedIn() {
 		return "", fmt.Errorf("client is not logged in")
@@ -2378,7 +2289,6 @@ func (c *WameowClient) GetGroupInviteLink(ctx context.Context, groupJID string, 
 	return link, nil
 }
 
-// JoinGroupViaLink joins a group using an invite link
 func (c *WameowClient) JoinGroupViaLink(ctx context.Context, inviteLink string) (*types.GroupInfo, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2401,7 +2311,6 @@ func (c *WameowClient) JoinGroupViaLink(ctx context.Context, inviteLink string) 
 		return nil, err
 	}
 
-	// Get group info after joining
 	groupInfo, err := c.client.GetGroupInfo(groupJID)
 	if err != nil {
 		c.logger.WarnWithFields("Joined group but failed to get info", map[string]interface{}{
@@ -2409,8 +2318,6 @@ func (c *WameowClient) JoinGroupViaLink(ctx context.Context, inviteLink string) 
 			"group_jid":  groupJID.String(),
 			"error":      err.Error(),
 		})
-		// Return minimal info if we can't get full details - this is intentional fallback
-		// The join operation succeeded, but getting detailed info failed
 		return &types.GroupInfo{
 			JID: groupJID,
 		}, err
@@ -2425,7 +2332,6 @@ func (c *WameowClient) JoinGroupViaLink(ctx context.Context, inviteLink string) 
 	return groupInfo, nil
 }
 
-// LeaveGroup leaves a group
 func (c *WameowClient) LeaveGroup(ctx context.Context, groupJID string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -2459,7 +2365,6 @@ func (c *WameowClient) LeaveGroup(ctx context.Context, groupJID string) error {
 	return nil
 }
 
-// UpdateGroupSettings updates group settings (announce, locked)
 func (c *WameowClient) UpdateGroupSettings(ctx context.Context, groupJID string, announce, locked *bool) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -2511,7 +2416,6 @@ func (c *WameowClient) UpdateGroupSettings(ctx context.Context, groupJID string,
 	return nil
 }
 
-// CreatePoll creates a poll message
 func (c *WameowClient) CreatePoll(ctx context.Context, to, name string, options []string, selectableCount int) (*types.MessageInfo, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2537,7 +2441,6 @@ func (c *WameowClient) CreatePoll(ctx context.Context, to, name string, options 
 		return nil, fmt.Errorf("selectable count cannot exceed number of options")
 	}
 
-	// Parse recipient JID
 	toJID, err := c.parseJID(to)
 	if err != nil {
 		return nil, fmt.Errorf("invalid recipient JID: %w", err)
@@ -2551,10 +2454,8 @@ func (c *WameowClient) CreatePoll(ctx context.Context, to, name string, options 
 		"selectable_count": selectableCount,
 	})
 
-	// Build poll creation message
 	pollMessage := c.client.BuildPollCreation(name, options, selectableCount)
 
-	// Send the poll
 	resp, err := c.client.SendMessage(ctx, toJID, pollMessage)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to send poll", map[string]interface{}{
@@ -2572,14 +2473,12 @@ func (c *WameowClient) CreatePoll(ctx context.Context, to, name string, options 
 		"timestamp":  resp.Timestamp,
 	})
 
-	// Return message info
 	return &types.MessageInfo{
 		ID:        resp.ID,
 		Timestamp: resp.Timestamp,
 	}, nil
 }
 
-// VotePoll votes in a poll
 func (c *WameowClient) VotePoll(ctx context.Context, to, pollMessageID string, selectedOptions []string) (*types.MessageInfo, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2600,14 +2499,12 @@ func (c *WameowClient) VotePoll(ctx context.Context, to, pollMessageID string, s
 		"selected_options": selectedOptions,
 	})
 
-	// Return a mock response for now since poll voting requires complex message handling
 	return &types.MessageInfo{
 		ID:        "mock-vote-" + pollMessageID,
 		Timestamp: time.Now(),
 	}, nil
 }
 
-// SetGroupPhoto sets a group's photo
 func (c *WameowClient) SetGroupPhoto(ctx context.Context, groupJID, photoPath string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -2621,13 +2518,11 @@ func (c *WameowClient) SetGroupPhoto(ctx context.Context, groupJID, photoPath st
 		return fmt.Errorf("photo path is required")
 	}
 
-	// Parse group JID
 	gJID, err := c.parseJID(groupJID)
 	if err != nil {
 		return fmt.Errorf("invalid group JID: %w", err)
 	}
 
-	// Read photo file
 	photoData, err := os.ReadFile(photoPath)
 	if err != nil {
 		return fmt.Errorf("failed to read photo file: %w", err)
@@ -2640,7 +2535,6 @@ func (c *WameowClient) SetGroupPhoto(ctx context.Context, groupJID, photoPath st
 		"photo_size": len(photoData),
 	})
 
-	// Set group photo using whatsmeow
 	_, err = c.client.SetGroupPhoto(gJID, photoData)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to set group photo", map[string]interface{}{
@@ -2659,7 +2553,6 @@ func (c *WameowClient) SetGroupPhoto(ctx context.Context, groupJID, photoPath st
 	return nil
 }
 
-// DownloadMedia downloads media from a WhatsApp message
 func (c *WameowClient) DownloadMedia(ctx context.Context, messageID string, mediaType string) ([]byte, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2675,17 +2568,10 @@ func (c *WameowClient) DownloadMedia(ctx context.Context, messageID string, medi
 		"media_type": mediaType,
 	})
 
-	// Note: This is a simplified implementation
-	// In a real implementation, you would need to:
-	// 1. Get the message by ID from the store
-	// 2. Extract the media info from the message
-	// 3. Use client.Download() with the media info
 
-	// For now, return an error indicating the feature needs message context
 	return nil, fmt.Errorf("download media requires message context - feature needs enhancement")
 }
 
-// DownloadMediaFromMessage downloads media from a specific message object
 func (c *WameowClient) DownloadMediaFromMessage(ctx context.Context, msg interface{}) ([]byte, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2695,12 +2581,9 @@ func (c *WameowClient) DownloadMediaFromMessage(ctx context.Context, msg interfa
 		"session_id": c.sessionID,
 	})
 
-	// Note: This would need proper message type handling
-	// The actual implementation would depend on the whatsmeow message structure
 	return nil, fmt.Errorf("download media from message not fully implemented - requires whatsmeow message handling")
 }
 
-// SetGroupPhotoFromBytes sets a group's photo from byte data
 func (c *WameowClient) SetGroupPhotoFromBytes(ctx context.Context, groupJID string, photoData []byte) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -2714,7 +2597,6 @@ func (c *WameowClient) SetGroupPhotoFromBytes(ctx context.Context, groupJID stri
 		return fmt.Errorf("photo data is required")
 	}
 
-	// Parse group JID
 	gJID, err := c.parseJID(groupJID)
 	if err != nil {
 		return fmt.Errorf("invalid group JID: %w", err)
@@ -2726,7 +2608,6 @@ func (c *WameowClient) SetGroupPhotoFromBytes(ctx context.Context, groupJID stri
 		"photo_size": len(photoData),
 	})
 
-	// Set group photo using whatsmeow
 	_, err = c.client.SetGroupPhoto(gJID, photoData)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to set group photo", map[string]interface{}{
@@ -2752,7 +2633,6 @@ func IsDeviceRegistered(client *whatsmeow.Client) bool {
 	return client.Store.ID != nil
 }
 
-// GetGroupRequestParticipants gets the list of participants that have requested to join the group
 func (c *WameowClient) GetGroupRequestParticipants(ctx context.Context, groupJID string) ([]types.GroupParticipantRequest, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2784,7 +2664,6 @@ func (c *WameowClient) GetGroupRequestParticipants(ctx context.Context, groupJID
 	return participants, nil
 }
 
-// UpdateGroupRequestParticipants can be used to approve or reject requests to join the group
 func (c *WameowClient) UpdateGroupRequestParticipants(ctx context.Context, groupJID string, participants []string, action string) ([]string, []string, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, nil, fmt.Errorf("client is not logged in")
@@ -2795,7 +2674,6 @@ func (c *WameowClient) UpdateGroupRequestParticipants(ctx context.Context, group
 		return nil, nil, fmt.Errorf("invalid group JID: %w", err)
 	}
 
-	// Validate action
 	var participantAction whatsmeow.ParticipantRequestChange
 	switch action {
 	case "approve":
@@ -2806,7 +2684,6 @@ func (c *WameowClient) UpdateGroupRequestParticipants(ctx context.Context, group
 		return nil, nil, fmt.Errorf("invalid action: %s (must be 'approve' or 'reject')", action)
 	}
 
-	// Parse participant JIDs
 	participantJIDs := make([]types.JID, len(participants))
 	for i, participant := range participants {
 		participantJID, err := c.parseJID(participant)
@@ -2832,7 +2709,6 @@ func (c *WameowClient) UpdateGroupRequestParticipants(ctx context.Context, group
 		return nil, nil, fmt.Errorf("failed to update group request participants: %w", err)
 	}
 
-	// Process results
 	var success, failed []string
 	for _, participant := range result {
 		if participant.Error == 0 {
@@ -2852,7 +2728,6 @@ func (c *WameowClient) UpdateGroupRequestParticipants(ctx context.Context, group
 	return success, failed, nil
 }
 
-// SetGroupJoinApprovalMode sets the group join approval mode to 'on' or 'off'
 func (c *WameowClient) SetGroupJoinApprovalMode(ctx context.Context, groupJID string, requireApproval bool) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -2885,7 +2760,6 @@ func (c *WameowClient) SetGroupJoinApprovalMode(ctx context.Context, groupJID st
 	return nil
 }
 
-// SetGroupMemberAddMode sets the group member add mode to 'admin_add' or 'all_member_add'
 func (c *WameowClient) SetGroupMemberAddMode(ctx context.Context, groupJID string, mode string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -2896,7 +2770,6 @@ func (c *WameowClient) SetGroupMemberAddMode(ctx context.Context, groupJID strin
 		return fmt.Errorf("invalid group JID: %w", err)
 	}
 
-	// Validate and convert mode
 	var memberAddMode types.GroupMemberAddMode
 	switch mode {
 	case "admin_add":
@@ -2929,11 +2802,7 @@ func (c *WameowClient) SetGroupMemberAddMode(ctx context.Context, groupJID strin
 	return nil
 }
 
-// ============================================================================
-// Newsletter Methods
-// ============================================================================
 
-// CreateNewsletter creates a new WhatsApp newsletter/channel
 func (c *WameowClient) CreateNewsletter(ctx context.Context, name, description string) (*types.NewsletterMetadata, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2981,7 +2850,6 @@ func (c *WameowClient) CreateNewsletter(ctx context.Context, name, description s
 	return newsletter, nil
 }
 
-// GetNewsletterInfo gets information about a newsletter by JID
 func (c *WameowClient) GetNewsletterInfo(ctx context.Context, jid string) (*types.NewsletterMetadata, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -2996,7 +2864,6 @@ func (c *WameowClient) GetNewsletterInfo(ctx context.Context, jid string) (*type
 		return nil, fmt.Errorf("invalid newsletter JID: %w", err)
 	}
 
-	// Validate that it's a newsletter JID
 	if !strings.Contains(jid, "@newsletter") {
 		return nil, fmt.Errorf("invalid newsletter JID format: must contain @newsletter")
 	}
@@ -3025,7 +2892,6 @@ func (c *WameowClient) GetNewsletterInfo(ctx context.Context, jid string) (*type
 	return newsletter, nil
 }
 
-// GetNewsletterInfoWithInvite gets newsletter information using an invite key
 func (c *WameowClient) GetNewsletterInfoWithInvite(ctx context.Context, inviteKey string) (*types.NewsletterMetadata, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -3035,7 +2901,6 @@ func (c *WameowClient) GetNewsletterInfoWithInvite(ctx context.Context, inviteKe
 		return nil, fmt.Errorf("invite key is required")
 	}
 
-	// Clean up the invite key by removing common prefixes
 	cleanKey := strings.TrimSpace(inviteKey)
 	cleanKey = strings.TrimPrefix(cleanKey, "https://whatsapp.com/channel/")
 	cleanKey = strings.TrimPrefix(cleanKey, "whatsapp.com/channel/")
@@ -3069,7 +2934,6 @@ func (c *WameowClient) GetNewsletterInfoWithInvite(ctx context.Context, inviteKe
 	return newsletter, nil
 }
 
-// FollowNewsletter makes the user follow (subscribe to) a newsletter
 func (c *WameowClient) FollowNewsletter(ctx context.Context, jid string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -3084,7 +2948,6 @@ func (c *WameowClient) FollowNewsletter(ctx context.Context, jid string) error {
 		return fmt.Errorf("invalid newsletter JID: %w", err)
 	}
 
-	// Validate that it's a newsletter JID
 	if !strings.Contains(jid, "@newsletter") {
 		return fmt.Errorf("invalid newsletter JID format: must contain @newsletter")
 	}
@@ -3112,7 +2975,6 @@ func (c *WameowClient) FollowNewsletter(ctx context.Context, jid string) error {
 	return nil
 }
 
-// UnfollowNewsletter makes the user unfollow (unsubscribe from) a newsletter
 func (c *WameowClient) UnfollowNewsletter(ctx context.Context, jid string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -3127,7 +2989,6 @@ func (c *WameowClient) UnfollowNewsletter(ctx context.Context, jid string) error
 		return fmt.Errorf("invalid newsletter JID: %w", err)
 	}
 
-	// Validate that it's a newsletter JID
 	if !strings.Contains(jid, "@newsletter") {
 		return fmt.Errorf("invalid newsletter JID format: must contain @newsletter")
 	}
@@ -3139,7 +3000,6 @@ func (c *WameowClient) UnfollowNewsletter(ctx context.Context, jid string) error
 
 	err = c.client.UnfollowNewsletter(parsedJID)
 	if err != nil {
-		// Check if it's a 405 Not Allowed error (common for owner newsletters)
 		if strings.Contains(err.Error(), "405 Not Allowed") {
 			c.logger.WarnWithFields("Cannot unfollow newsletter - not allowed (possibly owner)", map[string]interface{}{
 				"session_id": c.sessionID,
@@ -3165,7 +3025,6 @@ func (c *WameowClient) UnfollowNewsletter(ctx context.Context, jid string) error
 	return nil
 }
 
-// GetSubscribedNewsletters gets all newsletters the user is subscribed to
 func (c *WameowClient) GetSubscribedNewsletters(ctx context.Context) ([]*types.NewsletterMetadata, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -3192,7 +3051,6 @@ func (c *WameowClient) GetSubscribedNewsletters(ctx context.Context) ([]*types.N
 	return newsletters, nil
 }
 
-// GetNewsletterMessages gets messages from a newsletter
 func (c *WameowClient) GetNewsletterMessages(ctx context.Context, jid string, count int, before string) ([]*types.NewsletterMessage, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -3202,7 +3060,6 @@ func (c *WameowClient) GetNewsletterMessages(ctx context.Context, jid string, co
 		return nil, fmt.Errorf("newsletter JID cannot be empty")
 	}
 
-	// Parse and validate JID
 	parsedJID, err := c.parseJID(jid)
 	if err != nil {
 		c.logger.ErrorWithFields("Invalid newsletter JID", map[string]interface{}{
@@ -3222,15 +3079,12 @@ func (c *WameowClient) GetNewsletterMessages(ctx context.Context, jid string, co
 		"before":     before,
 	})
 
-	// Prepare parameters
 	params := &whatsmeow.GetNewsletterMessagesParams{}
 	if count > 0 {
 		params.Count = count
 	}
 	if before != "" {
-		// Convert string to MessageServerID with safe conversion
 		if serverID, err := strconv.ParseUint(before, 10, 64); err == nil {
-			// Check if the value fits in an int to prevent overflow
 			if serverID <= uint64(^uint(0)>>1) { // Max int value
 				params.Before = types.MessageServerID(serverID)
 			} else {
@@ -3262,25 +3116,19 @@ func (c *WameowClient) GetNewsletterMessages(ctx context.Context, jid string, co
 	return messages, nil
 }
 
-// GetNewsletterMessageUpdates gets message updates from a newsletter (view counts, reactions)
 func (c *WameowClient) GetNewsletterMessageUpdates(ctx context.Context, jid string, count int, since string, after string) ([]*types.NewsletterMessage, error) {
-	// Validate request
 	newsletterJID, err := c.validateNewsletterUpdatesRequest(jid)
 	if err != nil {
 		return nil, err
 	}
 
-	// Log request
 	c.logNewsletterUpdatesRequest(jid, count, since, after)
 
-	// Prepare parameters
 	params := c.buildNewsletterUpdatesParams(count, since, after)
 
-	// Execute request with timeout
 	return c.executeNewsletterUpdatesRequest(ctx, jid, newsletterJID, params)
 }
 
-// validateNewsletterUpdatesRequest validates the newsletter updates request
 func (c *WameowClient) validateNewsletterUpdatesRequest(jid string) (types.JID, error) {
 	if !c.client.IsLoggedIn() {
 		return types.EmptyJID, fmt.Errorf("client is not logged in")
@@ -3290,7 +3138,6 @@ func (c *WameowClient) validateNewsletterUpdatesRequest(jid string) (types.JID, 
 		return types.EmptyJID, fmt.Errorf("newsletter JID cannot be empty")
 	}
 
-	// Parse and validate JID
 	parsedJID, err := c.parseJID(jid)
 	if err != nil {
 		c.logger.ErrorWithFields("Invalid newsletter JID", map[string]interface{}{
@@ -3304,7 +3151,6 @@ func (c *WameowClient) validateNewsletterUpdatesRequest(jid string) (types.JID, 
 	return parsedJID, nil
 }
 
-// logNewsletterUpdatesRequest logs the newsletter updates request
 func (c *WameowClient) logNewsletterUpdatesRequest(jid string, count int, since, after string) {
 	c.logger.InfoWithFields("Getting newsletter message updates", map[string]interface{}{
 		"session_id": c.sessionID,
@@ -3315,7 +3161,6 @@ func (c *WameowClient) logNewsletterUpdatesRequest(jid string, count int, since,
 	})
 }
 
-// buildNewsletterUpdatesParams builds the parameters for newsletter updates request
 func (c *WameowClient) buildNewsletterUpdatesParams(count int, since, after string) *whatsmeow.GetNewsletterUpdatesParams {
 	params := &whatsmeow.GetNewsletterUpdatesParams{}
 
@@ -3324,16 +3169,13 @@ func (c *WameowClient) buildNewsletterUpdatesParams(count int, since, after stri
 	}
 
 	if since != "" {
-		// Parse ISO timestamp
 		if sinceTime, err := time.Parse(time.RFC3339, since); err == nil {
 			params.Since = sinceTime
 		}
 	}
 
 	if after != "" {
-		// Convert string to MessageServerID with safe conversion
 		if serverID, err := strconv.ParseUint(after, 10, 64); err == nil {
-			// Check if the value fits in an int to prevent overflow
 			if serverID <= uint64(^uint(0)>>1) { // Max int value
 				params.After = types.MessageServerID(serverID)
 			} else {
@@ -3349,9 +3191,7 @@ func (c *WameowClient) buildNewsletterUpdatesParams(count int, since, after stri
 	return params
 }
 
-// executeNewsletterUpdatesRequest executes the newsletter updates request with timeout
 func (c *WameowClient) executeNewsletterUpdatesRequest(ctx context.Context, jid string, newsletterJID types.JID, params *whatsmeow.GetNewsletterUpdatesParams) ([]*types.NewsletterMessage, error) {
-	// Add timeout context for the operation
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -3371,7 +3211,6 @@ func (c *WameowClient) executeNewsletterUpdatesRequest(ctx context.Context, jid 
 		return nil, fmt.Errorf("failed to get newsletter message updates: %w", err)
 	}
 
-	// Check if context was canceled
 	select {
 	case <-ctxWithTimeout.Done():
 		c.logger.WarnWithFields("Newsletter message updates operation timed out", map[string]interface{}{
@@ -3380,7 +3219,6 @@ func (c *WameowClient) executeNewsletterUpdatesRequest(ctx context.Context, jid 
 		})
 		return nil, fmt.Errorf("operation timed out")
 	default:
-		// Continue normally
 	}
 
 	c.logger.InfoWithFields("Newsletter message updates retrieved successfully", map[string]interface{}{
@@ -3392,7 +3230,6 @@ func (c *WameowClient) executeNewsletterUpdatesRequest(ctx context.Context, jid 
 	return updates, nil
 }
 
-// NewsletterMarkViewed marks newsletter messages as viewed
 func (c *WameowClient) NewsletterMarkViewed(ctx context.Context, jid string, serverIDs []string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -3406,7 +3243,6 @@ func (c *WameowClient) NewsletterMarkViewed(ctx context.Context, jid string, ser
 		return fmt.Errorf("server IDs cannot be empty")
 	}
 
-	// Parse and validate JID
 	parsedJID, err := c.parseJID(jid)
 	if err != nil {
 		c.logger.ErrorWithFields("Invalid newsletter JID", map[string]interface{}{
@@ -3423,11 +3259,9 @@ func (c *WameowClient) NewsletterMarkViewed(ctx context.Context, jid string, ser
 		"count":      len(serverIDs),
 	})
 
-	// Convert string server IDs to MessageServerID
 	messageServerIDs := make([]types.MessageServerID, 0, len(serverIDs))
 	for _, serverID := range serverIDs {
 		if id, err := strconv.ParseUint(serverID, 10, 64); err == nil {
-			// Check if the value fits in an int to prevent overflow
 			if id <= uint64(^uint(0)>>1) { // Max int value
 				messageServerIDs = append(messageServerIDs, types.MessageServerID(id))
 			} else {
@@ -3444,7 +3278,6 @@ func (c *WameowClient) NewsletterMarkViewed(ctx context.Context, jid string, ser
 				"server_id":  serverID,
 				"error":      err.Error(),
 			})
-			// Skip invalid server IDs instead of failing
 			continue
 		}
 	}
@@ -3468,7 +3301,6 @@ func (c *WameowClient) NewsletterMarkViewed(ctx context.Context, jid string, ser
 	return nil
 }
 
-// NewsletterSendReaction sends a reaction to a newsletter message
 func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, serverID string, reaction string, messageID string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -3482,7 +3314,6 @@ func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, s
 		return fmt.Errorf("server ID cannot be empty")
 	}
 
-	// Parse and validate JID
 	parsedJID, err := c.parseJID(jid)
 	if err != nil {
 		c.logger.ErrorWithFields("Invalid newsletter JID", map[string]interface{}{
@@ -3501,7 +3332,6 @@ func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, s
 		"message_id": messageID,
 	})
 
-	// Convert string server ID to MessageServerID with safe conversion
 	msgServerID, err := strconv.ParseUint(serverID, 10, 64)
 	if err != nil {
 		c.logger.ErrorWithFields("Invalid server ID format", map[string]interface{}{
@@ -3512,7 +3342,6 @@ func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, s
 		return fmt.Errorf("server ID must be numeric, got: %s", serverID)
 	}
 
-	// Check if the value fits in an int to prevent overflow
 	if msgServerID > uint64(^uint(0)>>1) { // Max int value
 		c.logger.ErrorWithFields("Server ID too large", map[string]interface{}{
 			"session_id": c.sessionID,
@@ -3522,7 +3351,6 @@ func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, s
 		return fmt.Errorf("server ID too large: %s (max: %d)", serverID, ^uint(0)>>1)
 	}
 
-	// Use messageID directly
 	var msgID string
 	if messageID != "" {
 		msgID = messageID
@@ -3549,7 +3377,6 @@ func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, s
 	return nil
 }
 
-// NewsletterSubscribeLiveUpdates subscribes to live updates from a newsletter
 func (c *WameowClient) NewsletterSubscribeLiveUpdates(ctx context.Context, jid string) (int64, error) {
 	if !c.client.IsLoggedIn() {
 		return 0, fmt.Errorf("client is not logged in")
@@ -3559,7 +3386,6 @@ func (c *WameowClient) NewsletterSubscribeLiveUpdates(ctx context.Context, jid s
 		return 0, fmt.Errorf("newsletter JID cannot be empty")
 	}
 
-	// Parse and validate JID
 	parsedJID, err := c.parseJID(jid)
 	if err != nil {
 		c.logger.ErrorWithFields("Invalid newsletter JID", map[string]interface{}{
@@ -3596,7 +3422,6 @@ func (c *WameowClient) NewsletterSubscribeLiveUpdates(ctx context.Context, jid s
 	return durationSeconds, nil
 }
 
-// NewsletterToggleMute toggles mute status of a newsletter
 func (c *WameowClient) NewsletterToggleMute(ctx context.Context, jid string, mute bool) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -3606,7 +3431,6 @@ func (c *WameowClient) NewsletterToggleMute(ctx context.Context, jid string, mut
 		return fmt.Errorf("newsletter JID cannot be empty")
 	}
 
-	// Parse and validate JID
 	parsedJID, err := c.parseJID(jid)
 	if err != nil {
 		c.logger.ErrorWithFields("Invalid newsletter JID", map[string]interface{}{
@@ -3643,7 +3467,6 @@ func (c *WameowClient) NewsletterToggleMute(ctx context.Context, jid string, mut
 	return nil
 }
 
-// AcceptTOSNotice accepts a terms of service notice
 func (c *WameowClient) AcceptTOSNotice(ctx context.Context, noticeID string, stage string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -3683,7 +3506,6 @@ func (c *WameowClient) AcceptTOSNotice(ctx context.Context, noticeID string, sta
 	return nil
 }
 
-// UploadNewsletter uploads media for newsletters
 func (c *WameowClient) UploadNewsletter(ctx context.Context, data []byte, mimeType string, mediaType string) (*whatsmeow.UploadResponse, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -3708,7 +3530,6 @@ func (c *WameowClient) UploadNewsletter(ctx context.Context, data []byte, mimeTy
 		"data_size":  len(data),
 	})
 
-	// Convert string media type to whatsmeow MediaType
 	whatsmeowMediaType := c.convertStringToMediaType(mediaType)
 
 	uploaded, err := c.client.UploadNewsletter(ctx, data, whatsmeowMediaType)
@@ -3736,7 +3557,6 @@ func (c *WameowClient) UploadNewsletter(ctx context.Context, data []byte, mimeTy
 	return &uploaded, nil
 }
 
-// UploadNewsletterReader uploads media for newsletters from a reader
 func (c *WameowClient) UploadNewsletterReader(ctx context.Context, data []byte, mimeType string, mediaType string) (*whatsmeow.UploadResponse, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -3761,10 +3581,8 @@ func (c *WameowClient) UploadNewsletterReader(ctx context.Context, data []byte, 
 		"data_size":  len(data),
 	})
 
-	// Convert string media type to whatsmeow MediaType
 	whatsmeowMediaType := c.convertStringToMediaType(mediaType)
 
-	// Create a reader from the data
 	reader := bytes.NewReader(data)
 
 	uploaded, err := c.client.UploadNewsletterReader(ctx, reader, whatsmeowMediaType)
@@ -3792,7 +3610,6 @@ func (c *WameowClient) UploadNewsletterReader(ctx context.Context, data []byte, 
 	return &uploaded, nil
 }
 
-// convertStringToMediaType converts string media type to whatsmeow MediaType
 func (c *WameowClient) convertStringToMediaType(mediaType string) whatsmeow.MediaType {
 	switch mediaType {
 	case "image":
@@ -3808,11 +3625,7 @@ func (c *WameowClient) convertStringToMediaType(mediaType string) whatsmeow.Medi
 	}
 }
 
-// ============================================================================
-// COMMUNITY METHODS
-// ============================================================================
 
-// handleCommunityAction is a generic helper for community actions that require two JIDs
 func (c *WameowClient) handleCommunityAction(
 	ctx context.Context,
 	communityJID, groupJID string,
@@ -3831,7 +3644,6 @@ func (c *WameowClient) handleCommunityAction(
 		return fmt.Errorf("group JID cannot be empty")
 	}
 
-	// Parse and validate JIDs
 	parsedCommunityJID, err := c.parseJID(communityJID)
 	if err != nil {
 		c.logger.ErrorWithFields("Invalid community JID", map[string]interface{}{
@@ -3858,7 +3670,6 @@ func (c *WameowClient) handleCommunityAction(
 		"group_jid":     groupJID,
 	})
 
-	// Execute the action
 	err = actionFunc(parsedCommunityJID, parsedGroupJID)
 	if err != nil {
 		c.logger.ErrorWithFields(fmt.Sprintf("Failed to %s", actionName), map[string]interface{}{
@@ -3879,7 +3690,6 @@ func (c *WameowClient) handleCommunityAction(
 	return nil
 }
 
-// handleCommunityQuery is a generic helper for community queries that require one JID
 func (c *WameowClient) handleCommunityQuery(
 	ctx context.Context,
 	communityJID string,
@@ -3894,7 +3704,6 @@ func (c *WameowClient) handleCommunityQuery(
 		return nil, fmt.Errorf("community JID cannot be empty")
 	}
 
-	// Parse and validate community JID
 	parsedCommunityJID, err := c.parseJID(communityJID)
 	if err != nil {
 		c.logger.ErrorWithFields("Invalid community JID", map[string]interface{}{
@@ -3910,7 +3719,6 @@ func (c *WameowClient) handleCommunityQuery(
 		"community_jid": communityJID,
 	})
 
-	// Execute the query
 	result, err := queryFunc(parsedCommunityJID)
 	if err != nil {
 		c.logger.ErrorWithFields(fmt.Sprintf("Failed to %s", actionName), map[string]interface{}{
@@ -3921,13 +3729,11 @@ func (c *WameowClient) handleCommunityQuery(
 		return nil, fmt.Errorf("failed to %s: %w", actionName, err)
 	}
 
-	// Log success with count if result is a slice
 	logFields := map[string]interface{}{
 		"session_id":    c.sessionID,
 		"community_jid": communityJID,
 	}
 
-	// Add count to log if result is a slice
 	switch v := result.(type) {
 	case []*types.GroupLinkTarget:
 		logFields["count"] = len(v)
@@ -3940,17 +3746,14 @@ func (c *WameowClient) handleCommunityQuery(
 	return result, nil
 }
 
-// LinkGroup links a group to a community
 func (c *WameowClient) LinkGroup(ctx context.Context, communityJID, groupJID string) error {
 	return c.handleCommunityAction(ctx, communityJID, groupJID, "linking group to community", c.client.LinkGroup)
 }
 
-// UnlinkGroup unlinks a group from a community
 func (c *WameowClient) UnlinkGroup(ctx context.Context, communityJID, groupJID string) error {
 	return c.handleCommunityAction(ctx, communityJID, groupJID, "unlinking group from community", c.client.UnlinkGroup)
 }
 
-// GetSubGroups gets all sub-groups (linked groups) of a community
 func (c *WameowClient) GetSubGroups(ctx context.Context, communityJID string) ([]*types.GroupLinkTarget, error) {
 	result, err := c.handleCommunityQuery(ctx, communityJID, "getting community sub-groups", func(parsedCommunityJID types.JID) (interface{}, error) {
 		return c.client.GetSubGroups(parsedCommunityJID)
@@ -3966,7 +3769,6 @@ func (c *WameowClient) GetSubGroups(ctx context.Context, communityJID string) ([
 	return linkTargets, nil
 }
 
-// GetLinkedGroupsParticipants gets participants from all linked groups in a community
 func (c *WameowClient) GetLinkedGroupsParticipants(ctx context.Context, communityJID string) ([]types.JID, error) {
 	result, err := c.handleCommunityQuery(ctx, communityJID, "getting linked groups participants", func(parsedCommunityJID types.JID) (interface{}, error) {
 		return c.client.GetLinkedGroupsParticipants(parsedCommunityJID)
@@ -3982,11 +3784,7 @@ func (c *WameowClient) GetLinkedGroupsParticipants(ctx context.Context, communit
 	return jids, nil
 }
 
-// ============================================================================
-// ADVANCED GROUP METHODS
-// ============================================================================
 
-// GetGroupInfoFromLink gets group information from an invite link
 func (c *WameowClient) GetGroupInfoFromLink(ctx context.Context, inviteLink string) (*types.GroupInfo, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -4001,7 +3799,6 @@ func (c *WameowClient) GetGroupInfoFromLink(ctx context.Context, inviteLink stri
 		"invite_link": inviteLink,
 	})
 
-	// Use whatsmeow's GetGroupInfoFromLink method
 	groupInfo, err := c.client.GetGroupInfoFromLink(inviteLink)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to get group info from link", map[string]interface{}{
@@ -4021,7 +3818,6 @@ func (c *WameowClient) GetGroupInfoFromLink(ctx context.Context, inviteLink stri
 	return groupInfo, nil
 }
 
-// GetGroupInfoFromInvite gets group information from an invite
 func (c *WameowClient) GetGroupInfoFromInvite(ctx context.Context, jid, inviter, code string, expiration int64) (*types.GroupInfo, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
@@ -4035,7 +3831,6 @@ func (c *WameowClient) GetGroupInfoFromInvite(ctx context.Context, jid, inviter,
 		return nil, fmt.Errorf("invite code cannot be empty")
 	}
 
-	// Parse JIDs
 	parsedJID, err := c.parseJID(jid)
 	if err != nil {
 		return nil, fmt.Errorf("invalid group JID: %w", err)
@@ -4056,7 +3851,6 @@ func (c *WameowClient) GetGroupInfoFromInvite(ctx context.Context, jid, inviter,
 		"code":       code,
 	})
 
-	// Use whatsmeow's GetGroupInfoFromInvite method
 	groupInfo, err := c.client.GetGroupInfoFromInvite(parsedJID, parsedInviter, code, expiration)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to get group info from invite", map[string]interface{}{
@@ -4078,7 +3872,6 @@ func (c *WameowClient) GetGroupInfoFromInvite(ctx context.Context, jid, inviter,
 	return groupInfo, nil
 }
 
-// JoinGroupWithInvite joins a group using a specific invite
 func (c *WameowClient) JoinGroupWithInvite(ctx context.Context, jid, inviter, code string, expiration int64) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
@@ -4092,7 +3885,6 @@ func (c *WameowClient) JoinGroupWithInvite(ctx context.Context, jid, inviter, co
 		return fmt.Errorf("invite code cannot be empty")
 	}
 
-	// Parse JIDs
 	parsedJID, err := c.parseJID(jid)
 	if err != nil {
 		return fmt.Errorf("invalid group JID: %w", err)
@@ -4113,7 +3905,6 @@ func (c *WameowClient) JoinGroupWithInvite(ctx context.Context, jid, inviter, co
 		"code":       code,
 	})
 
-	// Use whatsmeow's JoinGroupWithInvite method
 	err = c.client.JoinGroupWithInvite(parsedJID, parsedInviter, code, expiration)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to join group with invite", map[string]interface{}{

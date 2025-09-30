@@ -14,13 +14,11 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 )
 
-// EventDispatcher converts whatsmeow events to webhook events and dispatches them
 type EventDispatcher struct {
 	logger          *logger.Logger
 	deliveryService *WebhookDeliveryService
 }
 
-// NewEventDispatcher creates a new event dispatcher
 func NewEventDispatcher(logger *logger.Logger, deliveryService *WebhookDeliveryService) *EventDispatcher {
 	return &EventDispatcher{
 		logger:          logger,
@@ -28,16 +26,13 @@ func NewEventDispatcher(logger *logger.Logger, deliveryService *WebhookDeliveryS
 	}
 }
 
-// DispatchEvent converts and dispatches a whatsmeow event
 func (d *EventDispatcher) DispatchEvent(ctx context.Context, evt interface{}, sessionID string) error {
 	eventType := d.getEventType(evt)
 
-	// Skip AppState events to reduce webhook spam - they're too frequent and not critical
 	if eventType == "AppState" {
 		return nil
 	}
 
-	// Skip if event type is not supported
 	if !webhook.IsValidEventType(eventType) {
 		d.logger.DebugWithFields("Skipping unsupported event type", map[string]interface{}{
 			"event_type": eventType,
@@ -46,7 +41,6 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, evt interface{}, se
 		return nil
 	}
 
-	// Convert event to map for JSON serialization
 	eventData, err := d.convertEventToMap(evt)
 	if err != nil {
 		d.logger.ErrorWithFields("Failed to convert event to map", map[string]interface{}{
@@ -57,7 +51,6 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, evt interface{}, se
 		return fmt.Errorf("failed to convert event: %w", err)
 	}
 
-	// Create webhook event
 	webhookEvent := webhook.NewWebhookEvent(sessionID, eventType, eventData)
 
 	d.logger.DebugWithFields("Dispatching webhook event", map[string]interface{}{
@@ -66,18 +59,15 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, evt interface{}, se
 		"session_id": sessionID,
 	})
 
-	// Deliver the event
 	return d.deliveryService.DeliverEvent(ctx, webhookEvent)
 }
 
-// getEventType extracts the event type name from the event interface
 func (d *EventDispatcher) getEventType(evt interface{}) string {
 	eventType := reflect.TypeOf(evt)
 	if eventType.Kind() == reflect.Ptr {
 		eventType = eventType.Elem()
 	}
 
-	// Remove the package prefix (e.g., "events.Message" -> "Message")
 	typeName := eventType.Name()
 	if strings.Contains(typeName, ".") {
 		parts := strings.Split(typeName, ".")
@@ -87,27 +77,22 @@ func (d *EventDispatcher) getEventType(evt interface{}) string {
 	return typeName
 }
 
-// convertEventToMap converts a whatsmeow event to a map for JSON serialization
 func (d *EventDispatcher) convertEventToMap(evt interface{}) (map[string]interface{}, error) {
-	// First, marshal to JSON to handle all the complex types
 	jsonBytes, err := json.Marshal(evt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal event to JSON: %w", err)
 	}
 
-	// Then unmarshal to map
 	var eventMap map[string]interface{}
 	if err := json.Unmarshal(jsonBytes, &eventMap); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON to map: %w", err)
 	}
 
-	// Add some metadata based on event type
 	eventMap = d.enrichEventData(evt, eventMap)
 
 	return eventMap, nil
 }
 
-// enrichEventData adds additional metadata to event data based on event type
 func (d *EventDispatcher) enrichEventData(evt interface{}, eventMap map[string]interface{}) map[string]interface{} {
 	switch v := evt.(type) {
 	case *events.Message:
@@ -265,7 +250,6 @@ func (d *EventDispatcher) enrichJoinedGroupEvent(v *events.JoinedGroup, eventMap
 	eventMap["type"] = v.Type
 }
 
-// Event type mapping for whatsmeow events to webhook event names
 var eventTypeMapping = map[string]string{
 	"*events.Message":                     "Message",
 	"*events.UndecryptableMessage":        "UndecryptableMessage",
@@ -315,13 +299,11 @@ var eventTypeMapping = map[string]string{
 	"*events.FBMessage":                   "FBMessage",
 }
 
-// GetEventTypeFromInterface returns the webhook event type for a whatsmeow event
 func (d *EventDispatcher) GetEventTypeFromInterface(evt interface{}) string {
 	fullType := fmt.Sprintf("%T", evt)
 	if mappedType, exists := eventTypeMapping[fullType]; exists {
 		return mappedType
 	}
 
-	// Fallback to extracting from type name
 	return d.getEventType(evt)
 }

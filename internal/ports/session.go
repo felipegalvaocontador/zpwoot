@@ -6,7 +6,6 @@ import (
 	"zpwoot/internal/domain/session"
 )
 
-// SessionRepository defines the interface for session data operations
 type SessionRepository interface {
 	Create(ctx context.Context, session *session.Session) error
 	GetByID(ctx context.Context, id string) (*session.Session, error)

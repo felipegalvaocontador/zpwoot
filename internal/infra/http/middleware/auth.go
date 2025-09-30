@@ -10,7 +10,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// Context key types to avoid collisions
 type contextKey string
 
 const (
@@ -18,13 +17,11 @@ const (
 	authenticatedContextKey contextKey = "authenticated"
 )
 
-// APIKeyAuth middleware for Chi router
 func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
 			
-			// Skip authentication for certain paths
 			if strings.HasPrefix(path, "/health") || 
 			   strings.HasPrefix(path, "/swagger") || 
 			   strings.Contains(path, "/chatwoot/webhook") {
@@ -79,7 +76,6 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 				"api_key": maskAPIKey(apiKey),
 			})
 
-			// Add authentication info to context
 			ctx := context.WithValue(r.Context(), apiKeyContextKey, apiKey)
 			ctx = context.WithValue(ctx, authenticatedContextKey, true)
 
@@ -88,7 +84,6 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 	}
 }
 
-// GetAPIKeyFromContext extracts API key from Chi context
 func GetAPIKeyFromContext(r *http.Request) string {
 	if apiKey, ok := r.Context().Value(apiKeyContextKey).(string); ok {
 		return apiKey
@@ -96,7 +91,6 @@ func GetAPIKeyFromContext(r *http.Request) string {
 	return ""
 }
 
-// IsAuthenticated checks if request is authenticated
 func IsAuthenticated(r *http.Request) bool {
 	if authenticated, ok := r.Context().Value(authenticatedContextKey).(bool); ok {
 		return authenticated
@@ -104,30 +98,24 @@ func IsAuthenticated(r *http.Request) bool {
 	return false
 }
 
-// getClientIP extracts the client IP address from the request
 func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header first
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// X-Forwarded-For can contain multiple IPs, take the first one
 		if idx := strings.Index(xff, ","); idx != -1 {
 			return strings.TrimSpace(xff[:idx])
 		}
 		return strings.TrimSpace(xff)
 	}
 
-	// Check X-Real-IP header
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
 		return strings.TrimSpace(xri)
 	}
 
-	// Fall back to RemoteAddr
 	if idx := strings.LastIndex(r.RemoteAddr, ":"); idx != -1 {
 		return r.RemoteAddr[:idx]
 	}
 	return r.RemoteAddr
 }
 
-// maskAPIKey masks an API key for logging purposes
 func maskAPIKey(apiKey string) string {
 	if len(apiKey) <= 8 {
 		return strings.Repeat("*", len(apiKey))

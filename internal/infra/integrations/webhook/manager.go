@@ -11,7 +11,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// WebhookManager coordinates webhook delivery and event dispatching
 type WebhookManager struct {
 	logger          *logger.Logger
 	webhookRepo     ports.WebhookRepository
@@ -23,7 +22,6 @@ type WebhookManager struct {
 	started         bool
 }
 
-// NewWebhookManager creates a new webhook manager
 func NewWebhookManager(
 	logger *logger.Logger,
 	webhookRepo ports.WebhookRepository,
@@ -31,10 +29,8 @@ func NewWebhookManager(
 ) *WebhookManager {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Create delivery service
 	deliveryService := NewWebhookDeliveryService(logger, webhookRepo, workers)
 
-	// Create event dispatcher
 	eventDispatcher := NewEventDispatcher(logger, deliveryService)
 
 	return &WebhookManager{
@@ -48,7 +44,6 @@ func NewWebhookManager(
 	}
 }
 
-// Start initializes the webhook manager and starts background workers
 func (m *WebhookManager) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -60,7 +55,6 @@ func (m *WebhookManager) Start() error {
 
 	m.logger.Info("Starting webhook manager")
 
-	// Start the delivery service workers
 	m.deliveryService.Start(m.ctx)
 
 	m.started = true
@@ -69,7 +63,6 @@ func (m *WebhookManager) Start() error {
 	return nil
 }
 
-// Stop gracefully shuts down the webhook manager
 func (m *WebhookManager) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -81,7 +74,6 @@ func (m *WebhookManager) Stop() error {
 
 	m.logger.Info("Stopping webhook manager")
 
-	// Cancel the context to stop all workers
 	m.cancel()
 
 	m.started = false
@@ -90,14 +82,12 @@ func (m *WebhookManager) Stop() error {
 	return nil
 }
 
-// IsStarted returns whether the webhook manager is currently running
 func (m *WebhookManager) IsStarted() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.started
 }
 
-// DispatchEvent processes and dispatches a whatsmeow event to webhooks
 func (m *WebhookManager) DispatchEvent(evt interface{}, sessionID string) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -110,17 +100,14 @@ func (m *WebhookManager) DispatchEvent(evt interface{}, sessionID string) error 
 	return m.eventDispatcher.DispatchEvent(m.ctx, evt, sessionID)
 }
 
-// GetEventDispatcher returns the event dispatcher for direct access
 func (m *WebhookManager) GetEventDispatcher() *EventDispatcher {
 	return m.eventDispatcher
 }
 
-// GetDeliveryService returns the delivery service for direct access
 func (m *WebhookManager) GetDeliveryService() *WebhookDeliveryService {
 	return m.deliveryService
 }
 
-// GetStats returns statistics about webhook operations
 func (m *WebhookManager) GetStats() *WebhookStats {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -135,7 +122,6 @@ func (m *WebhookManager) GetStats() *WebhookStats {
 	}
 }
 
-// WebhookStats contains statistics about webhook operations
 type WebhookStats struct {
 	RetryDelay    string `json:"retry_delay"`
 	Workers       int    `json:"workers"`
@@ -145,7 +131,6 @@ type WebhookStats struct {
 	Started       bool   `json:"started"`
 }
 
-// TestWebhook tests a webhook endpoint with a sample event
 func (m *WebhookManager) TestWebhook(webhookID, eventType string, testData map[string]interface{}) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -154,13 +139,11 @@ func (m *WebhookManager) TestWebhook(webhookID, eventType string, testData map[s
 		return ErrWebhookManagerNotStarted
 	}
 
-	// Get webhook configuration
 	_, err := m.webhookRepo.GetByID(m.ctx, webhookID)
 	if err != nil {
 		return err
 	}
 
-	// Create test event
 	testEvent := &webhook.WebhookEvent{
 		ID:        "test-" + webhookID,
 		SessionID: "test-session",
@@ -169,11 +152,9 @@ func (m *WebhookManager) TestWebhook(webhookID, eventType string, testData map[s
 		Data:      testData,
 	}
 
-	// Deliver the test event
 	return m.deliveryService.DeliverEvent(m.ctx, testEvent)
 }
 
-// Errors
 var (
 	ErrWebhookManagerNotStarted = fmt.Errorf("webhook manager is not started")
 )

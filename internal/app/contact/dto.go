@@ -2,13 +2,11 @@ package contact
 
 import "time"
 
-// CheckWhatsAppRequest represents a request to check if phone numbers are on WhatsApp
 type CheckWhatsAppRequest struct {
 	SessionID    string   `json:"sessionId,omitempty"`
 	PhoneNumbers []string `json:"phoneNumbers" validate:"required,min=1,max=50" example:"[\"+5511999999999\", \"+5511888888888\"]"`
 }
 
-// WhatsAppStatus represents the status of a phone number on WhatsApp
 type WhatsAppStatus struct {
 	PhoneNumber  string `json:"phoneNumber" example:"+5511999999999"`
 	JID          string `json:"jid,omitempty" example:"5511999999999@s.whatsapp.net"`
@@ -17,21 +15,18 @@ type WhatsAppStatus struct {
 	IsBusiness   bool   `json:"isBusiness" example:"false"`
 }
 
-// CheckWhatsAppResponse represents the response for checking WhatsApp numbers
 type CheckWhatsAppResponse struct {
 	Results []WhatsAppStatus `json:"results"`
 	Total   int              `json:"total" example:"2"`
 	Checked int              `json:"checked" example:"2"`
 }
 
-// GetProfilePictureRequest represents a request to get profile picture
 type GetProfilePictureRequest struct {
 	SessionID string `json:"sessionId,omitempty"`
 	JID       string `json:"jid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 	Preview   bool   `json:"preview" example:"false"`
 }
 
-// ProfilePictureResponse represents profile picture information
 type ProfilePictureResponse struct {
 	UpdatedAt  time.Time `json:"updatedAt,omitempty" example:"2024-01-01T12:00:00Z"`
 	JID        string    `json:"jid" example:"5511999999999@s.whatsapp.net"`
@@ -42,13 +37,11 @@ type ProfilePictureResponse struct {
 	HasPicture bool      `json:"hasPicture" example:"true"`
 }
 
-// GetUserInfoRequest represents a request to get user information
 type GetUserInfoRequest struct {
 	SessionID string   `json:"sessionId,omitempty"`
 	JIDs      []string `json:"jids" validate:"required,min=1,max=20" example:"[\"5511999999999@s.whatsapp.net\", \"5511888888888@s.whatsapp.net\"]"`
 }
 
-// UserInfo represents information about a WhatsApp user
 type UserInfo struct {
 	LastSeen     *time.Time `json:"lastSeen,omitempty" example:"2024-01-01T12:00:00Z"`
 	JID          string     `json:"jid" example:"5511999999999@s.whatsapp.net"`
@@ -62,14 +55,12 @@ type UserInfo struct {
 	IsOnline     bool       `json:"isOnline" example:"false"`
 }
 
-// GetUserInfoResponse represents the response for getting user information
 type GetUserInfoResponse struct {
 	Users []UserInfo `json:"users"`
 	Total int        `json:"total" example:"2"`
 	Found int        `json:"found" example:"2"`
 }
 
-// ListContactsRequest represents a request to list contacts
 type ListContactsRequest struct {
 	SessionID string `json:"sessionId,omitempty"`
 	Search    string `json:"search,omitempty" example:"John"`
@@ -77,7 +68,6 @@ type ListContactsRequest struct {
 	Offset    int    `json:"offset" validate:"min=0" example:"0"`
 }
 
-// Contact represents a contact in the contact list
 type Contact struct {
 	AddedAt     time.Time `json:"addedAt,omitempty" example:"2024-01-01T12:00:00Z"`
 	UpdatedAt   time.Time `json:"updatedAt,omitempty" example:"2024-01-01T12:00:00Z"`
@@ -91,7 +81,6 @@ type Contact struct {
 	IsBlocked   bool      `json:"isBlocked" example:"false"`
 }
 
-// ListContactsResponse represents the response for listing contacts
 type ListContactsResponse struct {
 	Contacts []Contact `json:"contacts"`
 	Total    int       `json:"total" example:"150"`
@@ -100,13 +89,11 @@ type ListContactsResponse struct {
 	HasMore  bool      `json:"hasMore" example:"true"`
 }
 
-// SyncContactsRequest represents a request to sync contacts
 type SyncContactsRequest struct {
 	SessionID string `json:"sessionId,omitempty"`
 	Force     bool   `json:"force" example:"false"` // Force full sync even if recently synced
 }
 
-// SyncContactsResponse represents the response for syncing contacts
 type SyncContactsResponse struct {
 	SyncedAt time.Time `json:"syncedAt" example:"2024-01-01T12:00:00Z"`
 	Message  string    `json:"message" example:"Contacts synchronized successfully"`
@@ -117,13 +104,11 @@ type SyncContactsResponse struct {
 	Total    int       `json:"total" example:"150"`
 }
 
-// GetBusinessProfileRequest represents a request to get business profile
 type GetBusinessProfileRequest struct {
 	SessionID string `json:"sessionId,omitempty"`
 	JID       string `json:"jid" validate:"required" example:"5511999999999@s.whatsapp.net"`
 }
 
-// BusinessProfile represents a WhatsApp Business profile
 type BusinessProfile struct {
 	JID         string `json:"jid" example:"5511999999999@s.whatsapp.net"`
 	Name        string `json:"name,omitempty" example:"My Business"`
@@ -135,14 +120,12 @@ type BusinessProfile struct {
 	Verified    bool   `json:"verified" example:"true"`
 }
 
-// BusinessProfileResponse represents the response for getting business profile
 type BusinessProfileResponse struct {
 	UpdatedAt time.Time       `json:"updatedAt" example:"2024-01-01T12:00:00Z"`
 	Profile   BusinessProfile `json:"profile"`
 	Found     bool            `json:"found" example:"true"`
 }
 
-// ContactStats represents statistics about contacts
 type ContactStats struct {
 	LastSyncAt       *time.Time `json:"lastSyncAt,omitempty" example:"2024-01-01T12:00:00Z"`
 	TotalContacts    int        `json:"totalContacts" example:"150"`
@@ -152,12 +135,10 @@ type ContactStats struct {
 	SyncRate         float64    `json:"syncRate" example:"0.8"`
 }
 
-// GetContactStatsRequest represents a request to get contact statistics
 type GetContactStatsRequest struct {
 	SessionID string `json:"sessionId,omitempty"`
 }
 
-// GetContactStatsResponse represents the response for contact statistics
 type GetContactStatsResponse struct {
 	Stats     ContactStats `json:"stats"`
 	UpdatedAt time.Time    `json:"updatedAt" example:"2024-01-01T12:00:00Z"`

@@ -6,7 +6,6 @@ import (
 	"zpwoot/internal/domain/webhook"
 )
 
-// WebhookService defines the interface for webhook operations
 type WebhookService interface {
 	SendWebhook(url string, payload interface{}) error
 	RegisterWebhook(sessionID, url, secret string, events []string) error
@@ -14,7 +13,6 @@ type WebhookService interface {
 	GetWebhooks(sessionID string) ([]*WebhookRegistration, error)
 }
 
-// WebhookRepository defines the interface for webhook data operations
 type WebhookRepository interface {
 	Create(ctx context.Context, webhook *webhook.WebhookConfig) error
 	GetByID(ctx context.Context, id string) (*webhook.WebhookConfig, error)
@@ -31,7 +29,6 @@ type WebhookRepository interface {
 	UpdateWebhookStats(ctx context.Context, webhookID string, stats *WebhookStats) error
 }
 
-// WebhookDeliveryRepository defines the interface for webhook delivery operations
 type WebhookDeliveryRepository interface {
 	Create(ctx context.Context, delivery *WebhookDelivery) error
 	GetByWebhookID(ctx context.Context, webhookID string, limit, offset int) ([]*WebhookDelivery, error)
@@ -42,7 +39,6 @@ type WebhookDeliveryRepository interface {
 	GetDeliveryStats(ctx context.Context, webhookID string, from, to int64) (*DeliveryStats, error)
 }
 
-// WebhookRegistration represents a webhook registration
 type WebhookRegistration struct {
 	ID        string   `json:"id"`
 	SessionID string   `json:"session_id"`
@@ -52,7 +48,6 @@ type WebhookRegistration struct {
 	Active    bool     `json:"active"`
 }
 
-// WebhookStats represents statistics for webhook operations
 type WebhookStats struct {
 	WebhookID       string `json:"webhook_id" db:"webhook_id"`
 	TotalDeliveries int64  `json:"total_deliveries" db:"total_deliveries"`
@@ -64,7 +59,6 @@ type WebhookStats struct {
 	AverageLatency  int64  `json:"average_latency" db:"average_latency"`
 }
 
-// WebhookDelivery represents a webhook delivery attempt
 type WebhookDelivery struct {
 	ID           string `json:"id" db:"id"`
 	WebhookID    string `json:"webhook_id" db:"webhook_id"`
@@ -79,7 +73,6 @@ type WebhookDelivery struct {
 	Success      bool   `json:"success" db:"success"`
 }
 
-// DeliveryStats represents delivery statistics for webhooks
 type DeliveryStats struct {
 	WebhookID       string  `json:"webhook_id"`
 	TotalDeliveries int64   `json:"total_deliveries"`

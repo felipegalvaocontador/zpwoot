@@ -59,7 +59,6 @@ func (h *NewsletterHandler) CreateNewsletter(w http.ResponseWriter, r *http.Requ
 	)
 }
 
-// handleNewsletterAction handles common newsletter action logic
 func (h *NewsletterHandler) handleNewsletterAction(
 	w http.ResponseWriter,
 	r *http.Request,

@@ -16,7 +16,6 @@ type ChatwootConfig struct {
 	InboxID   *string   `json:"inboxId,omitempty" db:"inboxId"`
 	Enabled   bool      `json:"enabled" db:"enabled"`
 
-	// Advanced configuration - shorter names matching DB
 	InboxName      *string  `json:"inboxName,omitempty" db:"inboxName"`
 	AutoCreate     bool     `json:"autoCreate" db:"autoCreate"`
 	SignMsg        bool     `json:"signMsg" db:"signMsg"`
@@ -46,7 +45,6 @@ var (
 	ErrChatwootAPIError     = errors.New("chatwoot API error")
 )
 
-// Domain DTOs - used by domain service
 type CreateChatwootConfigRequest struct {
 	SessionID uuid.UUID `json:"sessionId" validate:"required"`
 	URL       string    `json:"url" validate:"required,url"`
@@ -55,7 +53,6 @@ type CreateChatwootConfigRequest struct {
 	InboxID   *string   `json:"inboxId,omitempty"`
 	Enabled   *bool     `json:"enabled,omitempty"`
 
-	// Advanced configuration
 	InboxName      *string  `json:"inboxName,omitempty"`
 	AutoCreate     *bool    `json:"autoCreate,omitempty"`
 	SignMsg        *bool    `json:"signMsg,omitempty"`
@@ -83,7 +80,6 @@ type UpdateChatwootConfigRequest struct {
 	InboxID   *string `json:"inboxId,omitempty"`
 	Enabled   *bool   `json:"enabled,omitempty"`
 
-	// Advanced configuration updates
 	InboxName      *string  `json:"inboxName,omitempty"`
 	AutoCreate     *bool    `json:"autoCreate,omitempty"`
 	SignMsg        *bool    `json:"signMsg,omitempty"`
@@ -154,17 +150,12 @@ type ChatwootSender struct {
 	Email         string `json:"email,omitempty"`
 }
 
-// ChatwootWebhookPayload representa o payload REAL enviado pelo Chatwoot
-// Baseado na análise dos logs do Sidekiq
 type ChatwootWebhookPayload struct {
-	// Metadados do evento
 	Event   string          `json:"event"`
 	Account ChatwootAccount `json:"account"`
 
-	// Dados da conversa
 	Conversation ChatwootConversation `json:"conversation"`
 
-	// Dados do remetente (estrutura complexa do Chatwoot)
 	Sender struct {
 		Account              ChatwootAccount        `json:"account"`
 		AdditionalAttributes map[string]interface{} `json:"additional_attributes"`
@@ -179,7 +170,6 @@ type ChatwootWebhookPayload struct {
 		Blocked              bool                   `json:"blocked"`
 	} `json:"sender"`
 
-	// Dados da mensagem (campos diretos no payload)
 	ID          int         `json:"id"`
 	Content     string      `json:"content"`
 	ContentType string      `json:"content_type"`
@@ -188,12 +178,10 @@ type ChatwootWebhookPayload struct {
 	SourceID    *string     `json:"source_id"`
 	CreatedAt   interface{} `json:"created_at"`
 
-	// Campos adicionais do Chatwoot
 	AdditionalAttributes map[string]interface{} `json:"additional_attributes"`
 	ContentAttributes    map[string]interface{} `json:"content_attributes"`
 	Inbox                map[string]interface{} `json:"inbox"`
 
-	// Campos legados para compatibilidade
 	Contact  ChatwootContact        `json:"contact,omitempty"`
 	Message  *ChatwootMessage       `json:"message,omitempty"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
@@ -276,7 +264,6 @@ const (
 	ChatwootEventContactCreated            ChatwootEventType = "contact_created"
 	ChatwootEventContactUpdated            ChatwootEventType = "contact_updated"
 	ChatwootEventConversationStatusChanged ChatwootEventType = "conversation_status_changed"
-	// Additional events that Chatwoot might send
 	ChatwootEventConversationOpened     ChatwootEventType = "conversation_opened"
 	ChatwootEventConversationReopened   ChatwootEventType = "conversation_reopened"
 	ChatwootEventConversationSnoozed    ChatwootEventType = "conversation_snoozed"
@@ -286,7 +273,6 @@ const (
 	ChatwootEventMessageDeleted         ChatwootEventType = "message_deleted"
 	ChatwootEventContactMerged          ChatwootEventType = "contact_merged"
 	ChatwootEventContactDeleted         ChatwootEventType = "contact_deleted"
-	// Typing events
 	ChatwootEventConversationTypingOn  ChatwootEventType = "conversation_typing_on"
 	ChatwootEventConversationTypingOff ChatwootEventType = "conversation_typing_off"
 )

@@ -10,7 +10,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// WebhookRepository defines the interface for webhook data operations
 type WebhookRepository interface {
 	Create(ctx context.Context, webhook *WebhookConfig) error
 	GetByID(ctx context.Context, id string) (*WebhookConfig, error)
@@ -40,23 +39,19 @@ func (s *Service) SetConfig(ctx context.Context, req *SetConfigRequest) (*Webhoo
 		"enabled":    req.Enabled,
 	})
 
-	// Validate events
 	if invalidEvents := ValidateEvents(req.Events); len(invalidEvents) > 0 {
 		return nil, fmt.Errorf("invalid events: %v", invalidEvents)
 	}
 
-	// Set default enabled to true if not specified
 	enabled := true
 	if req.Enabled != nil {
 		enabled = *req.Enabled
 	}
 
-	// Try to find existing webhook for this session
 	var webhook *WebhookConfig
 	if req.SessionID != nil {
 		existingWebhooks, err := s.webhookRepo.GetBySessionID(ctx, *req.SessionID)
 		if err == nil && len(existingWebhooks) > 0 {
-			// Update existing webhook
 			webhook = existingWebhooks[0]
 			webhook.URL = req.URL
 			webhook.Secret = req.Secret
@@ -64,12 +59,10 @@ func (s *Service) SetConfig(ctx context.Context, req *SetConfigRequest) (*Webhoo
 			webhook.Enabled = enabled
 			webhook.UpdatedAt = time.Now()
 
-			// Validate webhook config
 			if err := s.ValidateWebhookConfig(webhook); err != nil {
 				return nil, err
 			}
 
-			// Update in repository
 			if err := s.webhookRepo.Update(ctx, webhook); err != nil {
 				s.logger.ErrorWithFields("Failed to update webhook", map[string]interface{}{
 					"error": err.Error(),
@@ -82,7 +75,6 @@ func (s *Service) SetConfig(ctx context.Context, req *SetConfigRequest) (*Webhoo
 		}
 	}
 
-	// Create new webhook
 	webhook = &WebhookConfig{
 		ID:        uuid.New(),
 		SessionID: req.SessionID,
@@ -94,12 +86,10 @@ func (s *Service) SetConfig(ctx context.Context, req *SetConfigRequest) (*Webhoo
 		UpdatedAt: time.Now(),
 	}
 
-	// Validate webhook config
 	if err := s.ValidateWebhookConfig(webhook); err != nil {
 		return nil, err
 	}
 
-	// Save to repository
 	if err := s.webhookRepo.Create(ctx, webhook); err != nil {
 		s.logger.ErrorWithFields("Failed to create webhook", map[string]interface{}{
 			"error": err.Error(),
@@ -116,28 +106,23 @@ func (s *Service) UpdateWebhook(ctx context.Context, webhookID string, req *Upda
 		"webhook_id": webhookID,
 	})
 
-	// Get existing webhook
 	webhook, err := s.webhookRepo.GetByID(ctx, webhookID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Validate events if provided
 	if req.Events != nil {
 		if invalidEvents := ValidateEvents(req.Events); len(invalidEvents) > 0 {
 			return nil, fmt.Errorf("invalid events: %v", invalidEvents)
 		}
 	}
 
-	// Update fields
 	webhook.Update(req)
 
-	// Validate updated config
 	if err := s.ValidateWebhookConfig(webhook); err != nil {
 		return nil, err
 	}
 
-	// Save to repository
 	if err := s.webhookRepo.Update(ctx, webhook); err != nil {
 		s.logger.ErrorWithFields("Failed to update webhook", map[string]interface{}{
 			"webhook_id": webhookID,
@@ -171,14 +156,12 @@ func (s *Service) GetWebhookBySession(ctx context.Context, sessionID string) (*W
 		return nil, ErrWebhookNotFound
 	}
 
-	// Return the first enabled webhook for the session
 	for _, webhook := range webhooks {
 		if webhook.Enabled {
 			return webhook, nil
 		}
 	}
 
-	// If no enabled webhook, return the first one
 	return webhooks[0], nil
 }
 

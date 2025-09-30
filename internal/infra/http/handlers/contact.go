@@ -35,7 +35,6 @@ func NewContactHandler(appLogger *logger.Logger, contactUC contact.UseCase, sess
 	}
 }
 
-// resolveSession resolves session using the helpers.SessionResolver
 func (h *ContactHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
@@ -44,7 +43,6 @@ func (h *ContactHandler) resolveSession(r *http.Request) (*domainSession.Session
 	return h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 }
 
-// handleActionRequest is a simplified version for contact actions
 func (h *ContactHandler) handleActionRequest(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -85,7 +83,6 @@ func (h *ContactHandler) handleActionRequest(
 	h.writeSuccessResponse(w, result, successMessage)
 }
 
-// handleListRequest handles list requests with pagination
 func (h *ContactHandler) handleListRequest(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -103,7 +100,6 @@ func (h *ContactHandler) handleListRequest(
 		return
 	}
 
-	// Parse query parameters
 	limit := 50
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		if parsedLimit, parseErr := strconv.Atoi(limitStr); parseErr == nil {
@@ -120,7 +116,6 @@ func (h *ContactHandler) handleListRequest(
 
 	search := r.URL.Query().Get("search")
 
-	// Validate parameters
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
@@ -407,7 +402,6 @@ func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(response)
 }
 
-// IsOnWhatsApp checks if phone numbers are registered on WhatsApp
 func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -451,7 +445,6 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 		"phone_count":  len(req.PhoneNumbers),
 	})
 
-	// For now, return placeholder response until implemented in use case
 	results := make([]map[string]interface{}, len(req.PhoneNumbers))
 	for i, phone := range req.PhoneNumbers {
 		results[i] = map[string]interface{}{
@@ -471,7 +464,6 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Numbers checked successfully"))
 }
 
-// GetAllContacts gets all contacts
 func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -490,7 +482,6 @@ func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) 
 		"session_name": sess.Name,
 	})
 
-	// For now, return placeholder response until implemented in use case
 	response := map[string]interface{}{
 		"contacts": []interface{}{},
 		"count":    0,
@@ -502,7 +493,6 @@ func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "All contacts retrieved successfully"))
 }
 
-// GetProfilePictureInfo gets profile picture information
 func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -530,7 +520,6 @@ func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Re
 		"jid":          jid,
 	})
 
-	// For now, return placeholder response until implemented in use case
 	response := map[string]interface{}{
 		"jid":     jid,
 		"url":     "https://placeholder.com/avatar.jpg",
@@ -544,7 +533,6 @@ func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Profile picture info retrieved successfully"))
 }
 
-// GetDetailedUserInfo gets detailed user information
 func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.resolveSession(r)
 	if err != nil {
@@ -588,7 +576,6 @@ func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Requ
 		"jid_count":    len(req.JIDs),
 	})
 
-	// For now, return placeholder response until implemented in use case
 	results := make([]map[string]interface{}, len(req.JIDs))
 	for i, jid := range req.JIDs {
 		results[i] = map[string]interface{}{

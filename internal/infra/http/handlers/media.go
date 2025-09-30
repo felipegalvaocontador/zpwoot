@@ -151,7 +151,6 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse query parameters
 	limit := 50
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		if parsedLimit, err := strconv.Atoi(limitStr); err == nil {

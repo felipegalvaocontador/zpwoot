@@ -72,9 +72,7 @@ func (uc *useCaseImpl) CreateSession(ctx context.Context, req *CreateSessionRequ
 		CreatedAt:   sess.CreatedAt,
 	}
 
-	// If QR code was requested during creation, try to get it from database
 	if req.QrCode {
-		// Give a small delay for the QR code to be generated and saved by events
 		time.Sleep(500 * time.Millisecond)
 
 		qrResponse, err := uc.sessionService.GetQRCode(ctx, sess.ID.String())
@@ -82,7 +80,6 @@ func (uc *useCaseImpl) CreateSession(ctx context.Context, req *CreateSessionRequ
 			response.QrCode = qrResponse.QRCodeImage
 			response.Code = qrResponse.QRCode
 		}
-		// Don't fail creation if QR code is not ready yet
 	}
 
 	return response, nil
@@ -147,7 +144,6 @@ func (uc *useCaseImpl) ConnectSession(ctx context.Context, sessionID string) (*C
 	var response *ConnectSessionResponse
 
 	if err != nil {
-		// Check if it's an "already connected" error
 		appErr := &pkgErrors.AppError{}
 		if errors.As(err, &appErr) {
 			response = &ConnectSessionResponse{
@@ -164,15 +160,12 @@ func (uc *useCaseImpl) ConnectSession(ctx context.Context, sessionID string) (*C
 		}
 	}
 
-	// Always try to get QR code if available (for both connected and connecting sessions)
 	qrResponse, qrErr := uc.sessionService.GetQRCode(ctx, sessionID)
 	if qrErr == nil && qrResponse != nil {
 		response.QrCode = qrResponse.QRCodeImage
 		response.Code = qrResponse.QRCode
 
-		// Update message based on session state
 		if err != nil && response.Message == "Session is already connected and active" {
-			// Session is connected but has QR code (shouldn't happen normally)
 			response.Message = "Session is connected"
 		} else {
 			response.Message = "QR code generated - scan with WhatsApp to connect"
@@ -185,10 +178,8 @@ func (uc *useCaseImpl) ConnectSession(ctx context.Context, sessionID string) (*C
 func (uc *useCaseImpl) LogoutSession(ctx context.Context, sessionID string) error {
 	err := uc.sessionService.LogoutSession(ctx, sessionID)
 	if err != nil {
-		// Check if it's an "already disconnected" error
 		appErr := &pkgErrors.AppError{}
 		if errors.As(err, &appErr) {
-			// Return success for already disconnected sessions
 			return nil
 		}
 		return err

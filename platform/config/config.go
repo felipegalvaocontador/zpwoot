@@ -26,10 +26,7 @@ type Config struct {
 }
 
 func Load() *Config {
-	// Load .env file if it exists (optional, so we don't fail if it doesn't exist)
 	if err := godotenv.Load(); err != nil {
-		// .env file is optional, so we just continue without it
-		// This is common in production environments where env vars are set directly
 		_ = err // Explicitly ignore the error as this is expected behavior
 	}
 

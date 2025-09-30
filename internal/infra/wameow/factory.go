@@ -1,4 +1,3 @@
-// Refactored: separated responsibilities; improved builder pattern; standardized error handling
 package wameow
 
 import (
@@ -14,13 +13,11 @@ import (
 	waLog "go.mau.fi/whatsmeow/util/log"
 )
 
-// WameowLogger adapts our logger to whatsmeow's logger interface
 type WameowLogger struct {
 	logger *logger.Logger
 	module string
 }
 
-// NewWameowLogger creates a new whatsmeow logger adapter
 func NewWameowLogger(logger *logger.Logger) waLog.Logger {
 	return &WameowLogger{
 		logger: logger,
@@ -59,13 +56,11 @@ func (w *WameowLogger) Sub(module string) waLog.Logger {
 	}
 }
 
-// Factory creates and configures wameow components
 type Factory struct {
 	logger      *logger.Logger
 	sessionRepo ports.SessionRepository
 }
 
-// NewFactory creates a new factory instance
 func NewFactory(logger *logger.Logger, sessionRepo ports.SessionRepository) (*Factory, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
@@ -80,7 +75,6 @@ func NewFactory(logger *logger.Logger, sessionRepo ports.SessionRepository) (*Fa
 	}, nil
 }
 
-// CreateManager creates a new manager with the given database connection
 func (f *Factory) CreateManager(db *sql.DB) (*Manager, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database connection cannot be nil")
@@ -113,37 +107,31 @@ func (f *Factory) createSQLStoreContainer(db *sql.DB) (*sqlstore.Container, erro
 	return container, nil
 }
 
-// ManagerBuilder provides a fluent interface for building Manager instances
 type ManagerBuilder struct {
 	logger      *logger.Logger
 	sessionRepo ports.SessionRepository
 	db          *sql.DB
 }
 
-// NewManagerBuilder creates a new manager builder
 func NewManagerBuilder() *ManagerBuilder {
 	return &ManagerBuilder{}
 }
 
-// WithLogger sets the logger for the manager
 func (b *ManagerBuilder) WithLogger(logger *logger.Logger) *ManagerBuilder {
 	b.logger = logger
 	return b
 }
 
-// WithSessionRepository sets the session repository for the manager
 func (b *ManagerBuilder) WithSessionRepository(repo ports.SessionRepository) *ManagerBuilder {
 	b.sessionRepo = repo
 	return b
 }
 
-// WithDatabase sets the database connection for the manager
 func (b *ManagerBuilder) WithDatabase(db *sql.DB) *ManagerBuilder {
 	b.db = db
 	return b
 }
 
-// Build creates and returns a new Manager instance
 func (b *ManagerBuilder) Build() (*Manager, error) {
 	if err := b.validate(); err != nil {
 		return nil, fmt.Errorf("builder validation failed: %w", err)
@@ -157,7 +145,6 @@ func (b *ManagerBuilder) Build() (*Manager, error) {
 	return factory.CreateManager(b.db)
 }
 
-// validate checks that all required fields are set
 func (b *ManagerBuilder) validate() error {
 	if b.logger == nil {
 		return fmt.Errorf("logger is required")
@@ -171,7 +158,6 @@ func (b *ManagerBuilder) validate() error {
 	return nil
 }
 
-// HealthCheck returns the health status of the manager and all sessions
 func (m *Manager) HealthCheck() map[string]interface{} {
 	m.clientsMutex.RLock()
 	defer m.clientsMutex.RUnlock()
@@ -194,25 +180,21 @@ func (m *Manager) HealthCheck() map[string]interface{} {
 	}
 }
 
-// GetStats returns detailed statistics about the manager
 func (m *Manager) GetStats() map[string]interface{} {
 	healthData := m.HealthCheck()
 
-	// Add additional stats
 	healthData["version"] = "1.0.0"   // This should come from build info
 	healthData["go_version"] = "1.21" // This should come from runtime
 
 	return healthData
 }
 
-// sessionStats holds session statistics
 type sessionStats struct {
 	Total     int
 	Connected int
 	LoggedIn  int
 }
 
-// calculateSessionStats calculates session statistics
 func (m *Manager) calculateSessionStats() sessionStats {
 	stats := sessionStats{
 		Total: len(m.clients),
@@ -230,7 +212,6 @@ func (m *Manager) calculateSessionStats() sessionStats {
 	return stats
 }
 
-// LogLevelToWALevel converts our log levels to whatsmeow log levels
 func LogLevelToWALevel(level string) string {
 	levelMap := map[string]string{
 		"ERROR": "error",

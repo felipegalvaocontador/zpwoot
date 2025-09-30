@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	// Database operation timeouts
 	dbPingTimeout  = 5 * time.Second
 	dbQueryTimeout = 3 * time.Second
 )

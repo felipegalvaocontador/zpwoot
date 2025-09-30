@@ -6,23 +6,19 @@ import (
 	"time"
 )
 
-// ChatwootClient defines the interface for Chatwoot API client operations
 type ChatwootClient interface {
-	// Inbox operations
 	CreateInbox(name, webhookURL string) (*ChatwootInbox, error)
 	ListInboxes() ([]ChatwootInbox, error)
 	GetInbox(inboxID int) (*ChatwootInbox, error)
 	UpdateInbox(inboxID int, updates map[string]interface{}) error
 	DeleteInbox(inboxID int) error
 
-	// Contact operations
 	CreateContact(phone, name string, inboxID int) (*ChatwootContact, error)
 	FindContact(phone string, inboxID int) (*ChatwootContact, error)
 	GetContact(contactID int) (*ChatwootContact, error)
 	UpdateContactAttributes(contactID int, attributes map[string]interface{}) error
 	MergeContacts(baseContactID, mergeContactID int) error
 
-	// Conversation operations
 	CreateConversation(contactID, inboxID int) (*ChatwootConversation, error)
 	GetConversation(contactID, inboxID int) (*ChatwootConversation, error)
 	GetConversationByID(conversationID int) (*ChatwootConversation, error)
@@ -30,40 +26,31 @@ type ChatwootClient interface {
 	ListContactConversations(contactID int) ([]ChatwootConversation, error)
 	UpdateConversationStatus(conversationID int, status string) error
 
-	// Message operations
 	SendMessage(conversationID int, content string) (*ChatwootMessage, error)
 	SendMessageWithType(conversationID int, content string, messageType string) (*ChatwootMessage, error)
 	SendMediaMessage(conversationID int, content string, attachment io.Reader, filename string) (*ChatwootMessage, error)
 	GetMessages(conversationID int, before int) ([]ChatwootMessage, error)
 
-	// Account operations
 	GetAccount() (*ChatwootAccount, error)
 	UpdateAccount(updates map[string]interface{}) error
 }
 
-// ChatwootManager defines the interface for managing Chatwoot integrations per session
 type ChatwootManager interface {
-	// Client management
 	GetClient(sessionID string) (ChatwootClient, error)
 	IsEnabled(sessionID string) bool
 
-	// Instance initialization
 	InitInstanceChatwoot(sessionID, inboxName, webhookURL string, autoCreate bool) error
 
-	// Configuration management
 	SetConfig(sessionID string, config *ChatwootConfig) error
 	GetConfig(sessionID string) (*ChatwootConfig, error)
 
-	// Cleanup
 	Cleanup(sessionID string) error
 }
 
-// WebhookHandler defines the interface for processing Chatwoot webhooks
 type WebhookHandler interface {
 	ProcessWebhook(ctx context.Context, webhook *ChatwootWebhookPayload, sessionID string) error
 }
 
-// ChatwootIntegration defines the basic interface for Chatwoot integration operations
 type ChatwootIntegration interface {
 	CreateContact(phoneNumber, name string) (*ChatwootContact, error)
 	CreateConversation(contactID string, sessionID string) (*ChatwootConversation, error)
@@ -73,7 +60,6 @@ type ChatwootIntegration interface {
 	UpdateContactAttributes(contactID string, attributes map[string]interface{}) error
 }
 
-// ChatwootIntegrationExtended extends ChatwootIntegration with advanced operations
 type ChatwootIntegrationExtended interface {
 	ChatwootIntegration
 
@@ -113,7 +99,6 @@ type ChatwootIntegrationExtended interface {
 	BulkDeleteContacts(contactIDs []int) error
 }
 
-// ChatwootInbox represents an inbox in Chatwoot
 type ChatwootInbox struct {
 	AdditionalAttributes map[string]interface{} `json:"additional_attributes,omitempty"`
 	Name                 string                 `json:"name"`
@@ -130,13 +115,11 @@ type ChatwootInbox struct {
 	GreetingEnabled      bool                   `json:"greeting_enabled"`
 }
 
-// ChatwootContactInbox represents the relationship between contact and inbox
 type ChatwootContactInbox struct {
 	SourceID string `json:"source_id"`
 	InboxID  int    `json:"inbox_id"`
 }
 
-// ChatwootSender represents the sender of a message
 type ChatwootSender struct {
 	Name          string `json:"name"`
 	AvailableName string `json:"available_name"`
@@ -147,7 +130,6 @@ type ChatwootSender struct {
 	ID            int    `json:"id"`
 }
 
-// ChatwootAccount represents an account in Chatwoot
 type ChatwootAccount struct {
 	Name         string `json:"name"`
 	Locale       string `json:"locale"`
@@ -156,7 +138,6 @@ type ChatwootAccount struct {
 	ID           int    `json:"id"`
 }
 
-// ChatwootAgent represents an agent in Chatwoot
 type ChatwootAgent struct {
 	Name      string `json:"name"`
 	Email     string `json:"email"`
@@ -168,7 +149,6 @@ type ChatwootAgent struct {
 	Available bool   `json:"available"`
 }
 
-// ChatwootLabel represents a label in Chatwoot
 type ChatwootLabel struct {
 	Title         string `json:"title"`
 	Description   string `json:"description"`
@@ -177,7 +157,6 @@ type ChatwootLabel struct {
 	ShowOnSidebar bool   `json:"show_on_sidebar"`
 }
 
-// ChatwootCustomAttribute represents a custom attribute in Chatwoot
 type ChatwootCustomAttribute struct {
 	AttributeKey   string `json:"attribute_key"`
 	AttributeType  string `json:"attribute_type"`
@@ -187,7 +166,6 @@ type ChatwootCustomAttribute struct {
 	ID             int    `json:"id"`
 }
 
-// ChatwootWebhook represents a webhook configuration in Chatwoot
 type ChatwootWebhook struct {
 	URL       string   `json:"url"`
 	Events    []string `json:"events"`
@@ -195,7 +173,6 @@ type ChatwootWebhook struct {
 	AccountID int      `json:"account_id"`
 }
 
-// ConversationMetrics represents conversation metrics from Chatwoot
 type ConversationMetrics struct {
 	TotalConversations    int     `json:"total_conversations"`
 	OpenConversations     int     `json:"open_conversations"`
@@ -206,7 +183,6 @@ type ConversationMetrics struct {
 	To                    int64   `json:"to"`
 }
 
-// AgentMetrics represents agent performance metrics from Chatwoot
 type AgentMetrics struct {
 	AgentID               int     `json:"agent_id"`
 	ConversationsHandled  int     `json:"conversations_handled"`
@@ -217,7 +193,6 @@ type AgentMetrics struct {
 	To                    int64   `json:"to"`
 }
 
-// AccountMetrics represents account-level metrics from Chatwoot
 type AccountMetrics struct {
 	TotalContacts         int     `json:"total_contacts"`
 	TotalConversations    int     `json:"total_conversations"`
@@ -229,13 +204,11 @@ type AccountMetrics struct {
 	To                    int64   `json:"to"`
 }
 
-// ContactUpdate represents an update operation for a contact
 type ContactUpdate struct {
 	Updates map[string]interface{} `json:"updates"`
 	ID      int                    `json:"id"`
 }
 
-// ZpMessage represents a complete mapping between WhatsApp message and Chatwoot message
 type ZpMessage struct {
 	UpdatedAt        time.Time  `json:"updated_at"`
 	CreatedAt        time.Time  `json:"created_at"`
@@ -254,7 +227,6 @@ type ZpMessage struct {
 	ZpFromMe         bool       `json:"zp_from_me"`
 }
 
-// ChatwootMessageRepository defines the interface for zpMessage operations
 type ChatwootMessageRepository interface {
 	CreateMessage(ctx context.Context, message *ZpMessage) error
 	GetMessageByZpID(ctx context.Context, sessionID, zpMessageID string) (*ZpMessage, error)
@@ -266,7 +238,6 @@ type ChatwootMessageRepository interface {
 	DeleteMessage(ctx context.Context, id string) error
 }
 
-// ChatwootMessageMapper defines the interface for message mapping operations
 type ChatwootMessageMapper interface {
 	CreateMapping(ctx context.Context, sessionID, zpMessageID, zpSender, zpChat, zpType, content string, zpTimestamp time.Time, zpFromMe bool) (*ZpMessage, error)
 	UpdateMapping(ctx context.Context, sessionID, zpMessageID string, cwMessageID, cwConversationID int) error
@@ -276,7 +247,6 @@ type ChatwootMessageMapper interface {
 	MarkAsFailed(ctx context.Context, sessionID, zpMessageID string) error
 }
 
-// ChatwootWebhookPayload represents the payload structure for Chatwoot webhooks
 type ChatwootWebhookPayload struct {
 	Data    map[string]interface{} `json:"data"`
 	Account ChatwootAccount        `json:"account"`

@@ -12,7 +12,6 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 )
 
-// Message type constants
 const (
 	MessageTypeText     = "text"
 	MessageTypeImage    = "image"
@@ -24,7 +23,6 @@ const (
 	MessageTypeContact  = "contact"
 )
 
-// WebhookEventHandler defines interface for handling webhook events
 type WebhookEventHandler interface {
 	HandleWhatsmeowEvent(evt interface{}, sessionID string) error
 }
@@ -38,7 +36,6 @@ type EventHandler struct {
 	chatwootManager ChatwootManager // Interface for Chatwoot integration
 }
 
-// ChatwootManager interface for Chatwoot integration
 type ChatwootManager interface {
 	IsEnabled(sessionID string) bool
 	ProcessWhatsAppMessage(sessionID, messageID, from, content, messageType string, timestamp time.Time, fromMe bool) error
@@ -53,16 +50,13 @@ func NewEventHandler(manager *Manager, sessionMgr SessionUpdater, qrGen *QRCodeG
 	}
 }
 
-// SetChatwootManager sets the Chatwoot manager for integration
 func (h *EventHandler) SetChatwootManager(chatwootManager ChatwootManager) {
 	h.chatwootManager = chatwootManager
 }
 
 func (h *EventHandler) HandleEvent(evt interface{}, sessionID string) {
-	// First, deliver to webhook if configured
 	h.deliverToWebhook(evt, sessionID)
 
-	// Then handle the event internally
 	h.handleEventInternal(evt, sessionID)
 }
 
@@ -90,8 +84,6 @@ func (h *EventHandler) handleEventInternal(evt interface{}, sessionID string) {
 }
 
 func (h *EventHandler) handleQREvent(evt *events.QR, sessionID string) {
-	// QR events are handled by client QR channel to avoid duplication
-	// All QR code processing is done through client.handleQREvent()
 	h.logger.DebugWithFields("QR event received but skipped (handled by client channel)", map[string]interface{}{
 		"session_id": sessionID,
 	})
@@ -212,7 +204,6 @@ func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 		"timestamp":  evt.Info.Timestamp,
 	}
 
-	// Removed detailed message analysis for cleaner logs
 
 	if evt.Message.ContactMessage != nil {
 		contactMsg := evt.Message.ContactMessage
@@ -297,40 +288,26 @@ func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 
 	h.updateSessionLastSeen(sessionID)
 
-	// Process message for Chatwoot integration if enabled
 	h.processChatwootIntegration(evt, sessionID)
 }
 
-// processChatwootIntegration processes the message for Chatwoot integration
 func (h *EventHandler) processChatwootIntegration(evt *events.Message, sessionID string) {
-	// Check if Chatwoot manager is available and enabled
 	if h.chatwootManager == nil || !h.chatwootManager.IsEnabled(sessionID) {
 		return
 	}
 
-	// Extract message information
 	messageID := evt.Info.ID
 	from := evt.Info.Sender.String()
 	chat := evt.Info.Chat.String() // This is the actual recipient/chat
 	timestamp := evt.Info.Timestamp
 	fromMe := evt.Info.IsFromMe
 
-	// For from_me=true messages, we need to use the Chat (recipient) instead of Sender
-	// The Sender is always our session number, but Chat is who we sent the message to
 	contactNumber := from
 	if fromMe {
 		contactNumber = chat // Use the recipient (who we sent the message to)
 	}
 
-	// For messages sent by us (from_me=true), we need to distinguish:
-	// 1. Messages sent from Chatwoot → WhatsApp (should be skipped to avoid loop)
-	// 2. Messages sent from phone/other devices → WhatsApp (should be processed for history sync)
-	//
-	// We can identify Chatwoot-originated messages by checking if they're already mapped
-	// in our message mapping system (they would have been mapped when sent from Chatwoot)
 	if fromMe {
-		// Check if this message was already processed/mapped (came from Chatwoot)
-		// We'll let the Chatwoot integration manager handle this check
 		h.logger.DebugWithFields("Processing from_me message (could be from phone or Chatwoot)", map[string]interface{}{
 			"session_id":     sessionID,
 			"message_id":     messageID,
@@ -341,7 +318,6 @@ func (h *EventHandler) processChatwootIntegration(evt *events.Message, sessionID
 		})
 	}
 
-	// Determine message type and content
 	messageType := MessageTypeText
 	content := ""
 
@@ -390,8 +366,6 @@ func (h *EventHandler) processChatwootIntegration(evt *events.Message, sessionID
 		content = evt.Message.GetConversation()
 	}
 
-	// Process the message with Chatwoot
-	// Use contactNumber which is the correct contact (sender for incoming, recipient for outgoing)
 	err := h.chatwootManager.ProcessWhatsAppMessage(sessionID, messageID, contactNumber, content, messageType, timestamp, fromMe)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to process message for Chatwoot", map[string]interface{}{
@@ -442,8 +416,6 @@ func (h *EventHandler) handleHistorySync(evt *events.HistorySync, sessionID stri
 }
 
 func (h *EventHandler) handleAppState(evt *events.AppState, sessionID string) {
-	// Skip AppState events to reduce spam - they're not critical for most use cases
-	// Only log at trace level to avoid log pollution
 	_ = evt // Avoid unused parameter warning
 }
 
@@ -670,7 +642,6 @@ func (h *EventHandler) clearSessionQRCode(sessionID string) {
 	}
 }
 
-// getEventType extracts the event type name using reflection
 func getEventType(evt interface{}) string {
 	if evt == nil {
 		return "nil"
@@ -681,22 +652,18 @@ func getEventType(evt interface{}) string {
 		eventType = eventType.Elem()
 	}
 
-	// Extract just the type name without package prefix
 	typeName := eventType.Name()
 	if typeName == "" {
-		// Fallback to full type string
 		typeName = strings.TrimPrefix(eventType.String(), "*events.")
 	}
 
 	return typeName
 }
 
-// SetWebhookHandler sets the webhook handler in the EventHandler
 func (h *EventHandler) SetWebhookHandler(webhookHandler WebhookEventHandler) {
 	h.webhookHandler = webhookHandler
 }
 
-// deliverToWebhook delivers an event to the webhook handler if configured
 func (h *EventHandler) deliverToWebhook(evt interface{}, sessionID string) {
 	if h.webhookHandler == nil {
 		return
@@ -711,14 +678,11 @@ func (h *EventHandler) deliverToWebhook(evt interface{}, sessionID string) {
 	}
 }
 
-// HandleQRCode processes QR codes from client channel (not automatic events)
-// This is the single source of truth for all QR code processing
 func (h *EventHandler) HandleQRCode(sessionID string, qrCode string) {
 	h.logger.InfoWithFields("QR code received from client channel", map[string]interface{}{
 		"session_id": sessionID,
 	})
 
-	// Process QR code: save to database and display in terminal
 	if qrCode != "" {
 		h.updateSessionQRCode(sessionID, qrCode)
 		h.qrGen.DisplayQRCodeInTerminal(qrCode, sessionID)

@@ -9,7 +9,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// Service defines the interface for contact domain service
 type Service interface {
 	CheckWhatsApp(ctx context.Context, req *CheckWhatsAppRequest) (*CheckWhatsAppResponse, error)
 	GetProfilePicture(ctx context.Context, req *GetProfilePictureRequest) (*ProfilePictureInfo, error)
@@ -20,7 +19,6 @@ type Service interface {
 	GetContactStats(ctx context.Context, req *GetContactStatsRequest) (*GetContactStatsResponse, error)
 }
 
-// WameowManager defines the interface for multi-session WhatsApp operations
 type WameowManager interface {
 	IsOnWhatsApp(ctx context.Context, sessionID string, phoneNumbers []string) (map[string]interface{}, error)
 	GetProfilePictureInfo(ctx context.Context, sessionID, jid string, preview bool) (map[string]interface{}, error)
@@ -34,7 +32,6 @@ type service struct {
 	logger        *logger.Logger
 }
 
-// NewService creates a new contact service
 func NewService(wameowManager WameowManager, logger *logger.Logger) Service {
 	return &service{
 		wameowManager: wameowManager,
@@ -42,7 +39,6 @@ func NewService(wameowManager WameowManager, logger *logger.Logger) Service {
 	}
 }
 
-// CheckWhatsApp checks if phone numbers are registered on WhatsApp
 func (s *service) CheckWhatsApp(ctx context.Context, req *CheckWhatsAppRequest) (*CheckWhatsAppResponse, error) {
 	if err := s.validateCheckWhatsAppRequest(req); err != nil {
 		return nil, err
@@ -53,7 +49,6 @@ func (s *service) CheckWhatsApp(ctx context.Context, req *CheckWhatsAppRequest) 
 		"phone_count": len(req.PhoneNumbers),
 	})
 
-	// Check with WhatsApp using real whatsmeow method
 	statusMap, err := s.wameowManager.IsOnWhatsApp(ctx, req.SessionID, req.PhoneNumbers)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to check WhatsApp numbers", map[string]interface{}{
@@ -63,7 +58,6 @@ func (s *service) CheckWhatsApp(ctx context.Context, req *CheckWhatsAppRequest) 
 		return nil, fmt.Errorf("failed to check WhatsApp numbers: %w", err)
 	}
 
-	// Convert map to slice
 	results := make([]WhatsAppStatus, 0, len(req.PhoneNumbers))
 	checked := 0
 	for _, phoneNumber := range req.PhoneNumbers {
@@ -80,7 +74,6 @@ func (s *service) CheckWhatsApp(ctx context.Context, req *CheckWhatsAppRequest) 
 				checked++
 			}
 		} else {
-			// Add default status for numbers that couldn't be checked
 			results = append(results, WhatsAppStatus{
 				PhoneNumber:  phoneNumber,
 				IsOnWhatsApp: false,
@@ -95,7 +88,6 @@ func (s *service) CheckWhatsApp(ctx context.Context, req *CheckWhatsAppRequest) 
 	}, nil
 }
 
-// GetProfilePicture gets profile picture information for a contact
 func (s *service) GetProfilePicture(ctx context.Context, req *GetProfilePictureRequest) (*ProfilePictureInfo, error) {
 	if err := s.validateGetProfilePictureRequest(req); err != nil {
 		return nil, err
@@ -117,7 +109,6 @@ func (s *service) GetProfilePicture(ctx context.Context, req *GetProfilePictureR
 		return nil, fmt.Errorf("failed to get profile picture: %w", err)
 	}
 
-	// Convert map to ProfilePictureInfo
 	profilePicture := &ProfilePictureInfo{
 		JID:        getStringFromMap(profileData, "jid"),
 		URL:        getStringFromMap(profileData, "url"),
@@ -131,7 +122,6 @@ func (s *service) GetProfilePicture(ctx context.Context, req *GetProfilePictureR
 	return profilePicture, nil
 }
 
-// GetUserInfo gets detailed information about WhatsApp users
 func (s *service) GetUserInfo(ctx context.Context, req *GetUserInfoRequest) (*GetUserInfoResponse, error) {
 	if err := s.validateGetUserInfoRequest(req); err != nil {
 		return nil, err
@@ -151,7 +141,6 @@ func (s *service) GetUserInfo(ctx context.Context, req *GetUserInfoRequest) (*Ge
 		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
 
-	// Convert slice of maps to slice of UserInfo
 	users := make([]UserInfo, 0, len(usersData))
 	for _, userData := range usersData {
 		user := UserInfo{
@@ -176,7 +165,6 @@ func (s *service) GetUserInfo(ctx context.Context, req *GetUserInfoRequest) (*Ge
 	}, nil
 }
 
-// ListContacts lists contacts from the WhatsApp account
 func (s *service) ListContacts(ctx context.Context, req *ListContactsRequest) (*ListContactsResponse, error) {
 	if err := s.validateListContactsRequest(req); err != nil {
 		return nil, err
@@ -189,20 +177,16 @@ func (s *service) ListContacts(ctx context.Context, req *ListContactsRequest) (*
 		"search":     req.Search,
 	})
 
-	// Get raw contacts data
 	contactsList, err := s.fetchContactsData(ctx, req.SessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert and filter contacts
 	allContacts := s.processContactsData(contactsList, req.Search)
 
-	// Apply pagination and return response
 	return s.paginateContacts(allContacts, req), nil
 }
 
-// fetchContactsData retrieves raw contacts data from WhatsApp
 func (s *service) fetchContactsData(ctx context.Context, sessionID string) ([]map[string]interface{}, error) {
 	contactsData, err := s.wameowManager.GetAllContacts(ctx, sessionID)
 	if err != nil {
@@ -213,7 +197,6 @@ func (s *service) fetchContactsData(ctx context.Context, sessionID string) ([]ma
 		return nil, fmt.Errorf("failed to get contacts: %w", err)
 	}
 
-	// Extract contacts from response
 	contactsInterface, exists := contactsData["contacts"]
 	if !exists {
 		return []map[string]interface{}{}, nil
@@ -227,14 +210,12 @@ func (s *service) fetchContactsData(ctx context.Context, sessionID string) ([]ma
 	return contactsList, nil
 }
 
-// processContactsData converts raw data to domain objects and applies search filter
 func (s *service) processContactsData(contactsList []map[string]interface{}, search string) []Contact {
 	allContacts := make([]Contact, 0, len(contactsList))
 
 	for _, contactData := range contactsList {
 		contact := s.mapContactData(contactData)
 
-		// Apply search filter if provided
 		if search != "" && !s.matchesSearchCriteria(contact, search) {
 			continue
 		}
@@ -245,9 +226,7 @@ func (s *service) processContactsData(contactsList []map[string]interface{}, sea
 	return allContacts
 }
 
-// mapContactData converts raw contact data to domain Contact object
 func (s *service) mapContactData(contactData map[string]interface{}) Contact {
-	// Handle time fields that might be nil
 	var addedAt, updatedAt time.Time
 	if addedAtPtr := getTimeFromMap(contactData, "addedAt"); addedAtPtr != nil {
 		addedAt = *addedAtPtr
@@ -270,7 +249,6 @@ func (s *service) mapContactData(contactData map[string]interface{}) Contact {
 	}
 }
 
-// matchesSearchCriteria checks if a contact matches the search criteria
 func (s *service) matchesSearchCriteria(contact Contact, search string) bool {
 	searchLower := strings.ToLower(search)
 	return strings.Contains(strings.ToLower(contact.Name), searchLower) ||
@@ -279,13 +257,11 @@ func (s *service) matchesSearchCriteria(contact Contact, search string) bool {
 		strings.Contains(contact.PhoneNumber, search)
 }
 
-// paginateContacts applies pagination to the contacts list
 func (s *service) paginateContacts(allContacts []Contact, req *ListContactsRequest) *ListContactsResponse {
 	total := len(allContacts)
 	start := req.Offset
 	end := start + req.Limit
 
-	// Handle empty results or offset beyond total
 	if start >= total {
 		return &ListContactsResponse{
 			Contacts: []Contact{},
@@ -296,7 +272,6 @@ func (s *service) paginateContacts(allContacts []Contact, req *ListContactsReque
 		}
 	}
 
-	// Adjust end if it exceeds total
 	if end > total {
 		end = total
 	}
@@ -313,9 +288,6 @@ func (s *service) paginateContacts(allContacts []Contact, req *ListContactsReque
 	}
 }
 
-// SyncContacts synchronizes contacts from the device with WhatsApp
-// Note: whatsmeow doesn't have a native SyncContacts method
-// Contact sync happens automatically via app state
 func (s *service) SyncContacts(ctx context.Context, req *SyncContactsRequest) (*SyncContactsResponse, error) {
 	if err := s.validateSyncContactsRequest(req); err != nil {
 		return nil, err
@@ -326,7 +298,6 @@ func (s *service) SyncContacts(ctx context.Context, req *SyncContactsRequest) (*
 		"method":     "SyncContacts",
 	})
 
-	// Return placeholder response since whatsmeow doesn't support this natively
 	return &SyncContactsResponse{
 		Synced:   0,
 		Added:    0,
@@ -337,7 +308,6 @@ func (s *service) SyncContacts(ctx context.Context, req *SyncContactsRequest) (*
 	}, fmt.Errorf("SyncContacts not supported by whatsmeow - contacts sync automatically via app state")
 }
 
-// GetBusinessProfile gets business profile information
 func (s *service) GetBusinessProfile(ctx context.Context, req *GetBusinessProfileRequest) (*GetBusinessProfileResponse, error) {
 	if err := s.validateGetBusinessProfileRequest(req); err != nil {
 		return nil, err
@@ -358,7 +328,6 @@ func (s *service) GetBusinessProfile(ctx context.Context, req *GetBusinessProfil
 		return nil, fmt.Errorf("failed to get business profile: %w", err)
 	}
 
-	// Convert map to BusinessProfile
 	profile := BusinessProfile{
 		JID:         getStringFromMap(profileData, "jid"),
 		Name:        getStringFromMap(profileData, "name"),
@@ -377,8 +346,6 @@ func (s *service) GetBusinessProfile(ctx context.Context, req *GetBusinessProfil
 	}, nil
 }
 
-// GetContactStats gets statistics about contacts
-// Note: whatsmeow doesn't provide contact statistics natively
 func (s *service) GetContactStats(ctx context.Context, req *GetContactStatsRequest) (*GetContactStatsResponse, error) {
 	if err := s.validateGetContactStatsRequest(req); err != nil {
 		return nil, err
@@ -389,7 +356,6 @@ func (s *service) GetContactStats(ctx context.Context, req *GetContactStatsReque
 		"method":     "GetContactStats",
 	})
 
-	// Return placeholder stats since whatsmeow doesn't support this natively
 	return &GetContactStatsResponse{
 		SessionID: req.SessionID,
 		Stats: ContactStats{
@@ -404,7 +370,6 @@ func (s *service) GetContactStats(ctx context.Context, req *GetContactStatsReque
 	}, fmt.Errorf("GetContactStats not supported by whatsmeow - contact stats not available")
 }
 
-// Validation methods
 func (s *service) validateCheckWhatsAppRequest(req *CheckWhatsAppRequest) error {
 	if req.SessionID == "" {
 		return ErrInvalidSessionID
@@ -478,7 +443,6 @@ func (s *service) validateGetContactStatsRequest(req *GetContactStatsRequest) er
 	return nil
 }
 
-// Helper functions to extract values from map[string]interface{}
 func getStringFromMap(m map[string]interface{}, key string) string {
 	if val, ok := m[key]; ok {
 		if str, ok := val.(string); ok {

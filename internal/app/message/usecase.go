@@ -45,25 +45,21 @@ func (uc *useCaseImpl) SendMessage(ctx context.Context, sessionID string, req *S
 		"type":       req.Type,
 	})
 
-	// Validate session
 	if err := uc.validateSession(ctx, sessionID); err != nil {
 		return nil, err
 	}
 
-	// Prepare domain request
 	domainReq := req.ToDomainRequest()
 	if err := message.ValidateMessageRequest(domainReq); err != nil {
 		return nil, fmt.Errorf("invalid request: %w", err)
 	}
 
-	// Process media if needed
 	filePath, cleanup, err := uc.processMediaIfNeeded(ctx, domainReq)
 	if err != nil {
 		return nil, err
 	}
 	defer uc.cleanupMedia(cleanup, filePath)
 
-	// Send message
 	result, err := uc.sendMessageToWameow(sessionID, domainReq, filePath)
 	if err != nil {
 		uc.logger.ErrorWithFields("Failed to send message", map[string]interface{}{
@@ -89,7 +85,6 @@ func (uc *useCaseImpl) SendMessage(ctx context.Context, sessionID string, req *S
 	}, nil
 }
 
-// validateSession validates that the session exists and is connected
 func (uc *useCaseImpl) validateSession(ctx context.Context, sessionID string) error {
 	sess, err := uc.sessionRepo.GetByID(ctx, sessionID)
 	if err != nil {
@@ -107,7 +102,6 @@ func (uc *useCaseImpl) validateSession(ctx context.Context, sessionID string) er
 	return nil
 }
 
-// processMediaIfNeeded processes media files if the message contains media
 func (uc *useCaseImpl) processMediaIfNeeded(ctx context.Context, domainReq *message.SendMessageRequest) (string, func() error, error) {
 	if !domainReq.IsMediaMessage() || domainReq.File == "" {
 		return "", nil, nil
@@ -118,7 +112,6 @@ func (uc *useCaseImpl) processMediaIfNeeded(ctx context.Context, domainReq *mess
 		return "", nil, fmt.Errorf("failed to process media: %w", err)
 	}
 
-	// Set default values if not provided
 	if domainReq.MimeType == "" {
 		domainReq.MimeType = processedMedia.MimeType
 	}
@@ -130,7 +123,6 @@ func (uc *useCaseImpl) processMediaIfNeeded(ctx context.Context, domainReq *mess
 	return processedMedia.FilePath, processedMedia.Cleanup, nil
 }
 
-// cleanupMedia cleans up temporary media files
 func (uc *useCaseImpl) cleanupMedia(cleanup func() error, filePath string) {
 	if cleanup != nil {
 		if cleanupErr := cleanup(); cleanupErr != nil {
@@ -142,9 +134,7 @@ func (uc *useCaseImpl) cleanupMedia(cleanup func() error, filePath string) {
 	}
 }
 
-// sendMessageToWameow sends the message via WameowManager
 func (uc *useCaseImpl) sendMessageToWameow(sessionID string, domainReq *message.SendMessageRequest, filePath string) (*message.SendResult, error) {
-	// Convert domain ContextInfo to message ContextInfo
 	var msgContextInfo *message.ContextInfo
 	if domainReq.ContextInfo != nil {
 		msgContextInfo = &message.ContextInfo{
@@ -169,17 +159,12 @@ func (uc *useCaseImpl) sendMessageToWameow(sessionID string, domainReq *message.
 	)
 }
 
-// GetPollResults retrieves poll results for a specific poll message
 func (uc *useCaseImpl) GetPollResults(ctx context.Context, req *GetPollResultsRequest) (*GetPollResultsResponse, error) {
 	uc.logger.InfoWithFields("Getting poll results", map[string]interface{}{
 		"to":              req.RemoteJID,
 		"poll_message_id": req.PollMessageID,
 	})
 
-	// Note: whatsmeow doesn't have a direct GetPollResults method
-	// Poll results are typically collected via events (DecryptPollVote)
-	// This is a placeholder implementation that would need to be enhanced
-	// with actual poll vote collection from events
 
 	return &GetPollResultsResponse{
 		PollMessageID:         req.PollMessageID,
@@ -192,14 +177,12 @@ func (uc *useCaseImpl) GetPollResults(ctx context.Context, req *GetPollResultsRe
 	}, fmt.Errorf("poll results collection not yet implemented - requires event handling")
 }
 
-// RevokeMessage revokes a message using whatsmeow's RevokeMessage method
 func (uc *useCaseImpl) RevokeMessage(ctx context.Context, req *RevokeMessageRequest) (*RevokeMessageResponse, error) {
 	uc.logger.InfoWithFields("Revoking message", map[string]interface{}{
 		"to":         req.RemoteJID,
 		"message_id": req.MessageID,
 	})
 
-	// Use whatsmeow's RevokeMessage method
 	result, err := uc.wameowManager.RevokeMessage(req.SessionID, req.RemoteJID, req.MessageID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to revoke message: %w", err)
@@ -212,7 +195,6 @@ func (uc *useCaseImpl) RevokeMessage(ctx context.Context, req *RevokeMessageRequ
 	}, nil
 }
 
-// EditMessage edits a message using whatsmeow's BuildEdit method
 func (uc *useCaseImpl) EditMessage(ctx context.Context, req *EditMessageRequest) (*EditMessageResponse, error) {
 	uc.logger.InfoWithFields("Editing message", map[string]interface{}{
 		"to":         req.RemoteJID,
@@ -220,7 +202,6 @@ func (uc *useCaseImpl) EditMessage(ctx context.Context, req *EditMessageRequest)
 		"new_body":   req.NewBody,
 	})
 
-	// Use whatsmeow's BuildEdit method
 	err := uc.wameowManager.EditMessage(req.SessionID, req.RemoteJID, req.MessageID, req.NewBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to edit message: %w", err)
@@ -234,15 +215,12 @@ func (uc *useCaseImpl) EditMessage(ctx context.Context, req *EditMessageRequest)
 	}, nil
 }
 
-// MarkAsRead marks messages as read using whatsmeow's MarkRead method
 func (uc *useCaseImpl) MarkAsRead(ctx context.Context, req *MarkAsReadRequest) (*MarkAsReadResponse, error) {
 	uc.logger.InfoWithFields("Marking messages as read", map[string]interface{}{
 		"to":          req.RemoteJID,
 		"message_ids": req.MessageIDs,
 	})
 
-	// Use whatsmeow's MarkRead method (currently supports single message)
-	// For multiple messages, we'll mark each one individually
 	for _, messageID := range req.MessageIDs {
 		err := uc.wameowManager.MarkRead(req.SessionID, req.RemoteJID, messageID)
 		if err != nil {
@@ -252,7 +230,6 @@ func (uc *useCaseImpl) MarkAsRead(ctx context.Context, req *MarkAsReadRequest) (
 				"message_id": messageID,
 				"error":      err.Error(),
 			})
-			// Continue with other messages even if one fails
 		}
 	}
 

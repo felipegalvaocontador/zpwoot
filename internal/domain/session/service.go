@@ -65,12 +65,8 @@ func (s *Service) CreateSession(ctx context.Context, req *CreateSessionRequest) 
 		return nil, errors.Wrap(err, "failed to initialize Wameow session")
 	}
 
-	// If QR code was requested, initiate connection to generate QR code
 	if req.QrCode {
-		// Start connection process which will generate QR code
 		if err := s.Wameow.ConnectSession(session.ID.String()); err != nil {
-			// Don't fail session creation if QR code generation fails
-			// Just log the error
 			s.logger.WarnWithFields("Failed to initiate QR code generation", map[string]interface{}{
 				"session_id": session.ID.String(),
 				"error":      err.Error(),
@@ -102,7 +98,6 @@ func (s *Service) GetSession(ctx context.Context, id string) (*SessionInfo, erro
 				"session_id": id,
 				"error":      err.Error(),
 			})
-			// Continue without device info
 		} else {
 			info.DeviceInfo = deviceInfo
 		}
@@ -134,21 +129,16 @@ func (s *Service) DeleteSession(ctx context.Context, id string) error {
 		return errors.ErrNotFound
 	}
 
-	// Step 1: Mark session as being deleted to prevent race conditions
 	session.SetConnected(false)
 	session.ConnectionError = nil
 	if err := s.repo.Update(ctx, session); err != nil {
-		// Log error but continue with deletion
 		_ = err
 	}
 
-	// Step 2: Disconnect session if active, with timeout
 	if s.Wameow.IsConnected(id) {
-		// Create a context with timeout for disconnect operation
 		disconnectCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		// Run disconnect in goroutine with timeout
 		done := make(chan error, 1)
 		go func() {
 			done <- s.Wameow.DisconnectSession(id)
@@ -157,14 +147,12 @@ func (s *Service) DeleteSession(ctx context.Context, id string) error {
 		select {
 		case err := <-done:
 			if err != nil {
-				// Log error but don't fail deletion
 				s.logger.WarnWithFields("Error during session disconnect", map[string]interface{}{
 					"session_id": id,
 					"error":      err.Error(),
 				})
 			}
 		case <-disconnectCtx.Done():
-			// Timeout occurred, log warning but continue with deletion
 			if timeoutErr := disconnectCtx.Err(); timeoutErr != nil {
 				s.logger.WarnWithFields("Timeout during session disconnect", map[string]interface{}{
 					"session_id": id,
@@ -174,11 +162,9 @@ func (s *Service) DeleteSession(ctx context.Context, id string) error {
 			}
 		}
 
-		// Give additional time for cleanup
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	// Step 3: Delete from database
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return errors.Wrap(err, "failed to delete session")
 	}
@@ -196,9 +182,7 @@ func (s *Service) ConnectSession(ctx context.Context, id string) error {
 		return errors.ErrNotFound
 	}
 
-	// Check if session is already connected
 	if s.Wameow.IsConnected(id) {
-		// Update session status to reflect current state
 		session.SetConnected(true)
 		session.ConnectionError = nil
 		if err := s.repo.Update(ctx, session); err != nil {
@@ -234,9 +218,7 @@ func (s *Service) LogoutSession(ctx context.Context, id string) error {
 		return errors.ErrNotFound
 	}
 
-	// Check if session is already disconnected
 	if !s.Wameow.IsConnected(id) && !session.IsConnected {
-		// Update session status to reflect current state
 		session.SetConnected(false)
 		if err := s.repo.Update(ctx, session); err != nil {
 			return errors.Wrap(err, "failed to update session status")
@@ -270,20 +252,16 @@ func (s *Service) GetQRCode(ctx context.Context, id string) (*QRCodeResponse, er
 		return nil, errors.ErrNotFound
 	}
 
-	// Check if QR code exists in database
 	if session.QRCode == "" {
 		return nil, errors.NewWithDetails(404, "QR code not found", "no QR code available for this session")
 	}
 
-	// Check if QR code is expired
 	if session.QRCodeExpiresAt != nil && time.Now().After(*session.QRCodeExpiresAt) {
 		return nil, errors.NewWithDetails(410, "QR code expired", "QR code has expired")
 	}
 
-	// Generate QR code image from the stored code
 	qrCodeImage := s.qrGenerator.GenerateQRCodeImage(session.QRCode)
 
-	// Calculate expiry time (default 2 minutes from now if no expiry set)
 	expiresAt := time.Now().Add(2 * time.Minute)
 	if session.QRCodeExpiresAt != nil {
 		expiresAt = *session.QRCodeExpiresAt

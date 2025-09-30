@@ -11,14 +11,12 @@ import (
 )
 
 type CreateChatwootConfigRequest struct {
-	// Core configuration - matching zpChatwoot table
 	URL       string  `json:"url" validate:"required,url" example:"http://localhost:3001"`
 	Token     string  `json:"token" validate:"required" example:"WAF6y4K5s6sdR9uVpsdE7BCt"`
 	AccountID string  `json:"accountId" validate:"required" example:"1"`
 	InboxID   *string `json:"inboxId,omitempty" example:"1"`
 	Enabled   *bool   `json:"enabled,omitempty" example:"true"`
 
-	// Advanced configuration - shorter names matching DB columns
 	InboxName      *string  `json:"inboxName,omitempty" example:"WhatsApp zpwoot"`
 	AutoCreate     *bool    `json:"autoCreate,omitempty" example:"true"`
 	SignMsg        *bool    `json:"signMsg,omitempty" example:"false"`
@@ -51,7 +49,6 @@ type UpdateChatwootConfigRequest struct {
 	InboxID   *string `json:"inboxId,omitempty" example:"2"`
 	Enabled   *bool   `json:"enabled,omitempty" example:"false"`
 
-	// Advanced configuration updates
 	InboxName      *string  `json:"inboxName,omitempty" example:"WhatsApp zpwoot Updated"`
 	AutoCreate     *bool    `json:"autoCreate,omitempty" example:"false"`
 	SignMsg        *bool    `json:"signMsg,omitempty" example:"true"`
@@ -136,7 +133,6 @@ type SendMessageToChatwootResponse struct {
 	ConversationID int                    `json:"conversationId" example:"456"`
 }
 
-// WebhookRequest represents the complete webhook payload from Chatwoot
 type WebhookRequest struct {
 	Contact           ChatwootContact        `json:"contact"`
 	Message           *ChatwootMessage       `json:"message,omitempty"`
@@ -148,12 +144,10 @@ type WebhookRequest struct {
 	Private           bool                   `json:"private"`
 } // @name WebhookRequest
 
-// Meta represents metadata in webhook payload
 type Meta struct {
 	Sender *Sender `json:"sender,omitempty"`
 } // @name Meta
 
-// Sender represents the sender information in webhook
 type Sender struct {
 	Name          string `json:"name"`
 	Identifier    string `json:"identifier"`
@@ -242,7 +236,6 @@ type ChatwootStatsResponse struct {
 	MessagesReceived    int `json:"messagesReceived" example:"890"`
 } // @name ChatwootStatsResponse
 
-// Evolution API specific DTOs
 type ChatwootConfigEvolutionRequest struct {
 	Enabled                 *bool    `json:"enabled,omitempty" example:"true"`
 	AccountID               string   `json:"accountId" validate:"required" example:"1"`

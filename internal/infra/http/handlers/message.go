@@ -120,7 +120,7 @@ func (h *MessageHandler) handleMessageActionWithTwoFields(
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, successMessage))
 }
 
-// handleMediaMessage handles common media message logic for Chi
+// handleMediaMessage handles common media message logic
 func (h *MessageHandler) handleMediaMessage(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -179,8 +179,8 @@ func (h *MessageHandler) handleMediaMessage(
 	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("%s message sent successfully", titleCase(messageType))))
 }
 
-// chiParseMediaRequest parses common media request fields for Chi
-func chiParseMediaRequest(r *http.Request, messageType string, parseBody func(*http.Request) (string, string, string, string, string, *message.ContextInfo, error)) (*message.SendMessageRequest, error) {
+// parseMediaRequest parses common media request fields
+func parseMediaRequest(r *http.Request, messageType string, parseBody func(*http.Request) (string, string, string, string, string, *message.ContextInfo, error)) (*message.SendMessageRequest, error) {
 	remoteJID, file, caption, mimeType, filename, contextInfo, err := parseBody(r)
 	if err != nil {
 		return nil, fmt.Errorf("invalid %s message format", messageType)
@@ -450,7 +450,7 @@ func (h *MessageHandler) SendText(w http.ResponseWriter, r *http.Request) {
 // @Router /sessions/{sessionId}/messages/send/image [post]
 func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 	h.handleMediaMessage(w, r, "image", func(r *http.Request) (*message.SendMessageRequest, error) {
-		return chiParseMediaRequest(r, "image", func(r *http.Request) (string, string, string, string, string, *message.ContextInfo, error) {
+		return parseMediaRequest(r, "image", func(r *http.Request) (string, string, string, string, string, *message.ContextInfo, error) {
 			var imageReq message.ImageMessageRequest
 			if err := json.NewDecoder(r.Body).Decode(&imageReq); err != nil {
 				return "", "", "", "", "", nil, err
@@ -571,7 +571,7 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 // @Router /sessions/{sessionId}/messages/send/video [post]
 func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
 	h.handleMediaMessage(w, r, "video", func(r *http.Request) (*message.SendMessageRequest, error) {
-		return chiParseMediaRequest(r, "video", func(r *http.Request) (string, string, string, string, string, *message.ContextInfo, error) {
+		return parseMediaRequest(r, "video", func(r *http.Request) (string, string, string, string, string, *message.ContextInfo, error) {
 			var videoReq message.VideoMessageRequest
 			if err := json.NewDecoder(r.Body).Decode(&videoReq); err != nil {
 				return "", "", "", "", "", nil, err

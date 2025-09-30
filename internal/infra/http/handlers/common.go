@@ -259,8 +259,8 @@ func (h *BaseHandler) resolveSession(r *http.Request) (*session.Session, error) 
 	return h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 }
 
-// resolveSessionFromChi resolves session from chi URL parameter (for handlers using chi router)
-func (h *BaseHandler) resolveSessionFromChi(r *http.Request) (*session.Session, error) {
+// resolveSessionFromURL resolves session from URL parameter
+func (h *BaseHandler) resolveSessionFromURL(r *http.Request) (*session.Session, error) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
 		return nil, session.ErrSessionNotFound
@@ -288,7 +288,7 @@ func (h *BaseHandler) handleActionRequest(
 	parseFunc func(*http.Request, *session.Session) (interface{}, error),
 	actionFunc func(context.Context, interface{}) (interface{}, error),
 ) {
-	sess, err := h.resolveSessionFromChi(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, session.ErrSessionNotFound) {
@@ -328,7 +328,7 @@ func (h *BaseHandler) handleSimpleGetRequest(
 	successMessage string,
 	actionFunc func(context.Context, string) (interface{}, error),
 ) {
-	sess, err := h.resolveSessionFromChi(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, session.ErrSessionNotFound) {

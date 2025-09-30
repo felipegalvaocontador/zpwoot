@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"zpwoot/internal/app/chatwoot"
-	"zpwoot/internal/app/common"
 	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
@@ -45,7 +44,7 @@ func (h *ChatwootHandler) handleChatwootAction(
 	successMessage string,
 	actionFunc func(context.Context) (interface{}, error),
 ) {
-	sess, err := h.resolveSessionFromChi(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -63,6 +62,11 @@ func (h *ChatwootHandler) handleChatwootAction(
 	result, err := actionFunc(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
+		// Handle specific error types
+		if strings.Contains(err.Error(), "not found") {
+			h.writeErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
 		return
 	}
@@ -84,45 +88,35 @@ func (h *ChatwootHandler) handleChatwootAction(
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot/set [post]
 func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
 	var req chatwoot.CreateChatwootConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	// Validate required fields
 	if req.URL == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("URL is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "URL is required")
 		return
 	}
 
 	if req.Token == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Token is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Token is required")
 		return
 	}
 
 	if req.AccountID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Account ID is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Account ID is required")
 		return
 	}
 
@@ -136,16 +130,11 @@ func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 	result, err := h.chatwootUC.CreateConfig(r.Context(), sess.ID.String(), &req)
 	if err != nil {
 		h.logger.Error("Failed to create Chatwoot configuration: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to create Chatwoot configuration"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create Chatwoot configuration")
 		return
 	}
 
-	response := common.NewSuccessResponse(result, "Chatwoot configuration created successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, result, "Chatwoot configuration created successfully")
 }
 
 // @Summary Get Chatwoot configuration
@@ -159,43 +148,15 @@ func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot [get]
 func (h *ChatwootHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
-		return
-	}
-
-	h.logger.InfoWithFields("Getting Chatwoot configuration", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := h.chatwootUC.GetConfig(r.Context())
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Chatwoot configuration not found"))
-			return
-		}
-
-		h.logger.Error("Failed to get Chatwoot configuration: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get Chatwoot configuration"))
-		return
-	}
-
-	response := common.NewSuccessResponse(result, "Chatwoot configuration retrieved successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.handleChatwootAction(w, r, "Getting Chatwoot configuration", "Chatwoot configuration retrieved successfully",
+		func(ctx context.Context) (interface{}, error) {
+			result, err := h.chatwootUC.GetConfig(ctx)
+			if err != nil && strings.Contains(err.Error(), "not found") {
+				// Return a special error that the handler can detect
+				return nil, errors.New("chatwoot configuration not found")
+			}
+			return result, err
+		})
 }
 
 // @Summary Update Chatwoot configuration
@@ -212,23 +173,19 @@ func (h *ChatwootHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot [put]
 func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
 	var req chatwoot.UpdateChatwootConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
@@ -240,23 +197,16 @@ func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	result, err := h.chatwootUC.UpdateConfig(r.Context(), &req)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Chatwoot configuration not found"))
+			h.writeErrorResponse(w, http.StatusNotFound, "Chatwoot configuration not found")
 			return
 		}
 
 		h.logger.Error("Failed to update Chatwoot configuration: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to update Chatwoot configuration"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update Chatwoot configuration")
 		return
 	}
 
-	response := common.NewSuccessResponse(result, "Chatwoot configuration updated successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, result, "Chatwoot configuration updated successfully")
 }
 
 // @Summary Delete Chatwoot configuration
@@ -270,15 +220,13 @@ func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot [delete]
 func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
@@ -290,23 +238,16 @@ func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	err = h.chatwootUC.DeleteConfig(r.Context())
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Chatwoot configuration not found"))
+			h.writeErrorResponse(w, http.StatusNotFound, "Chatwoot configuration not found")
 			return
 		}
 
 		h.logger.Error("Failed to delete Chatwoot configuration: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to delete Chatwoot configuration"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete Chatwoot configuration")
 		return
 	}
 
-	response := common.NewSuccessResponse(nil, "Chatwoot configuration deleted successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, nil, "Chatwoot configuration deleted successfully")
 }
 
 // @Summary Test Chatwoot connection
@@ -357,15 +298,13 @@ func (h *ChatwootHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot/auto-create-inbox [post]
 func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
@@ -374,23 +313,17 @@ func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request
 		WebhookURL string `json:"webhookURL"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	if req.InboxName == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Inbox name is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Inbox name is required")
 		return
 	}
 
 	if req.WebhookURL == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Webhook URL is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Webhook URL is required")
 		return
 	}
 
@@ -404,16 +337,11 @@ func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request
 	err = h.chatwootUC.AutoCreateInbox(r.Context(), sess.ID.String(), req.InboxName, req.WebhookURL)
 	if err != nil {
 		h.logger.Error("Failed to auto-create Chatwoot inbox: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to auto-create Chatwoot inbox"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to auto-create Chatwoot inbox")
 		return
 	}
 
-	response := common.NewSuccessResponse(nil, "Inbox created successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, nil, "Inbox created successfully")
 }
 
 // @Summary Receive Chatwoot webhook
@@ -431,9 +359,7 @@ func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request
 func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -444,18 +370,14 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
 	var payload chatwoot.ChatwootWebhookPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		h.logger.Error("Failed to decode webhook payload: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid webhook payload"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid webhook payload")
 		return
 	}
 
@@ -468,14 +390,9 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 	err = h.chatwootUC.ProcessWebhook(r.Context(), sess.ID.String(), &payload)
 	if err != nil {
 		h.logger.Error("Failed to process Chatwoot webhook: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to process webhook"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to process webhook")
 		return
 	}
 
-	response := common.NewSuccessResponse(nil, "Webhook processed successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, nil, "Webhook processed successfully")
 }

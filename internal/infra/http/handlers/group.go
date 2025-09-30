@@ -40,7 +40,7 @@ func (h *GroupHandler) handleGroupActionWithValidation(
 	fieldValidationMessage string,
 	responseBuilder func(string) map[string]interface{},
 ) {
-	sess, err := h.resolveSessionFromChi(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -82,7 +82,7 @@ func (h *GroupHandler) handleGroupActionWithTwoFields(
 	field2Name, field2ValidationMessage string,
 	responseBuilder func(string, string) map[string]interface{},
 ) {
-	sess, err := h.resolveSessionFromChi(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -123,7 +123,7 @@ func (h *GroupHandler) handleGroupActionWithTwoFields(
 
 // GetGroupInviteLink gets the invite link for a group
 func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSessionFromChi(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {

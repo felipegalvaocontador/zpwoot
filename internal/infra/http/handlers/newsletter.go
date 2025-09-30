@@ -68,7 +68,7 @@ func (h *NewsletterHandler) handleNewsletterAction(
 	actionFunc func(context.Context, string, interface{}) (interface{}, error),
 	requestFactory func() interface{},
 ) {
-	sess, err := h.resolveSessionFromChi(r)
+	sess, err := h.resolveSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {

@@ -1,45 +1,44 @@
 package routers
 
 import (
-	"github.com/gofiber/fiber/v2"
-	fiberSwagger "github.com/swaggo/fiber-swagger"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	"zpwoot/internal/app"
 	"zpwoot/internal/infra/http/handlers"
+	"zpwoot/internal/infra/http/middleware"
 	"zpwoot/internal/infra/wameow"
+	"zpwoot/platform/config"
 	"zpwoot/platform/db"
 	"zpwoot/platform/logger"
 )
 
-func SetupRoutes(app *fiber.App, database *db.DB, logger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
-	app.Get("/swagger/*", fiberSwagger.WrapHandler)
+func SetupRoutes(cfg *config.Config, database *db.DB, logger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) http.Handler {
+	r := chi.NewRouter()
+
+	// Configure middlewares
+	setupMiddlewares(r, cfg, container, logger)
+
+	// Swagger documentation
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+	))
 
 	// Health check endpoints
 	healthHandler := handlers.NewHealthHandler(logger, wameowManager)
-	app.Get("/health", healthHandler.GetHealth)
-	app.Get("/health/wameow", healthHandler.GetWameowHealth)
+	r.Get("/health", healthHandler.GetHealth)
+	r.Get("/health/wameow", healthHandler.GetWameowHealth)
 
-	setupSessionRoutes(app, logger, wameowManager, container)
+	// Setup session routes
+	setupSessionRoutes(r, logger, wameowManager, container)
 
-	setupSessionSpecificRoutes(app, database, logger, wameowManager, container)
+	// Setup global routes
+	setupGlobalRoutes(r, logger, container)
 
-	setupGlobalRoutes(app, logger, container)
-}
-
-func setupSessionRoutes(app *fiber.App, appLogger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
-	logWameowAvailability(appLogger, wameowManager)
-
-	sessions := app.Group("/sessions")
-
-	// Setup all route groups
-	setupSessionManagementRoutes(sessions, container, appLogger)
-	setupMessageRoutes(sessions, container, wameowManager, appLogger)
-	setupGroupRoutes(sessions, container, appLogger)
-	setupNewsletterRoutes(sessions, container, appLogger)
-	setupCommunityRoutes(sessions, container, appLogger)
-	setupContactRoutes(sessions, container, appLogger)
-	setupWebhookRoutes(sessions, container, appLogger)
-	setupChatwootRoutes(sessions, container, appLogger)
+	return r
 }
 
 // logWameowAvailability logs Wameow manager availability
@@ -51,153 +50,241 @@ func logWameowAvailability(appLogger *logger.Logger, wameowManager *wameow.Manag
 	}
 }
 
-// setupSessionManagementRoutes sets up session management routes
-func setupSessionManagementRoutes(sessions fiber.Router, container *app.Container, appLogger *logger.Logger) {
-	sessionHandler := handlers.NewSessionHandler(appLogger, container.GetSessionUseCase(), container.GetSessionRepository())
+// setupMiddlewares configures all HTTP middlewares for Chi
+func setupMiddlewares(r *chi.Mux, cfg *config.Config, container *app.Container, logger *logger.Logger) {
+	// Recovery middleware
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer func() {
+				if err := recover(); err != nil {
+					logger.ErrorWithFields("Panic recovered", map[string]interface{}{
+						"error": err,
+						"path":  r.URL.Path,
+						"method": r.Method,
+					})
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			}()
+			next.ServeHTTP(w, r)
+		})
+	})
 
-	sessions.Post("/create", sessionHandler.CreateSession)
-	sessions.Get("/list", sessionHandler.ListSessions)
-	sessions.Get("/:sessionId/info", sessionHandler.GetSessionInfo)
-	sessions.Delete("/:sessionId/delete", sessionHandler.DeleteSession)
-	sessions.Post("/:sessionId/connect", sessionHandler.ConnectSession)
-	sessions.Post("/:sessionId/logout", sessionHandler.LogoutSession)
-	sessions.Get("/:sessionId/qr", sessionHandler.GetQRCode)
-	sessions.Post("/:sessionId/pair", sessionHandler.PairPhone)
-	sessions.Post("/:sessionId/proxy/set", sessionHandler.SetProxy)
-	sessions.Get("/:sessionId/proxy/find", sessionHandler.GetProxy)
+	// Request ID middleware
+	r.Use(middleware.RequestID(logger))
+
+	// HTTP Logger middleware
+	r.Use(middleware.HTTPLogger(logger))
+
+	// Metrics middleware
+	r.Use(middleware.Metrics(container, logger))
+
+	// CORS middleware
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
+
+	// API Key Auth middleware
+	r.Use(middleware.APIKeyAuth(cfg, logger))
 }
 
-// setupMessageRoutes sets up message-related routes
-func setupMessageRoutes(sessions fiber.Router, container *app.Container, wameowManager *wameow.Manager, appLogger *logger.Logger) {
-	messageHandler := handlers.NewMessageHandler(container.GetMessageUseCase(), wameowManager, container.GetSessionRepository(), appLogger)
+// setupSessionRoutes sets up session-related routes
+func setupSessionRoutes(r *chi.Mux, appLogger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
+	logWameowAvailability(appLogger, wameowManager)
 
-	// Basic message sending
-	sessions.Post("/:sessionId/messages/send/text", messageHandler.SendText)
-	sessions.Post("/:sessionId/messages/send/media", messageHandler.SendMedia)
-	sessions.Post("/:sessionId/messages/send/image", messageHandler.SendImage)
-	sessions.Post("/:sessionId/messages/send/audio", messageHandler.SendAudio)
-	sessions.Post("/:sessionId/messages/send/video", messageHandler.SendVideo)
-	sessions.Post("/:sessionId/messages/send/document", messageHandler.SendDocument)
-	sessions.Post("/:sessionId/messages/send/sticker", messageHandler.SendSticker)
-	sessions.Post("/:sessionId/messages/send/button", messageHandler.SendButtonMessage)
-	sessions.Post("/:sessionId/messages/send/contact", messageHandler.SendContact)
-	sessions.Post("/:sessionId/messages/send/list", messageHandler.SendListMessage)
-	sessions.Post("/:sessionId/messages/send/location", messageHandler.SendLocation)
-	sessions.Post("/:sessionId/messages/send/poll", messageHandler.SendPoll)
-	sessions.Post("/:sessionId/messages/send/reaction", messageHandler.SendReaction)
-	sessions.Post("/:sessionId/messages/send/presence", messageHandler.SendPresence)
+	r.Route("/sessions", func(r chi.Router) {
+		// Setup all route groups
+		setupSessionManagementRoutes(r, container, appLogger)
+		setupMessageRoutes(r, container, wameowManager, appLogger)
+		setupGroupRoutes(r, container, appLogger)
+		setupContactRoutes(r, container, appLogger)
+		setupNewsletterRoutes(r, container, appLogger)
+		setupCommunityRoutes(r, container, appLogger)
+		setupWebhookRoutes(r, container, appLogger)
+		setupMediaRoutes(r, container, appLogger)
+		setupChatwootRoutes(r, container, appLogger)
+	})
+}
 
-	// Message operations
-	sessions.Post("/:sessionId/messages/edit", messageHandler.EditMessage)
-	sessions.Post("/:sessionId/messages/mark-read", messageHandler.MarkAsRead)
-	sessions.Post("/:sessionId/messages/revoke", messageHandler.RevokeMessage)
-	sessions.Get("/:sessionId/messages/poll/:messageId/results", messageHandler.GetPollResults)
+// setupSessionManagementRoutes sets up session management routes
+func setupSessionManagementRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
+	sessionHandler := handlers.NewSessionHandler(appLogger, container.GetSessionUseCase(), container.GetSessionRepository())
+
+	r.Post("/create", sessionHandler.CreateSession)
+	r.Get("/list", sessionHandler.ListSessions)
+	r.Get("/{sessionId}/info", sessionHandler.GetSessionInfo)
+	r.Delete("/{sessionId}/delete", sessionHandler.DeleteSession)
+	r.Post("/{sessionId}/connect", sessionHandler.ConnectSession)
+	r.Post("/{sessionId}/logout", sessionHandler.LogoutSession)
+	r.Get("/{sessionId}/qr", sessionHandler.GetQRCode)
+	r.Post("/{sessionId}/pair", sessionHandler.PairPhone)
+	r.Post("/{sessionId}/proxy/set", sessionHandler.SetProxy)
+	r.Get("/{sessionId}/proxy/find", sessionHandler.GetProxy)
+
+	// Advanced session info
+	r.Get("/{sessionId}/stats", sessionHandler.GetSessionStats)
+	r.Get("/{sessionId}/user-jid", sessionHandler.GetUserJID)
+	r.Get("/{sessionId}/device-info", sessionHandler.GetDeviceInfo)
+}
+
+// setupMessageRoutes sets up message routes
+func setupMessageRoutes(r chi.Router, container *app.Container, wameowManager *wameow.Manager, appLogger *logger.Logger) {
+	messageHandler := handlers.NewMessageHandler(
+		container.GetMessageUseCase(),
+		wameowManager,
+		container.GetSessionRepository(),
+		appLogger,
+	)
+
+	// Message sending routes
+	r.Route("/{sessionId}/messages", func(r chi.Router) {
+		r.Post("/send/text", messageHandler.SendText)
+		r.Post("/send/media", messageHandler.SendMedia)
+		r.Post("/send/image", messageHandler.SendImage)
+		r.Post("/send/audio", messageHandler.SendAudio)
+		r.Post("/send/video", messageHandler.SendVideo)
+		r.Post("/send/document", messageHandler.SendDocument)
+		r.Post("/send/sticker", messageHandler.SendSticker)
+		r.Post("/send/location", messageHandler.SendLocation)
+		r.Post("/send/contact", messageHandler.SendContact)
+		r.Post("/send/contact-list", messageHandler.SendContactList)
+		r.Post("/send/contact-list-business", messageHandler.SendContactListBusiness)
+		r.Post("/send/single-contact", messageHandler.SendSingleContact)
+		r.Post("/send/single-contact-business", messageHandler.SendSingleContactBusiness)
+		r.Post("/send/profile/business", messageHandler.SendBusinessProfile)
+		r.Post("/send/button", messageHandler.SendButtonMessage)
+		r.Post("/send/list", messageHandler.SendListMessage)
+		r.Post("/send/reaction", messageHandler.SendReaction)
+		r.Post("/send/presence", messageHandler.SendPresence)
+		r.Post("/send/poll", messageHandler.SendPoll)
+		r.Post("/edit", messageHandler.EditMessage)
+		r.Post("/mark-read", messageHandler.MarkAsRead)
+		r.Post("/revoke", messageHandler.RevokeMessage)
+		r.Get("/poll/{messageId}/results", messageHandler.GetPollResults)
+	})
 }
 
 // setupGroupRoutes sets up group management routes
-func setupGroupRoutes(sessions fiber.Router, container *app.Container, appLogger *logger.Logger) {
+func setupGroupRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
 	groupHandler := handlers.NewGroupHandler(appLogger, container.GetGroupUseCase(), container.GetSessionRepository())
 
-	// Basic group operations
-	sessions.Post("/:sessionId/groups/create", groupHandler.CreateGroup)
-	sessions.Get("/:sessionId/groups", groupHandler.ListGroups)
-	sessions.Get("/:sessionId/groups/info", groupHandler.GetGroupInfo)
-	sessions.Post("/:sessionId/groups/participants", groupHandler.UpdateGroupParticipants)
-	sessions.Put("/:sessionId/groups/name", groupHandler.SetGroupName)
-	sessions.Put("/:sessionId/groups/description", groupHandler.SetGroupDescription)
-	sessions.Put("/:sessionId/groups/photo", groupHandler.SetGroupPhoto)
-	sessions.Get("/:sessionId/groups/invite-link", groupHandler.GetGroupInviteLink)
-	sessions.Post("/:sessionId/groups/join", groupHandler.JoinGroup)
-	sessions.Post("/:sessionId/groups/leave", groupHandler.LeaveGroup)
-	sessions.Put("/:sessionId/groups/settings", groupHandler.UpdateGroupSettings)
+	r.Route("/{sessionId}/groups", func(r chi.Router) {
+		r.Post("/", groupHandler.CreateGroup)
+		r.Get("/", groupHandler.ListGroups)
+		r.Get("/info", groupHandler.GetGroupInfo)
+		r.Post("/participants", groupHandler.UpdateGroupParticipants)
+		r.Put("/name", groupHandler.SetGroupName)
+		r.Put("/description", groupHandler.SetGroupDescription)
+		r.Put("/photo", groupHandler.SetGroupPhoto)
 
-	// Group request management
-	sessions.Get("/:sessionId/groups/requests", groupHandler.GetGroupRequestParticipants)
-	sessions.Post("/:sessionId/groups/requests", groupHandler.UpdateGroupRequestParticipants)
-	sessions.Put("/:sessionId/groups/join-approval", groupHandler.SetGroupJoinApprovalMode)
-	sessions.Put("/:sessionId/groups/member-add-mode", groupHandler.SetGroupMemberAddMode)
-
-	// Advanced group operations
-	sessions.Get("/:sessionId/groups/info-from-link", groupHandler.GetGroupInfoFromLink)
-	sessions.Post("/:sessionId/groups/info-from-invite", groupHandler.GetGroupInfoFromInvite)
-	sessions.Post("/:sessionId/groups/join-with-invite", groupHandler.JoinGroupWithInvite)
-}
-
-// setupNewsletterRoutes sets up newsletter management routes
-func setupNewsletterRoutes(sessions fiber.Router, container *app.Container, appLogger *logger.Logger) {
-	newsletterHandler := handlers.NewNewsletterHandler(appLogger, container.GetNewsletterUseCase(), container.GetSessionRepository())
-
-	sessions.Post("/:sessionId/newsletters/create", newsletterHandler.CreateNewsletter)
-	sessions.Get("/:sessionId/newsletters/info", newsletterHandler.GetNewsletterInfo)
-	sessions.Post("/:sessionId/newsletters/info-from-invite", newsletterHandler.GetNewsletterInfoWithInvite)
-	sessions.Post("/:sessionId/newsletters/follow", newsletterHandler.FollowNewsletter)
-	sessions.Post("/:sessionId/newsletters/unfollow", newsletterHandler.UnfollowNewsletter)
-	sessions.Get("/:sessionId/newsletters/messages", newsletterHandler.GetNewsletterMessages)
-	sessions.Get("/:sessionId/newsletters/updates", newsletterHandler.GetNewsletterMessageUpdates)
-	sessions.Post("/:sessionId/newsletters/mark-viewed", newsletterHandler.NewsletterMarkViewed)
-	sessions.Post("/:sessionId/newsletters/send-reaction", newsletterHandler.NewsletterSendReaction)
-	sessions.Post("/:sessionId/newsletters/subscribe-live", newsletterHandler.NewsletterSubscribeLiveUpdates)
-	sessions.Post("/:sessionId/newsletters/toggle-mute", newsletterHandler.NewsletterToggleMute)
-	sessions.Post("/:sessionId/newsletters/accept-tos", newsletterHandler.AcceptTOSNotice)
-	sessions.Post("/:sessionId/newsletters/upload", newsletterHandler.UploadNewsletter)
-	sessions.Post("/:sessionId/newsletters/upload-reader", newsletterHandler.UploadNewsletterReader)
-	sessions.Get("/:sessionId/newsletters", newsletterHandler.GetSubscribedNewsletters)
-}
-
-// setupCommunityRoutes sets up community management routes
-func setupCommunityRoutes(sessions fiber.Router, container *app.Container, appLogger *logger.Logger) {
-	communityHandler := handlers.NewCommunityHandler(appLogger, container.GetCommunityUseCase(), container.GetSessionRepository())
-
-	sessions.Post("/:sessionId/communities/link-group", communityHandler.LinkGroup)
-	sessions.Post("/:sessionId/communities/unlink-group", communityHandler.UnlinkGroup)
-	sessions.Get("/:sessionId/communities/info", communityHandler.GetCommunityInfo)
-	sessions.Get("/:sessionId/communities/subgroups", communityHandler.GetSubGroups)
+		// Advanced group operations
+		r.Get("/invite-link", groupHandler.GetGroupInviteLink)
+		r.Post("/join-via-link", groupHandler.JoinGroupViaLink)
+		r.Post("/leave", groupHandler.LeaveGroup)
+		r.Put("/settings", groupHandler.UpdateGroupSettings)
+		r.Get("/request-participants", groupHandler.GetGroupRequestParticipants)
+		r.Post("/request-participants", groupHandler.UpdateGroupRequestParticipants)
+		r.Put("/join-approval-mode", groupHandler.SetGroupJoinApprovalMode)
+		r.Put("/member-add-mode", groupHandler.SetGroupMemberAddMode)
+		r.Get("/info-from-link", groupHandler.GetGroupInfoFromLink)
+		r.Post("/info-from-invite", groupHandler.GetGroupInfoFromInvite)
+		r.Post("/join-with-invite", groupHandler.JoinGroupWithInvite)
+	})
 }
 
 // setupContactRoutes sets up contact management routes
-func setupContactRoutes(sessions fiber.Router, container *app.Container, appLogger *logger.Logger) {
+func setupContactRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
 	contactHandler := handlers.NewContactHandler(appLogger, container.GetContactUseCase(), container.GetSessionRepository())
 
-	sessions.Post("/:sessionId/contacts/check", contactHandler.CheckWhatsApp)
-	sessions.Get("/:sessionId/contacts/avatar", contactHandler.GetProfilePicture)
-	sessions.Post("/:sessionId/contacts/info", contactHandler.GetUserInfo)
-	sessions.Get("/:sessionId/contacts", contactHandler.ListContacts)
-	sessions.Post("/:sessionId/contacts/sync", contactHandler.SyncContacts)
-	sessions.Get("/:sessionId/contacts/business", contactHandler.GetBusinessProfile)
+	r.Route("/{sessionId}/contacts", func(r chi.Router) {
+		r.Post("/check", contactHandler.CheckWhatsApp)
+		r.Get("/avatar", contactHandler.GetProfilePicture)
+		r.Post("/info", contactHandler.GetUserInfo)
+		r.Get("/", contactHandler.ListContacts)
+		r.Post("/sync", contactHandler.SyncContacts)
+		r.Get("/business", contactHandler.GetBusinessProfile)
+
+		// Advanced contact operations
+		r.Post("/is-on-whatsapp", contactHandler.IsOnWhatsApp)
+		r.Get("/all", contactHandler.GetAllContacts)
+		r.Get("/profile-picture-info", contactHandler.GetProfilePictureInfo)
+		r.Post("/detailed-info", contactHandler.GetDetailedUserInfo)
+	})
 }
 
-// setupWebhookRoutes sets up webhook management routes
-func setupWebhookRoutes(sessions fiber.Router, container *app.Container, appLogger *logger.Logger) {
-	webhookHandler := handlers.NewWebhookHandler(container.WebhookUseCase, appLogger)
+// setupNewsletterRoutes sets up newsletter routes
+func setupNewsletterRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
+	newsletterHandler := handlers.NewNewsletterHandler(appLogger, container.GetNewsletterUseCase(), container.GetSessionRepository())
 
-	sessions.Post("/:sessionId/webhook/set", webhookHandler.SetConfig)
-	sessions.Get("/:sessionId/webhook/find", webhookHandler.FindConfig)
-	sessions.Post("/:sessionId/webhook/test", webhookHandler.TestWebhook)
+	r.Route("/{sessionId}/newsletters", func(r chi.Router) {
+		r.Post("/create", newsletterHandler.CreateNewsletter)
+		r.Get("/info", newsletterHandler.GetNewsletterInfo)
+		r.Post("/info-from-invite", newsletterHandler.GetNewsletterInfoWithInvite)
+		r.Post("/follow", newsletterHandler.FollowNewsletter)
+		r.Post("/unfollow", newsletterHandler.UnfollowNewsletter)
+		r.Get("/", newsletterHandler.GetSubscribedNewsletters)
+	})
 }
 
-// setupChatwootRoutes sets up Chatwoot integration routes
-func setupChatwootRoutes(sessions fiber.Router, container *app.Container, appLogger *logger.Logger) {
-	chatwootHandler := handlers.NewChatwootHandler(container.GetChatwootUseCase(), appLogger)
+// setupCommunityRoutes sets up community routes
+func setupCommunityRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
+	communityHandler := handlers.NewCommunityHandler(appLogger, container.GetCommunityUseCase(), container.GetSessionRepository())
 
-	sessions.Post("/:sessionId/chatwoot/set", chatwootHandler.SetConfig)
-	sessions.Get("/:sessionId/chatwoot/find", chatwootHandler.FindConfig)
-	sessions.Post("/:sessionId/chatwoot/contacts/sync", chatwootHandler.SyncContacts)
-	sessions.Post("/:sessionId/chatwoot/conversations/sync", chatwootHandler.SyncConversations)
+	r.Route("/{sessionId}/communities", func(r chi.Router) {
+		r.Post("/link-group", communityHandler.LinkGroup)
+		r.Post("/unlink-group", communityHandler.UnlinkGroup)
+		r.Get("/info", communityHandler.GetCommunityInfo)
+		r.Get("/subgroups", communityHandler.GetSubGroups)
+	})
 }
 
-func setupSessionSpecificRoutes(app *fiber.App, database *db.DB, appLogger *logger.Logger, wameowManager *wameow.Manager, container *app.Container) {
-	// Session-specific advanced routes that require additional processing
-	// Currently no additional session-specific routes needed
-	// All core functionality is handled in setupSessionRoutes
+// setupWebhookRoutes sets up webhook routes
+func setupWebhookRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
+	webhookHandler := handlers.NewWebhookHandler(appLogger, container.GetWebhookUseCase(), container.GetSessionRepository())
+
+	r.Route("/{sessionId}/webhook", func(r chi.Router) {
+		r.Post("/set", webhookHandler.SetConfig)
+		r.Get("/find", webhookHandler.FindConfig)
+		r.Post("/test", webhookHandler.TestWebhook)
+	})
 }
 
-func setupGlobalRoutes(app *fiber.App, appLogger *logger.Logger, container *app.Container) {
+// setupMediaRoutes sets up media management routes
+func setupMediaRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
+	mediaHandler := handlers.NewMediaHandler(appLogger, container.GetMediaUseCase(), container.GetSessionRepository())
+
+	r.Route("/{sessionId}/media", func(r chi.Router) {
+		r.Post("/download", mediaHandler.DownloadMedia)
+		r.Get("/info", mediaHandler.GetMediaInfo)
+		r.Get("/list", mediaHandler.ListCachedMedia)
+		r.Post("/clear-cache", mediaHandler.ClearCache)
+		r.Get("/stats", mediaHandler.GetMediaStats)
+	})
+}
+
+// setupChatwootRoutes sets up chatwoot integration routes
+func setupChatwootRoutes(r chi.Router, container *app.Container, appLogger *logger.Logger) {
+	// TODO: Implement chatwoot handler for Chi when needed
+	// chatwootHandler := handlers.NewChatwootHandler(container.GetChatwootUseCase(), appLogger)
+
+	// r.Route("/{sessionId}/chatwoot", func(r chi.Router) {
+	// 	r.Post("/set", chatwootHandler.CreateConfig)
+	// 	r.Get("/", chatwootHandler.GetConfig)
+	// 	r.Put("/", chatwootHandler.UpdateConfig)
+	// })
+}
+
+// setupGlobalRoutes sets up global routes
+func setupGlobalRoutes(r *chi.Mux, appLogger *logger.Logger, container *app.Container) {
 	// Global webhook info routes
-	webhookHandler := handlers.NewWebhookHandler(container.WebhookUseCase, appLogger)
-	app.Get("/webhook/events", webhookHandler.GetSupportedEvents) // GET /webhook/events
+	webhookHandler := handlers.NewWebhookHandler(appLogger, container.GetWebhookUseCase(), container.GetSessionRepository())
+	r.Get("/webhook/events", webhookHandler.GetSupportedEvents)
 
-	// Chatwoot webhook (without authentication - like Evolution API)
-	chatwootHandler := handlers.NewChatwootHandler(container.GetChatwootUseCase(), appLogger)
-	app.Post("/sessions/:sessionId/chatwoot/webhook", chatwootHandler.ReceiveWebhook) // POST /sessions/:sessionId/chatwoot/webhook
-	app.Post("/chatwoot/webhook/:sessionId", chatwootHandler.ReceiveWebhook)          // POST /chatwoot/webhook/:sessionId (alternative route)
+	// TODO: Implement chatwoot webhook for Chi when needed
+	// chatwootHandler := handlers.NewChatwootHandler(container.GetChatwootUseCase(), appLogger)
+	// r.Post("/chatwoot/webhook/{sessionId}", chatwootHandler.ReceiveWebhook)
 }

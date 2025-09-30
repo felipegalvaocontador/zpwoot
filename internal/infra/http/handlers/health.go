@@ -1,11 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
+	"net/http"
+
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/infra/wameow"
 	"zpwoot/platform/logger"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 type HealthHandler struct {
@@ -28,12 +29,15 @@ func NewHealthHandler(logger *logger.Logger, wameowManager *wameow.Manager) *Hea
 // @Success 200 {object} common.HealthResponse "API is healthy"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /health [get]
-func (h *HealthHandler) GetHealth(c *fiber.Ctx) error {
+func (h *HealthHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	response := &common.HealthResponse{
 		Status:  "ok",
 		Service: "zpwoot",
 	}
-	return c.JSON(response)
+	
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary WhatsApp manager health check
@@ -44,18 +48,23 @@ func (h *HealthHandler) GetHealth(c *fiber.Ctx) error {
 // @Success 200 {object} object "WhatsApp manager is healthy"
 // @Failure 503 {object} object "Service Unavailable"
 // @Router /health/wameow [get]
-func (h *HealthHandler) GetWameowHealth(c *fiber.Ctx) error {
+func (h *HealthHandler) GetWameowHealth(w http.ResponseWriter, r *http.Request) {
 	if h.wameowManager == nil {
-		return c.Status(503).JSON(fiber.Map{
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
 			"service": "wameow",
 			"message": "WhatsApp manager not initialized",
 		})
+		return
 	}
 
 	healthData := h.wameowManager.HealthCheck()
 	healthData["service"] = "wameow"
 	healthData["message"] = "WhatsApp manager is healthy and whatsmeow tables are available"
 
-	return c.JSON(healthData)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(healthData)
 }

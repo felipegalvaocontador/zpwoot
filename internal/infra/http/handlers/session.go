@@ -2,9 +2,14 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/session"
@@ -12,8 +17,6 @@ import (
 	"zpwoot/internal/infra/http/helpers"
 	pkgErrors "zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 type SessionHandler struct {
@@ -38,22 +41,22 @@ func NewSessionHandlerWithoutUseCase(appLogger *logger.Logger, sessionRepo helpe
 	}
 }
 
-func (h *SessionHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session, *fiber.Error) {
-	idOrName := c.Params("sessionId")
+func (h *SessionHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
+	idOrName := chi.URLParam(r, "sessionId")
 
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), idOrName)
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), idOrName)
 	if err != nil {
 		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
 			"identifier": idOrName,
 			"error":      err.Error(),
-			"path":       c.Path(),
+			"path":       r.URL.Path,
 		})
 
 		if err.Error() == "session not found" || errors.Is(err, domainSession.ErrSessionNotFound) {
-			return nil, fiber.NewError(404, "Session not found")
+			return nil, fmt.Errorf("session not found")
 		}
 
-		return nil, fiber.NewError(500, "Failed to resolve session")
+		return nil, fmt.Errorf("failed to resolve session")
 	}
 
 	return sess, nil
@@ -61,63 +64,102 @@ func (h *SessionHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session, *
 
 // handleSessionAction handles common session action logic
 func (h *SessionHandler) handleSessionAction(
-	c *fiber.Ctx,
+	w http.ResponseWriter,
+	r *http.Request,
 	actionName string,
 	actionFunc func(context.Context, string) (interface{}, error),
-) error {
+) {
 	if h.sessionUC == nil {
-		return c.Status(500).JSON(common.NewErrorResponse("Session use case not initialized"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		return
 	}
 
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = http.StatusNotFound
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	result, err := actionFunc(c.Context(), sess.ID.String())
+	result, err := actionFunc(r.Context(), sess.ID.String())
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
-		return c.Status(500).JSON(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		return
 	}
 
 	response := common.NewSuccessResponse(result, fmt.Sprintf("%s retrieved successfully", titleCase(actionName)))
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // handleSessionActionNoReturn handles session actions that don't return data
 func (h *SessionHandler) handleSessionActionNoReturn(
-	c *fiber.Ctx,
+	w http.ResponseWriter,
+	r *http.Request,
 	actionName string,
 	actionFunc func(context.Context, string) error,
 	successMessage string,
-) error {
+) {
 	if h.sessionUC == nil {
-		return c.Status(500).JSON(common.NewErrorResponse("Session use case not initialized"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		return
 	}
 
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = http.StatusNotFound
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	err := actionFunc(c.Context(), sess.ID.String())
+	err = actionFunc(r.Context(), sess.ID.String())
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
 
 		// Handle specific error types
 		appErr := &pkgErrors.AppError{}
 		if errors.As(err, &appErr) {
-			return c.Status(appErr.Code).JSON(common.NewErrorResponse(appErr.Message))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(appErr.Code)
+			json.NewEncoder(w).Encode(common.NewErrorResponse(appErr.Message))
+			return
 		}
 
 		if err.Error() == "session not found" {
-			return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+			return
 		}
-		return c.Status(500).JSON(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		return
 	}
 
 	response := common.NewSuccessResponse(nil, successMessage)
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Create new session
@@ -133,21 +175,27 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 // @Failure 409 {object} object "Session already exists"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/create [post]
-func (h *SessionHandler) CreateSession(c *fiber.Ctx) error {
+func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Creating new session")
 
 	if h.sessionUC == nil {
 		h.logger.Error("Session use case not initialized")
-		return c.Status(500).JSON(fiber.Map{
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": false,
 			"message": "Session service not available",
 		})
+		return
 	}
 
 	var req session.CreateSessionRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("Failed to parse request body: " + err.Error())
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		return
 	}
 
 	if isValid, errorMsg := h.sessionResolver.ValidateSessionName(req.Name); !isValid {
@@ -157,7 +205,9 @@ func (h *SessionHandler) CreateSession(c *fiber.Ctx) error {
 		})
 
 		suggested := h.sessionResolver.SuggestValidName(req.Name)
-		return c.Status(400).JSON(fiber.Map{
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":         "Invalid session name",
 			"message":       errorMsg,
 			"suggestedName": suggested,
@@ -168,25 +218,34 @@ func (h *SessionHandler) CreateSession(c *fiber.Ctx) error {
 				"Cannot use reserved names (create, list, info, etc.)",
 			},
 		})
+		return
 	}
 
-	result, err := h.sessionUC.CreateSession(c.Context(), &req)
+	result, err := h.sessionUC.CreateSession(r.Context(), &req)
 	if err != nil {
 		h.logger.Error("Failed to create session: " + err.Error())
 
 		if strings.Contains(err.Error(), "Session already exists") {
-			return c.Status(409).JSON(fiber.Map{
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			json.NewEncoder(w).Encode(map[string]interface{}{
 				"success": false,
 				"error":   "Session already exists",
 				"message": fmt.Sprintf("A session with the name '%s' already exists. Please choose a different name.", req.Name),
 			})
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to create session"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to create session"))
+		return
 	}
 
 	response := common.NewSuccessResponse(result, "Session created successfully")
-	return c.Status(201).JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary List sessions
@@ -204,16 +263,19 @@ func (h *SessionHandler) CreateSession(c *fiber.Ctx) error {
 // @Failure 400 {object} object "Bad Request"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/list [get]
-func (h *SessionHandler) ListSessions(c *fiber.Ctx) error {
+func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Listing sessions")
 
 	if h.sessionUC == nil {
-		return c.Status(500).JSON(common.NewErrorResponse("Session use case not initialized"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		return
 	}
 
 	var req session.ListSessionsRequest
 
-	if isConnectedStr := c.Query("isConnected"); isConnectedStr != "" {
+	if isConnectedStr := r.URL.Query().Get("isConnected"); isConnectedStr != "" {
 		switch isConnectedStr {
 		case "true":
 			isConnected := true
@@ -224,28 +286,39 @@ func (h *SessionHandler) ListSessions(c *fiber.Ctx) error {
 		}
 	}
 
-	if deviceJid := c.Query("deviceJid"); deviceJid != "" {
+	if deviceJid := r.URL.Query().Get("deviceJid"); deviceJid != "" {
 		req.DeviceJid = &deviceJid
 	}
 
-	if limit := c.QueryInt("limit", 20); limit > 0 && limit <= 100 {
-		req.Limit = limit
-	} else {
-		req.Limit = 20
+	limit := 20
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 && parsedLimit <= 100 {
+			limit = parsedLimit
+		}
 	}
+	req.Limit = limit
 
-	if offset := c.QueryInt("offset", 0); offset >= 0 {
-		req.Offset = offset
+	offset := 0
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if parsedOffset, err := strconv.Atoi(offsetStr); err == nil && parsedOffset >= 0 {
+			offset = parsedOffset
+		}
 	}
+	req.Offset = offset
 
-	result, err := h.sessionUC.ListSessions(c.Context(), &req)
+	result, err := h.sessionUC.ListSessions(r.Context(), &req)
 	if err != nil {
 		h.logger.Error("Failed to list sessions: " + err.Error())
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to list sessions"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to list sessions"))
+		return
 	}
 
 	response := common.NewSuccessResponse(result, "Sessions retrieved successfully")
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Get session information
@@ -258,8 +331,8 @@ func (h *SessionHandler) ListSessions(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/info [get]
-func (h *SessionHandler) GetSessionInfo(c *fiber.Ctx) error {
-	return h.handleSessionAction(c, "get session info", func(ctx context.Context, sessionID string) (interface{}, error) {
+func (h *SessionHandler) GetSessionInfo(w http.ResponseWriter, r *http.Request) {
+	h.handleSessionAction(w, r, "get session info", func(ctx context.Context, sessionID string) (interface{}, error) {
 		return h.sessionUC.GetSessionInfo(ctx, sessionID)
 	})
 }
@@ -274,8 +347,8 @@ func (h *SessionHandler) GetSessionInfo(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/delete [delete]
-func (h *SessionHandler) DeleteSession(c *fiber.Ctx) error {
-	return h.handleSessionActionNoReturn(c, "delete session", h.sessionUC.DeleteSession, "Session deleted successfully")
+func (h *SessionHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
+	h.handleSessionActionNoReturn(w, r, "delete session", h.sessionUC.DeleteSession, "Session deleted successfully")
 }
 
 // @Summary Connect session
@@ -288,8 +361,8 @@ func (h *SessionHandler) DeleteSession(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/connect [post]
-func (h *SessionHandler) ConnectSession(c *fiber.Ctx) error {
-	return h.handleSessionAction(c, "connect session", func(ctx context.Context, sessionID string) (interface{}, error) {
+func (h *SessionHandler) ConnectSession(w http.ResponseWriter, r *http.Request) {
+	h.handleSessionAction(w, r, "connect session", func(ctx context.Context, sessionID string) (interface{}, error) {
 		return h.sessionUC.ConnectSession(ctx, sessionID)
 	})
 }
@@ -304,8 +377,8 @@ func (h *SessionHandler) ConnectSession(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/logout [post]
-func (h *SessionHandler) LogoutSession(c *fiber.Ctx) error {
-	return h.handleSessionActionNoReturn(c, "logout session", h.sessionUC.LogoutSession, "Session logged out successfully")
+func (h *SessionHandler) LogoutSession(w http.ResponseWriter, r *http.Request) {
+	h.handleSessionActionNoReturn(w, r, "logout session", h.sessionUC.LogoutSession, "Session logged out successfully")
 }
 
 // @Summary Get QR code
@@ -318,8 +391,8 @@ func (h *SessionHandler) LogoutSession(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/qr [get]
-func (h *SessionHandler) GetQRCode(c *fiber.Ctx) error {
-	return h.handleSessionAction(c, "get QR code", func(ctx context.Context, sessionID string) (interface{}, error) {
+func (h *SessionHandler) GetQRCode(w http.ResponseWriter, r *http.Request) {
+	h.handleSessionAction(w, r, "get QR code", func(ctx context.Context, sessionID string) (interface{}, error) {
 		return h.sessionUC.GetQRCode(ctx, sessionID)
 	})
 }
@@ -337,31 +410,49 @@ func (h *SessionHandler) GetQRCode(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/pair [post]
-func (h *SessionHandler) PairPhone(c *fiber.Ctx) error {
+func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 	if h.sessionUC == nil {
-		return c.Status(500).JSON(common.NewErrorResponse("Session use case not initialized"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		return
 	}
 
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = http.StatusNotFound
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
 	var req session.PairPhoneRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("Failed to parse pair phone request: " + err.Error())
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		return
 	}
 
-	ctx := c.Context()
-	err := h.sessionUC.PairPhone(ctx, sess.ID.String(), &req)
+	ctx := r.Context()
+	err = h.sessionUC.PairPhone(ctx, sess.ID.String(), &req)
 	if err != nil {
 		h.logger.Error("Failed to pair phone: " + err.Error())
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to pair phone"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to pair phone"))
+		return
 	}
 
 	response := common.NewSuccessResponse(nil, "Phone pairing initiated successfully")
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Set proxy configuration
@@ -377,14 +468,24 @@ func (h *SessionHandler) PairPhone(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/proxy/set [post]
-func (h *SessionHandler) SetProxy(c *fiber.Ctx) error {
+func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 	if h.sessionUC == nil {
-		return c.Status(500).JSON(common.NewErrorResponse("Session use case not initialized"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		return
 	}
 
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = http.StatusNotFound
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
 	h.logger.InfoWithFields("Setting proxy", map[string]interface{}{
@@ -393,22 +494,33 @@ func (h *SessionHandler) SetProxy(c *fiber.Ctx) error {
 	})
 
 	var req session.SetProxyRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("Failed to parse request body: " + err.Error())
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		return
 	}
 
-	err := h.sessionUC.SetProxy(c.Context(), sess.ID.String(), &req)
+	err = h.sessionUC.SetProxy(r.Context(), sess.ID.String(), &req)
 	if err != nil {
 		h.logger.Error("Failed to set proxy: " + err.Error())
 		if err.Error() == "session not found" {
-			return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+			return
 		}
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to set proxy"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to set proxy"))
+		return
 	}
 
 	response := common.NewSuccessResponse(nil, "Proxy configuration updated successfully")
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Get proxy configuration
@@ -421,14 +533,24 @@ func (h *SessionHandler) SetProxy(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/proxy/find [get]
-func (h *SessionHandler) GetProxy(c *fiber.Ctx) error {
+func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 	if h.sessionUC == nil {
-		return c.Status(500).JSON(common.NewErrorResponse("Session use case not initialized"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		return
 	}
 
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = http.StatusNotFound
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
 	h.logger.InfoWithFields("Getting proxy config", map[string]interface{}{
@@ -436,15 +558,124 @@ func (h *SessionHandler) GetProxy(c *fiber.Ctx) error {
 		"session_name": sess.Name,
 	})
 
-	result, err := h.sessionUC.GetProxy(c.Context(), sess.ID.String())
+	result, err := h.sessionUC.GetProxy(r.Context(), sess.ID.String())
 	if err != nil {
 		h.logger.Error("Failed to get proxy: " + err.Error())
 		if err.Error() == "session not found" {
-			return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+			return
 		}
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to get proxy"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get proxy"))
+		return
 	}
 
 	response := common.NewSuccessResponse(result, "Proxy configuration retrieved successfully")
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetSessionStats gets session statistics
+func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = http.StatusNotFound
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	h.logger.InfoWithFields("Getting session stats", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	// For now, return placeholder stats until implemented in use case
+	response := map[string]interface{}{
+		"sessionId":        sess.ID.String(),
+		"sessionName":      sess.Name,
+		"messagesReceived": 0,
+		"messagesSent":     0,
+		"uptime":           "0h 0m 0s",
+		"status":           "active", // placeholder
+		"message":          "Session stats functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Session stats retrieved successfully"))
+}
+
+// GetUserJID gets the current user's JID
+func (h *SessionHandler) GetUserJID(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = http.StatusNotFound
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	h.logger.InfoWithFields("Getting user JID", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	// For now, return placeholder JID until implemented in use case
+	response := map[string]interface{}{
+		"sessionId": sess.ID.String(),
+		"userJid":   "placeholder@s.whatsapp.net",
+		"message":   "Get user JID functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "User JID retrieved successfully"))
+}
+
+// GetDeviceInfo gets device information
+func (h *SessionHandler) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = http.StatusNotFound
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	h.logger.InfoWithFields("Getting device info", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	// For now, return placeholder device info until implemented in use case
+	response := map[string]interface{}{
+		"sessionId":    sess.ID.String(),
+		"deviceId":     "placeholder-device-id",
+		"platform":     "web",
+		"appVersion":   "2.2412.54",
+		"osVersion":    "0.1",
+		"manufacturer": "zpwoot",
+		"message":      "Get device info functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Device info retrieved successfully"))
 }

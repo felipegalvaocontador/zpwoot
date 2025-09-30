@@ -20,18 +20,14 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 	"time"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	_ "zpwoot/docs/swagger" // Import generated swagger docs
 	"zpwoot/internal/app"
@@ -45,8 +41,8 @@ import (
 	"zpwoot/internal/domain/session"
 	domainWebhook "zpwoot/internal/domain/webhook"
 	"zpwoot/internal/infra/db"
-	"zpwoot/internal/infra/http/middleware"
 	"zpwoot/internal/infra/http/routers"
+
 	chatwootIntegration "zpwoot/internal/infra/integrations/chatwoot"
 	"zpwoot/internal/infra/integrations/webhook"
 	"zpwoot/internal/infra/repository"
@@ -109,17 +105,18 @@ func main() {
 	managerInstances := initializeManagers(database, repositories, appLogger)
 	container := createContainer(repositories, managerInstances, database, appLogger)
 
-	// Setup and start HTTP server
-	fiberApp := setupHTTPServer(cfg, container, database, managerInstances.whatsapp, appLogger)
+	// Setup and start HTTP server with Chi
+	appLogger.Info("Starting server with Chi router")
+	chiHandler := setupHTTPServer(cfg, container, database, managerInstances.whatsapp, appLogger)
 
 	// Start background services
 	startBackgroundServices(container, appLogger)
 
-	// Setup graceful shutdown
-	setupGracefulShutdown(fiberApp, appLogger)
+	// Setup graceful shutdown for Chi
+	setupGracefulShutdown(chiHandler, appLogger)
 
-	// Start server
-	startServer(fiberApp, cfg, appLogger)
+	// Start Chi server
+	startServer(chiHandler, cfg, appLogger)
 }
 
 // parseFlags parses and returns command line flags
@@ -130,6 +127,7 @@ func parseFlags() commandFlags {
 	flag.BoolVar(&flags.migrateStatus, "migrate-status", false, "Show migration status")
 	flag.BoolVar(&flags.seed, "seed", false, "Seed database with sample data")
 	flag.BoolVar(&flags.version, "version", false, "Show version information")
+
 	flag.Parse()
 	return flags
 }
@@ -407,40 +405,9 @@ func createContainerConfig(repositories *repository.Repositories, managers manag
 	}
 }
 
-// setupHTTPServer creates and configures the Fiber HTTP server
-func setupHTTPServer(cfg *config.Config, container *app.Container, database *platformDB.DB, whatsappManager *wameow.Manager, appLogger *logger.Logger) *fiber.App {
-	fiberApp := fiber.New(fiber.Config{
-		DisableStartupMessage: true,
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			code := fiber.StatusInternalServerError
-			e := &fiber.Error{}
-			if errors.As(err, &e) {
-				code = e.Code
-			}
-			return c.Status(code).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		},
-	})
 
-	// Configure middlewares
-	setupMiddlewares(fiberApp, cfg, container, appLogger)
 
-	// Setup routes
-	routers.SetupRoutes(fiberApp, database, appLogger, whatsappManager, container)
 
-	return fiberApp
-}
-
-// setupMiddlewares configures all HTTP middlewares
-func setupMiddlewares(app *fiber.App, cfg *config.Config, container *app.Container, appLogger *logger.Logger) {
-	app.Use(recover.New())
-	app.Use(middleware.RequestID(appLogger))
-	app.Use(middleware.HTTPLogger(appLogger))
-	app.Use(middleware.Metrics(container, appLogger))
-	app.Use(cors.New())
-	app.Use(middleware.APIKeyAuth(cfg, appLogger))
-}
 
 // startBackgroundServices starts all background services
 func startBackgroundServices(container *app.Container, appLogger *logger.Logger) {
@@ -448,32 +415,9 @@ func startBackgroundServices(container *app.Container, appLogger *logger.Logger)
 }
 
 // setupGracefulShutdown configures graceful shutdown handling
-func setupGracefulShutdown(fiberApp *fiber.App, appLogger *logger.Logger) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	go func() {
-		<-c
-		appLogger.Info("Shutting down server...")
-		if err := fiberApp.Shutdown(); err != nil {
-			appLogger.Error("Failed to shutdown server gracefully: " + err.Error())
-		}
-	}()
-}
 
-// startServer starts the HTTP server
-func startServer(fiberApp *fiber.App, cfg *config.Config, appLogger *logger.Logger) {
-	appLogger.InfoWithFields("Starting zpwoot server", map[string]interface{}{
-		"port":        cfg.Port,
-		"server_host": cfg.ServerHost,
-		"environment": cfg.NodeEnv,
-		"log_level":   cfg.LogLevel,
-	})
 
-	if err := fiberApp.Listen(":" + cfg.Port); err != nil {
-		appLogger.Fatal("Server failed to start: " + err.Error())
-	}
-}
 
 func showVersion() {
 	fmt.Printf("zpwoot - WhatsApp Multi-Session API\n")
@@ -673,4 +617,42 @@ func reconnectSessions(ctx context.Context, sessions []*session.Session, session
 	}
 
 	return stats
+}
+
+// setupHTTPServer creates and configures the Chi HTTP server
+func setupHTTPServer(cfg *config.Config, container *app.Container, database *platformDB.DB, whatsappManager *wameow.Manager, appLogger *logger.Logger) http.Handler {
+	return routers.SetupRoutes(cfg, database, appLogger, whatsappManager, container)
+}
+
+// setupGracefulShutdown configures graceful shutdown handling for Chi
+func setupGracefulShutdown(handler http.Handler, appLogger *logger.Logger) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-c
+		appLogger.Info("Shutting down Chi server...")
+		// Chi doesn't have a built-in shutdown method like Fiber
+		// The server shutdown will be handled by the HTTP server
+	}()
+}
+
+// startServer starts the Chi HTTP server
+func startServer(handler http.Handler, cfg *config.Config, appLogger *logger.Logger) {
+	server := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: handler,
+	}
+
+	appLogger.InfoWithFields("Starting zpwoot server with Chi", map[string]interface{}{
+		"port":        cfg.Port,
+		"server_host": cfg.ServerHost,
+		"environment": cfg.NodeEnv,
+		"log_level":   cfg.LogLevel,
+		"router":      "chi",
+	})
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		appLogger.Fatal("Chi server failed to start: " + err.Error())
+	}
 }

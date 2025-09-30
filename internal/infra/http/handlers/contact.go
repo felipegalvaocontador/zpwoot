@@ -2,16 +2,19 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/contact"
 	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 type ContactHandler struct {
@@ -30,21 +33,32 @@ func NewContactHandler(appLogger *logger.Logger, contactUC contact.UseCase, sess
 
 // handleContactAction handles common contact action logic
 func (h *ContactHandler) handleContactAction(
-	c *fiber.Ctx,
+	w http.ResponseWriter,
+	r *http.Request,
 	actionName string,
 	successMessage string,
-	parseFunc func(*fiber.Ctx, *domainSession.Session) (interface{}, error),
+	parseFunc func(*http.Request, *domainSession.Session) (interface{}, error),
 	actionFunc func(context.Context, interface{}) (interface{}, error),
-) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	req, err := parseFunc(c, sess)
+	req, err := parseFunc(r, sess)
 	if err != nil {
 		h.logger.Error("Failed to parse request body: " + err.Error())
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		return
 	}
 
 	h.logger.InfoWithFields(actionName, map[string]interface{}{
@@ -52,14 +66,19 @@ func (h *ContactHandler) handleContactAction(
 		"session_name": sess.Name,
 	})
 
-	result, err := actionFunc(c.Context(), req)
+	result, err := actionFunc(r.Context(), req)
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
-		return c.Status(500).JSON(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		return
 	}
 
 	response := common.NewSuccessResponse(result, successMessage)
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Check if phone numbers are on WhatsApp
@@ -75,14 +94,15 @@ func (h *ContactHandler) handleContactAction(
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts/check [post]
-func (h *ContactHandler) CheckWhatsApp(c *fiber.Ctx) error {
-	return h.handleContactAction(
-		c,
+func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
+	h.handleContactAction(
+		w,
+		r,
 		"Checking WhatsApp numbers",
 		"Phone numbers checked successfully",
-		func(c *fiber.Ctx, sess *domainSession.Session) (interface{}, error) {
+		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
 			var req contact.CheckWhatsAppRequest
-			if err := c.BodyParser(&req); err != nil {
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				return nil, err
 			}
 			req.SessionID = sess.ID.String()
@@ -108,18 +128,28 @@ func (h *ContactHandler) CheckWhatsApp(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session or user not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts/avatar [get]
-func (h *ContactHandler) GetProfilePicture(c *fiber.Ctx) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	jid := c.Query("jid")
+	jid := r.URL.Query().Get("jid")
 	if jid == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("JID is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("JID is required"))
+		return
 	}
 
-	preview := c.QueryBool("preview", false)
+	preview := r.URL.Query().Get("preview") == "true"
 
 	h.logger.InfoWithFields("Getting profile picture", map[string]interface{}{
 		"session_id":   sess.ID.String(),
@@ -134,17 +164,25 @@ func (h *ContactHandler) GetProfilePicture(c *fiber.Ctx) error {
 		Preview:   preview,
 	}
 
-	result, err := h.contactUC.GetProfilePicture(c.Context(), req)
+	result, err := h.contactUC.GetProfilePicture(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to get profile picture: " + err.Error())
 		if err.Error() == "user not found" {
-			return c.Status(404).JSON(common.NewErrorResponse("User not found"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("User not found"))
+			return
 		}
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to get profile picture"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get profile picture"))
+		return
 	}
 
 	response := common.NewSuccessResponse(result, "Profile picture retrieved successfully")
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Get user information
@@ -160,14 +198,15 @@ func (h *ContactHandler) GetProfilePicture(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts/info [post]
-func (h *ContactHandler) GetUserInfo(c *fiber.Ctx) error {
-	return h.handleContactAction(
-		c,
+func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
+	h.handleContactAction(
+		w,
+		r,
 		"Getting user info",
 		"User information retrieved successfully",
-		func(c *fiber.Ctx, sess *domainSession.Session) (interface{}, error) {
+		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
 			var req contact.GetUserInfoRequest
-			if err := c.BodyParser(&req); err != nil {
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				return nil, err
 			}
 			req.SessionID = sess.ID.String()
@@ -194,15 +233,35 @@ func (h *ContactHandler) GetUserInfo(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts [get]
-func (h *ContactHandler) ListContacts(c *fiber.Ctx) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	limit := c.QueryInt("limit", 50)
-	offset := c.QueryInt("offset", 0)
-	search := c.Query("search", "")
+	// Parse query parameters
+	limit := 50
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil {
+			limit = parsedLimit
+		}
+	}
+
+	offset := 0
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if parsedOffset, err := strconv.Atoi(offsetStr); err == nil {
+			offset = parsedOffset
+		}
+	}
+
+	search := r.URL.Query().Get("search")
 
 	if limit <= 0 || limit > 100 {
 		limit = 50
@@ -227,14 +286,19 @@ func (h *ContactHandler) ListContacts(c *fiber.Ctx) error {
 		Search:    search,
 	}
 
-	result, err := h.contactUC.ListContacts(c.Context(), req)
+	result, err := h.contactUC.ListContacts(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to list contacts: " + err.Error())
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to list contacts"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to list contacts"))
+		return
 	}
 
 	response := common.NewSuccessResponse(result, "Contacts retrieved successfully")
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Sync contacts
@@ -248,10 +312,17 @@ func (h *ContactHandler) ListContacts(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts/sync [post]
-func (h *ContactHandler) SyncContacts(c *fiber.Ctx) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
 	h.logger.InfoWithFields("Syncing contacts", map[string]interface{}{
@@ -263,14 +334,19 @@ func (h *ContactHandler) SyncContacts(c *fiber.Ctx) error {
 		SessionID: sess.ID.String(),
 	}
 
-	result, err := h.contactUC.SyncContacts(c.Context(), req)
+	result, err := h.contactUC.SyncContacts(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to sync contacts: " + err.Error())
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to sync contacts"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to sync contacts"))
+		return
 	}
 
 	response := common.NewSuccessResponse(result, "Contacts synchronized successfully")
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Get business profile
@@ -285,15 +361,25 @@ func (h *ContactHandler) SyncContacts(c *fiber.Ctx) error {
 // @Failure 404 {object} object "Session or business not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts/business [get]
-func (h *ContactHandler) GetBusinessProfile(c *fiber.Ctx) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	jid := c.Query("jid")
+	jid := r.URL.Query().Get("jid")
 	if jid == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("JID is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("JID is required"))
+		return
 	}
 
 	h.logger.InfoWithFields("Getting business profile", map[string]interface{}{
@@ -307,36 +393,247 @@ func (h *ContactHandler) GetBusinessProfile(c *fiber.Ctx) error {
 		JID:       jid,
 	}
 
-	result, err := h.contactUC.GetBusinessProfile(c.Context(), req)
+	result, err := h.contactUC.GetBusinessProfile(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to get business profile: " + err.Error())
 		if err.Error() == "business not found" {
-			return c.Status(404).JSON(common.NewErrorResponse("Business profile not found"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Business profile not found"))
+			return
 		}
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to get business profile"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get business profile"))
+		return
 	}
 
 	response := common.NewSuccessResponse(result, "Business profile retrieved successfully")
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
-func (h *ContactHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session, *fiber.Error) {
-	idOrName := c.Params("sessionId")
+func (h *ContactHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
+	idOrName := chi.URLParam(r, "sessionId")
 
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), idOrName)
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), idOrName)
 	if err != nil {
 		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
 			"identifier": idOrName,
 			"error":      err.Error(),
-			"path":       c.Path(),
+			"path":       r.URL.Path,
 		})
 
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			return nil, fiber.NewError(404, "Session not found")
-		}
-
-		return nil, fiber.NewError(500, "Failed to resolve session")
+		return nil, err
 	}
 
 	return sess, nil
 }
+
+// IsOnWhatsApp checks if phone numbers are registered on WhatsApp
+func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	var req struct {
+		PhoneNumbers []string `json:"phoneNumbers"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		return
+	}
+
+	if len(req.PhoneNumbers) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Phone numbers are required"))
+		return
+	}
+
+	if len(req.PhoneNumbers) > 50 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Maximum 50 phone numbers allowed"))
+		return
+	}
+
+	h.logger.InfoWithFields("Checking WhatsApp numbers", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+		"phone_count":  len(req.PhoneNumbers),
+	})
+
+	// For now, return placeholder response until implemented in use case
+	results := make([]map[string]interface{}, len(req.PhoneNumbers))
+	for i, phone := range req.PhoneNumbers {
+		results[i] = map[string]interface{}{
+			"phoneNumber": phone,
+			"isOnWhatsApp": true, // placeholder
+			"jid":         phone + "@s.whatsapp.net",
+		}
+	}
+
+	response := map[string]interface{}{
+		"results": results,
+		"message": "IsOnWhatsApp functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Numbers checked successfully"))
+}
+
+// GetAllContacts gets all contacts
+func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	h.logger.InfoWithFields("Getting all contacts", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	// For now, return placeholder response until implemented in use case
+	response := map[string]interface{}{
+		"contacts": []interface{}{},
+		"count":    0,
+		"message":  "GetAllContacts functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "All contacts retrieved successfully"))
+}
+
+// GetProfilePictureInfo gets profile picture information
+func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	jid := r.URL.Query().Get("jid")
+	if jid == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("JID is required"))
+		return
+	}
+
+	h.logger.InfoWithFields("Getting profile picture info", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+		"jid":          jid,
+	})
+
+	// For now, return placeholder response until implemented in use case
+	response := map[string]interface{}{
+		"jid":     jid,
+		"url":     "https://placeholder.com/avatar.jpg",
+		"id":      "placeholder-id",
+		"type":    "image",
+		"message": "GetProfilePictureInfo functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Profile picture info retrieved successfully"))
+}
+
+// GetDetailedUserInfo gets detailed user information
+func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	var req struct {
+		JIDs []string `json:"jids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		return
+	}
+
+	if len(req.JIDs) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("JIDs are required"))
+		return
+	}
+
+	if len(req.JIDs) > 20 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Maximum 20 JIDs allowed"))
+		return
+	}
+
+	h.logger.InfoWithFields("Getting detailed user info", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+		"jid_count":    len(req.JIDs),
+	})
+
+	// For now, return placeholder response until implemented in use case
+	results := make([]map[string]interface{}, len(req.JIDs))
+	for i, jid := range req.JIDs {
+		results[i] = map[string]interface{}{
+			"jid":         jid,
+			"name":        "Placeholder Name",
+			"status":      "Available",
+			"pictureId":   "placeholder-pic-id",
+			"isOnWhatsApp": true,
+		}
+	}
+
+	response := map[string]interface{}{
+		"results": results,
+		"message": "GetDetailedUserInfo functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Detailed user info retrieved successfully"))
+}
+
+
+
+

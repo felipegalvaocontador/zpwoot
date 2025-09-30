@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/go-chi/chi/v5"
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/message"
@@ -13,6 +16,8 @@ import (
 	"zpwoot/internal/infra/wameow"
 	"zpwoot/platform/logger"
 )
+
+
 
 type MessageHandler struct {
 	messageUC       message.UseCase
@@ -37,28 +42,38 @@ func NewMessageHandler(
 	}
 }
 
-// handleMediaMessage handles common media message logic
+// handleMediaMessage handles common media message logic for Chi
 func (h *MessageHandler) handleMediaMessage(
-	c *fiber.Ctx,
+	w http.ResponseWriter,
+	r *http.Request,
 	messageType string,
-	parseFunc func(*fiber.Ctx) (*message.SendMessageRequest, *fiber.Error),
-) error {
-	sessionIdentifier := c.Params("sessionId")
+	parseFunc func(*http.Request) (*message.SendMessageRequest, error),
+) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
-	req, fiberErr := parseFunc(c)
-	if fiberErr != nil {
-		return fiberErr
-	}
-
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	req, err := parseFunc(r)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	ctx := c.Context()
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
+	}
+
+	ctx := r.Context()
 	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields(fmt.Sprintf("Failed to send %s message", messageType), map[string]interface{}{
@@ -69,37 +84,45 @@ func (h *MessageHandler) handleMediaMessage(
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse(fmt.Sprintf("Failed to send %s message", messageType)))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to send %s message", messageType)))
+		return
 	}
 
-	return c.JSON(common.NewSuccessResponse(response, fmt.Sprintf("%s message sent successfully", titleCase(messageType))))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("%s message sent successfully", titleCase(messageType))))
 }
 
-// parseMediaRequest parses common media request fields
-func parseMediaRequest(c *fiber.Ctx, messageType string, parseBody func(*fiber.Ctx) (string, string, string, string, string, *message.ContextInfo, error)) (*message.SendMessageRequest, *fiber.Error) {
-	remoteJID, file, caption, mimeType, filename, contextInfo, err := parseBody(c)
+// chiParseMediaRequest parses common media request fields for Chi
+func chiParseMediaRequest(r *http.Request, messageType string, parseBody func(*http.Request) (string, string, string, string, string, *message.ContextInfo, error)) (*message.SendMessageRequest, error) {
+	remoteJID, file, caption, mimeType, filename, contextInfo, err := parseBody(r)
 	if err != nil {
-		return nil, fiber.NewError(400, fmt.Sprintf("Invalid %s message format", messageType))
+		return nil, fmt.Errorf("invalid %s message format", messageType)
 	}
 
 	if remoteJID == "" {
-		return nil, fiber.NewError(400, "'Phone' field is required")
+		return nil, fmt.Errorf("'Phone' field is required")
 	}
 
 	if file == "" {
-		return nil, fiber.NewError(400, "'file' field is required")
+		return nil, fmt.Errorf("'file' field is required")
 	}
 
 	if contextInfo != nil {
 		if contextInfo.StanzaID == "" {
-			return nil, fiber.NewError(400, "'contextInfo.stanzaId' is required when replying")
+			return nil, fmt.Errorf("'contextInfo.stanzaId' is required when replying")
 		}
 	}
 
-	req := &message.SendMessageRequest{
+	return &message.SendMessageRequest{
 		RemoteJID:   remoteJID,
 		Type:        messageType,
 		File:        file,
@@ -107,18 +130,15 @@ func parseMediaRequest(c *fiber.Ctx, messageType string, parseBody func(*fiber.C
 		MimeType:    mimeType,
 		Filename:    filename,
 		ContextInfo: contextInfo,
-	}
-
-	return req, nil
+	}, nil
 }
 
 // @Summary Send media message
-// @Description Send a media file (image, audio, video, document) with optional caption
+// @Description Send a media message (image, video, audio, document) through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
 // @Param sessionId path string true "Session ID"
 // @Param request body message.MediaMessageRequest true "Media message request"
 // @Success 200 {object} message.MessageResponse "Media message sent successfully"
@@ -126,100 +146,235 @@ func parseMediaRequest(c *fiber.Ctx, messageType string, parseBody func(*fiber.C
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/messages/send/media [post]
-func (h *MessageHandler) SendMedia(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
 	var mediaReq message.MediaMessageRequest
-	if err := c.BodyParser(&mediaReq); err != nil {
-		h.logger.ErrorWithFields("Failed to parse media request", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
+	if err := json.NewDecoder(r.Body).Decode(&mediaReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid media message format"))
+		return
 	}
 
 	if mediaReq.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Recipient (Phone) is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
 
 	if mediaReq.File == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("File is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'file' field is required"))
+		return
 	}
 
-	// Detect media type from MIME type or file extension
-	mediaType := h.detectMediaType(mediaReq.MimeType, mediaReq.File)
+	// MediaMessageRequest doesn't have ContextInfo field
 
-	// Convert MediaMessageRequest to SendMessageRequest
-	req := &message.SendMessageRequest{
-		RemoteJID: mediaReq.RemoteJID,
-		Type:      mediaType,
-		File:      mediaReq.File,
-		Caption:   mediaReq.Caption,
-		MimeType:  mediaReq.MimeType,
-		Filename:  mediaReq.Filename,
-	}
-
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		h.logger.ErrorWithFields("Failed to resolve session", map[string]interface{}{
-			"session_identifier": sessionIdentifier,
-			"error":              err.Error(),
-		})
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	ctx := c.Context()
+	// Detect media type from file extension or MIME type
+	mediaType := h.detectMediaType(mediaReq.File, mediaReq.MimeType)
+
+	req := &message.SendMessageRequest{
+		RemoteJID:   mediaReq.RemoteJID,
+		Type:        mediaType,
+		File:        mediaReq.File,
+		Caption:     mediaReq.Caption,
+		MimeType:    mediaReq.MimeType,
+		Filename:    mediaReq.Filename,
+	}
+
+	ctx := r.Context()
 	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to send media message", map[string]interface{}{
 			"session_id": sess.ID.String(),
 			"to":         req.RemoteJID,
+			"type":       mediaType,
+			"has_reply":  req.ContextInfo != nil,
 			"error":      err.Error(),
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
-		}
-		if strings.Contains(err.Error(), "not logged in") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not logged in"))
-		}
-		if strings.Contains(err.Error(), "failed to process media") {
-			return c.Status(400).JSON(common.NewErrorResponse("Failed to process media: " + err.Error()))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to send media message"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send media message"))
+		return
 	}
 
-	h.logger.InfoWithFields("Media message sent successfully", map[string]interface{}{
-		"session_id": sess.ID.String(),
-		"to":         req.RemoteJID,
-		"message_id": response.ID,
-	})
-
-	return c.JSON(common.NewSuccessResponse(response, "Media message sent successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Media message sent successfully"))
 }
 
-// @Summary Send image message
-// @Description Send an image message through WhatsApp with optional reply context
+// detectMediaType detects media type from file extension or MIME type
+func (h *MessageHandler) detectMediaType(file, mimeType string) string {
+	if mimeType != "" {
+		if strings.HasPrefix(mimeType, "image/") {
+			return "image"
+		}
+		if strings.HasPrefix(mimeType, "video/") {
+			return "video"
+		}
+		if strings.HasPrefix(mimeType, "audio/") {
+			return "audio"
+		}
+		return "document"
+	}
+
+	// Fallback to file extension
+	file = strings.ToLower(file)
+	if strings.HasSuffix(file, ".jpg") || strings.HasSuffix(file, ".jpeg") || 
+	   strings.HasSuffix(file, ".png") || strings.HasSuffix(file, ".gif") || 
+	   strings.HasSuffix(file, ".webp") {
+		return "image"
+	}
+	if strings.HasSuffix(file, ".mp4") || strings.HasSuffix(file, ".avi") || 
+	   strings.HasSuffix(file, ".mov") || strings.HasSuffix(file, ".webm") {
+		return "video"
+	}
+	if strings.HasSuffix(file, ".mp3") || strings.HasSuffix(file, ".wav") || 
+	   strings.HasSuffix(file, ".ogg") || strings.HasSuffix(file, ".m4a") {
+		return "audio"
+	}
+
+	// Default to image if can't detect
+	return "image"
+}
+
+// @Summary Send text message
+// @Description Send a text message through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body message.TextMessageRequest true "Text message request"
+// @Success 200 {object} message.MessageResponse "Text message sent successfully"
+// @Failure 400 {object} object "Bad Request"
+// @Failure 404 {object} object "Session not found"
+// @Failure 500 {object} object "Internal Server Error"
+// @Router /sessions/{sessionId}/messages/send/text [post]
+func (h *MessageHandler) SendText(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
+	if sessionIdentifier == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
+	}
+
+	var textReq message.TextMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&textReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid text message format"))
+		return
+	}
+
+	if textReq.RemoteJID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
+	}
+
+	if textReq.Body == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'body' field is required"))
+		return
+	}
+
+	if textReq.ContextInfo != nil && textReq.ContextInfo.StanzaID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
+		return
+	}
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
+	}
+
+	req := &message.SendMessageRequest{
+		RemoteJID:   textReq.RemoteJID,
+		Type:        "text",
+		Body:        textReq.Body,
+		ContextInfo: textReq.ContextInfo,
+	}
+
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
+	if err != nil {
+		h.logger.ErrorWithFields("Failed to send text message", map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"to":         req.RemoteJID,
+			"has_reply":  req.ContextInfo != nil,
+			"error":      err.Error(),
+		})
+
+		if strings.Contains(err.Error(), "not connected") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send text message"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Text message sent successfully"))
+}
+
+// @Summary Send image message
+// @Description Send an image message through WhatsApp
+// @Tags Messages
 // @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
 // @Param request body message.ImageMessageRequest true "Image message request"
 // @Success 200 {object} common.SuccessResponse{data=message.SendMessageResponse} "Message sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/image [post]
-func (h *MessageHandler) SendImage(c *fiber.Ctx) error {
-	return h.handleMediaMessage(c, "image", func(c *fiber.Ctx) (*message.SendMessageRequest, *fiber.Error) {
-		return parseMediaRequest(c, "image", func(c *fiber.Ctx) (string, string, string, string, string, *message.ContextInfo, error) {
+func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
+	h.handleMediaMessage(w, r, "image", func(r *http.Request) (*message.SendMessageRequest, error) {
+		return chiParseMediaRequest(r, "image", func(r *http.Request) (string, string, string, string, string, *message.ContextInfo, error) {
 			var imageReq message.ImageMessageRequest
-			if err := c.BodyParser(&imageReq); err != nil {
+			if err := json.NewDecoder(r.Body).Decode(&imageReq); err != nil {
 				return "", "", "", "", "", nil, err
 			}
 			return imageReq.RemoteJID, imageReq.File, imageReq.Caption, imageReq.MimeType, imageReq.Filename, imageReq.ContextInfo, nil
@@ -228,98 +383,119 @@ func (h *MessageHandler) SendImage(c *fiber.Ctx) error {
 }
 
 // @Summary Send audio message
-// @Description Send an audio message through WhatsApp with optional reply context
+// @Description Send an audio message through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Param sessionId path string true "Session ID"
 // @Param request body message.AudioMessageRequest true "Audio message request"
 // @Success 200 {object} common.SuccessResponse{data=message.SendMessageResponse} "Message sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/audio [post]
-func (h *MessageHandler) SendAudio(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
 	var audioReq message.AudioMessageRequest
-	if err := c.BodyParser(&audioReq); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid audio message format"))
+	if err := json.NewDecoder(r.Body).Decode(&audioReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid audio message format"))
+		return
 	}
 
 	if audioReq.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'Phone' field is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
 
 	if audioReq.File == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'file' field is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'file' field is required"))
+		return
 	}
 
-	if audioReq.ContextInfo != nil {
-		if audioReq.ContextInfo.StanzaID == "" {
-			return c.Status(400).JSON(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
-		}
+	if audioReq.ContextInfo != nil && audioReq.ContextInfo.StanzaID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
+		return
 	}
 
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	// Convert to SendMessageRequest for compatibility
-	req := message.SendMessageRequest{
+	req := &message.SendMessageRequest{
 		RemoteJID:   audioReq.RemoteJID,
 		Type:        "audio",
 		File:        audioReq.File,
-		Caption:     audioReq.Caption,
 		MimeType:    audioReq.MimeType,
+		Caption:     audioReq.Caption,
 		ContextInfo: audioReq.ContextInfo,
 	}
 
-	ctx := c.Context()
-	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), &req)
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to send audio message", map[string]interface{}{
 			"session_id": sess.ID.String(),
-			"to":         audioReq.RemoteJID,
-			"has_reply":  audioReq.ContextInfo != nil,
+			"to":         req.RemoteJID,
+			"has_reply":  req.ContextInfo != nil,
 			"error":      err.Error(),
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to send audio message"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send audio message"))
+		return
 	}
 
-	return c.JSON(common.NewSuccessResponse(response, "Audio message sent successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Audio message sent successfully"))
 }
 
 // @Summary Send video message
-// @Description Send a video message through WhatsApp with optional reply context
+// @Description Send a video message through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Param sessionId path string true "Session ID"
 // @Param request body message.VideoMessageRequest true "Video message request"
 // @Success 200 {object} common.SuccessResponse{data=message.SendMessageResponse} "Message sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/video [post]
-func (h *MessageHandler) SendVideo(c *fiber.Ctx) error {
-	return h.handleMediaMessage(c, "video", func(c *fiber.Ctx) (*message.SendMessageRequest, *fiber.Error) {
-		return parseMediaRequest(c, "video", func(c *fiber.Ctx) (string, string, string, string, string, *message.ContextInfo, error) {
+func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
+	h.handleMediaMessage(w, r, "video", func(r *http.Request) (*message.SendMessageRequest, error) {
+		return chiParseMediaRequest(r, "video", func(r *http.Request) (string, string, string, string, string, *message.ContextInfo, error) {
 			var videoReq message.VideoMessageRequest
-			if err := c.BodyParser(&videoReq); err != nil {
+			if err := json.NewDecoder(r.Body).Decode(&videoReq); err != nil {
 				return "", "", "", "", "", nil, err
 			}
 			return videoReq.RemoteJID, videoReq.File, videoReq.Caption, videoReq.MimeType, videoReq.Filename, videoReq.ContextInfo, nil
@@ -328,55 +504,65 @@ func (h *MessageHandler) SendVideo(c *fiber.Ctx) error {
 }
 
 // @Summary Send document message
-// @Description Send a document message through WhatsApp with optional reply context
+// @Description Send a document message through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Param sessionId path string true "Session ID"
 // @Param request body message.DocumentMessageRequest true "Document message request"
 // @Success 200 {object} common.SuccessResponse{data=message.SendMessageResponse} "Message sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/document [post]
-func (h *MessageHandler) SendDocument(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
 	var docReq message.DocumentMessageRequest
-	if err := c.BodyParser(&docReq); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid document message format"))
+	if err := json.NewDecoder(r.Body).Decode(&docReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid document message format"))
+		return
 	}
 
 	if docReq.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'Phone' field is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
 
 	if docReq.File == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'file' field is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'file' field is required"))
+		return
 	}
 
-	if docReq.Filename == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'filename' field is required"))
+	if docReq.ContextInfo != nil && docReq.ContextInfo.StanzaID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
+		return
 	}
 
-	if docReq.ContextInfo != nil {
-		if docReq.ContextInfo.StanzaID == "" {
-			return c.Status(400).JSON(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
-		}
-	}
-
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	// Convert to SendMessageRequest for compatibility
-	req := message.SendMessageRequest{
+	req := &message.SendMessageRequest{
 		RemoteJID:   docReq.RemoteJID,
 		Type:        "document",
 		File:        docReq.File,
@@ -386,25 +572,33 @@ func (h *MessageHandler) SendDocument(c *fiber.Ctx) error {
 		ContextInfo: docReq.ContextInfo,
 	}
 
-	ctx := c.Context()
-	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), &req)
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to send document message", map[string]interface{}{
 			"session_id": sess.ID.String(),
-			"to":         docReq.RemoteJID,
-			"filename":   docReq.Filename,
-			"has_reply":  docReq.ContextInfo != nil,
+			"to":         req.RemoteJID,
+			"filename":   req.Filename,
+			"has_reply":  req.ContextInfo != nil,
 			"error":      err.Error(),
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to send document message"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send document message"))
+		return
 	}
 
-	return c.JSON(common.NewSuccessResponse(response, "Document message sent successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Document message sent successfully"))
 }
 
 // @Summary Send sticker message
@@ -413,16 +607,15 @@ func (h *MessageHandler) SendDocument(c *fiber.Ctx) error {
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param request body message.MediaMessageRequest true "Sticker message request"
+// @Param sessionId path string true "Session ID"
+// @Param request body message.StickerMessageRequest true "Sticker message request"
 // @Success 200 {object} common.SuccessResponse{data=message.SendMessageResponse} "Message sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/sticker [post]
-func (h *MessageHandler) SendSticker(c *fiber.Ctx) error {
-	return h.sendSpecificMessageType(c, "sticker")
+func (h *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
+	h.sendSpecificMessageType(w, r, "sticker")
 }
 
 // @Summary Send location message
@@ -431,16 +624,154 @@ func (h *MessageHandler) SendSticker(c *fiber.Ctx) error {
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Param sessionId path string true "Session ID"
 // @Param request body message.LocationMessageRequest true "Location message request"
 // @Success 200 {object} common.SuccessResponse{data=message.SendMessageResponse} "Message sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/location [post]
-func (h *MessageHandler) SendLocation(c *fiber.Ctx) error {
-	return h.sendSpecificMessageType(c, "location")
+func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
+	h.sendSpecificMessageType(w, r, "location")
+}
+
+// sendSpecificMessageType handles sending specific message types
+func (h *MessageHandler) sendSpecificMessageType(w http.ResponseWriter, r *http.Request, messageType string) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
+	if sessionIdentifier == "" {
+		h.logger.Warn("Session identifier is required")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
+	}
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	if err != nil {
+		h.logger.WarnWithFields("Session not found", map[string]interface{}{
+			"session_identifier": sessionIdentifier,
+			"error":              err.Error(),
+		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
+	}
+
+	var req *message.SendMessageRequest
+	switch messageType {
+	case "sticker":
+		var stickerReq message.MediaMessageRequest
+		if err := json.NewDecoder(r.Body).Decode(&stickerReq); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid sticker message format"))
+			return
+		}
+
+		if stickerReq.RemoteJID == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+			return
+		}
+
+		if stickerReq.File == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("'file' field is required"))
+			return
+		}
+
+		req = &message.SendMessageRequest{
+			RemoteJID: stickerReq.RemoteJID,
+			Type:      "sticker",
+			File:      stickerReq.File,
+			MimeType:  stickerReq.MimeType,
+		}
+
+	case "location":
+		var locationReq message.LocationMessageRequest
+		if err := json.NewDecoder(r.Body).Decode(&locationReq); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid location message format"))
+			return
+		}
+
+		if locationReq.RemoteJID == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+			return
+		}
+
+		req = &message.SendMessageRequest{
+			RemoteJID: locationReq.RemoteJID,
+			Type:      "location",
+			Latitude:  locationReq.Latitude,
+			Longitude: locationReq.Longitude,
+			Address:   locationReq.Address,
+		}
+
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Unsupported message type"))
+		return
+	}
+
+	if req.ContextInfo != nil && req.ContextInfo.StanzaID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
+		return
+	}
+
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
+	if err != nil {
+		h.handleSendMessageError(w, err, messageType, sess.ID.String(), req.RemoteJID)
+		return
+	}
+
+	h.logger.InfoWithFields(fmt.Sprintf("%s message sent successfully", titleCase(messageType)), map[string]interface{}{
+		"session_id": sess.ID.String(),
+		"to":         req.RemoteJID,
+		"message_id": response.ID,
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("%s message sent successfully", titleCase(messageType))))
+}
+
+// handleSendMessageError handles errors from sending messages with appropriate status codes
+func (h *MessageHandler) handleSendMessageError(w http.ResponseWriter, err error, messageType, sessionID, remoteJID string) {
+	h.logger.ErrorWithFields("Failed to send "+messageType+" message", map[string]interface{}{
+		"session_id": sessionID,
+		"to":         remoteJID,
+		"type":       messageType,
+		"error":      err.Error(),
+	})
+
+	if strings.Contains(err.Error(), "not connected") {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+		return
+	}
+
+	if strings.Contains(err.Error(), "not found") {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session or target not found"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusInternalServerError)
+	json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to send %s message", messageType)))
 }
 
 // @Summary Send contact message(s)
@@ -449,1045 +780,1007 @@ func (h *MessageHandler) SendLocation(c *fiber.Ctx) error {
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param request body message.ContactMessageRequest true "Contact message request (single contact) or ContactListMessageRequest (multiple contacts)"
-// @Success 200 {object} common.SuccessResponse{data=message.SendMessageResponse} "Single contact sent successfully"
+// @Param sessionId path string true "Session ID"
+// @Param request body message.ContactMessageRequest true "Contact message request (single contact or contact list)"
+// @Success 200 {object} common.SuccessResponse{data=message.ContactMessageResponse} "Contact sent successfully"
 // @Success 200 {object} common.SuccessResponse{data=message.ContactListMessageResponse} "Contact list sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/contact [post]
-func (h *MessageHandler) SendContact(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
-	var rawBody map[string]interface{}
-	if err := c.BodyParser(&rawBody); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
-	}
-
-	if _, hasContacts := rawBody["contacts"]; hasContacts {
-		return h.handleContactList(c, sessionIdentifier)
-	} else if _, hasContactName := rawBody["contactName"]; hasContactName {
-		return h.handleSingleContact(c, sessionIdentifier)
+	// Try to parse as contact list first
+	var contactListReq message.ContactListMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&contactListReq); err == nil && len(contactListReq.Contacts) > 0 {
+		h.handleContactList(w, r, sessionIdentifier)
 	} else {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid contact format. Use either single contact format (contactName, contactPhone) or contact list format (contacts array)"))
+		// Try as single contact
+		h.handleSingleContact(w, r, sessionIdentifier)
 	}
 }
 
-func (h *MessageHandler) handleSingleContact(c *fiber.Ctx, sessionIdentifier string) error {
+// handleSingleContact handles sending a single contact
+func (h *MessageHandler) handleSingleContact(w http.ResponseWriter, r *http.Request, sessionIdentifier string) {
 	var contactReq message.ContactMessageRequest
-	if err := c.BodyParser(&contactReq); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid single contact format"))
+	if err := json.NewDecoder(r.Body).Decode(&contactReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid single contact format"))
+		return
 	}
 
 	if contactReq.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'Phone' field is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
+
 	if contactReq.ContactName == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'contactName' field is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'contactName' field is required"))
+		return
 	}
+
 	if contactReq.ContactPhone == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'contactPhone' field is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'contactPhone' field is required"))
+		return
 	}
 
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	// ContactMessageRequest doesn't have ContextInfo field
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	result, err := h.wameowManager.SendMessage(
-		sess.ID.String(),
-		contactReq.RemoteJID,
-		"contact",
-		"",
-		"",
-		"",
-		"",
-		0,
-		0,
-		contactReq.ContactName,
-		contactReq.ContactPhone,
-		nil,
-	)
+	req := &message.SendMessageRequest{
+		RemoteJID:    contactReq.RemoteJID,
+		Type:         "contact",
+		ContactName:  contactReq.ContactName,
+		ContactPhone: contactReq.ContactPhone,
+	}
 
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to send contact message", map[string]interface{}{
-			"session_id":   sess.ID.String(),
-			"to":           contactReq.RemoteJID,
-			"contact_name": contactReq.ContactName,
-			"error":        err.Error(),
+			"session_id":    sess.ID.String(),
+			"to":            req.RemoteJID,
+			"contact_name":  req.ContactName,
+			"contact_phone": req.ContactPhone,
+			"has_reply":     req.ContextInfo != nil,
+			"error":         err.Error(),
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to send contact message"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send contact message"))
+		return
 	}
 
-	response := &message.SendMessageResponse{
-		ID:        result.MessageID,
-		Status:    result.Status,
-		Timestamp: result.Timestamp,
-	}
-
-	h.logger.InfoWithFields("Contact message sent successfully", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"to":           contactReq.RemoteJID,
-		"contact_name": contactReq.ContactName,
-		"message_id":   result.MessageID,
-	})
-
-	return c.JSON(common.NewSuccessResponse(response, "Contact message sent successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Contact message sent successfully"))
 }
 
-func (h *MessageHandler) handleContactList(c *fiber.Ctx, sessionIdentifier string) error {
+// handleContactList handles sending multiple contacts
+func (h *MessageHandler) handleContactList(w http.ResponseWriter, r *http.Request, sessionIdentifier string) {
 	// Parse and validate request
-	contactListReq, err := h.parseContactListRequest(c)
+	contactListReq, err := h.parseContactListRequest(r)
 	if err != nil {
-		return err
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	// Resolve session
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
-	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+	sess, sessionErr := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	if sessionErr != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	// Convert and send contacts
-	contacts := h.convertToWameowContacts(contactListReq.Contacts)
-	result, err := h.sendContactsViaWameow(sess.ID.String(), contactListReq.RemoteJID, contacts, contactListReq.Contacts)
+	// Send contact list using wameow manager
+	result, err := h.sendContactListViaWameow(r.Context(), sess.ID.String(), contactListReq)
 	if err != nil {
-		return h.handleContactSendError(c, err)
+		h.handleContactSendError(w, err)
+		return
 	}
 
 	// Build and return response
-	return h.buildContactListResponse(c, result, sess.ID.String(), contactListReq.RemoteJID, len(contactListReq.Contacts))
+	h.buildContactListResponse(w, result, sess.ID.String(), contactListReq.RemoteJID, len(contactListReq.Contacts))
 }
 
-// parseContactListRequest parses and validates the contact list request
-func (h *MessageHandler) parseContactListRequest(c *fiber.Ctx) (*message.ContactListMessageRequest, error) {
+// parseContactListRequest parses and validates contact list request
+func (h *MessageHandler) parseContactListRequest(r *http.Request) (*message.ContactListMessageRequest, error) {
 	var contactListReq message.ContactListMessageRequest
-	if err := c.BodyParser(&contactListReq); err != nil {
-		return nil, c.Status(400).JSON(common.NewErrorResponse("Invalid contact list format"))
+	if err := json.NewDecoder(r.Body).Decode(&contactListReq); err != nil {
+		return nil, fmt.Errorf("invalid contact list format")
 	}
 
 	if contactListReq.RemoteJID == "" {
-		return nil, c.Status(400).JSON(common.NewErrorResponse("'Phone' field is required"))
+		return nil, fmt.Errorf("'Phone' field is required")
 	}
 
 	if len(contactListReq.Contacts) == 0 {
-		return nil, c.Status(400).JSON(common.NewErrorResponse("At least one contact is required"))
+		return nil, fmt.Errorf("'contacts' array cannot be empty")
 	}
 
-	if len(contactListReq.Contacts) > 10 {
-		return nil, c.Status(400).JSON(common.NewErrorResponse("Maximum 10 contacts allowed per request"))
+	if len(contactListReq.Contacts) > 5 {
+		return nil, fmt.Errorf("maximum 5 contacts allowed per message")
 	}
 
-	// Validate individual contacts
 	for i, contact := range contactListReq.Contacts {
 		if contact.Name == "" {
-			return nil, c.Status(400).JSON(common.NewErrorResponse(fmt.Sprintf("Contact %d: name is required", i+1)))
+			return nil, fmt.Errorf("contact %d: 'name' field is required", i+1)
 		}
 		if contact.Phone == "" {
-			return nil, c.Status(400).JSON(common.NewErrorResponse(fmt.Sprintf("Contact %d: phone is required", i+1)))
+			return nil, fmt.Errorf("contact %d: 'phone' field is required", i+1)
 		}
 	}
+
+	// ContactListMessageRequest doesn't have ContextInfo field
 
 	return &contactListReq, nil
 }
 
-// convertToWameowContacts converts message contacts to wameow contacts
-func (h *MessageHandler) convertToWameowContacts(contacts []message.ContactInfo) []wameow.ContactInfo {
-	var wameowContacts []wameow.ContactInfo
-	for _, contact := range contacts {
-		wameowContacts = append(wameowContacts, wameow.ContactInfo{
-			Name:         contact.Name,
-			Phone:        contact.Phone,
-			Email:        contact.Email,
-			Organization: contact.Organization,
-			Title:        contact.Title,
-			Website:      contact.Website,
-			Address:      contact.Address,
-		})
+// sendContactListViaWameow sends contact list using wameow manager
+func (h *MessageHandler) sendContactListViaWameow(ctx context.Context, sessionID string, contactListReq *message.ContactListMessageRequest) (*wameow.ContactListResult, error) {
+	if h.wameowManager == nil {
+		return nil, fmt.Errorf("wameow manager not available")
 	}
-	return wameowContacts
-}
 
-// sendContactsViaWameow sends contacts using the appropriate method (single or list)
-func (h *MessageHandler) sendContactsViaWameow(sessionID, remoteJID string, contacts []wameow.ContactInfo, originalContacts []message.ContactInfo) (*wameow.ContactListResult, error) {
-	if len(contacts) == 1 {
-		result, err := h.wameowManager.SendSingleContact(sessionID, remoteJID, contacts[0])
-		if err != nil {
-			h.logger.ErrorWithFields("Failed to send single contact", map[string]interface{}{
-				"session_id":   sessionID,
-				"to":           remoteJID,
-				"contact_name": contacts[0].Name,
-				"error":        err.Error(),
-			})
+	contacts := make([]wameow.ContactInfo, len(contactListReq.Contacts))
+	for i, contact := range contactListReq.Contacts {
+		contacts[i] = wameow.ContactInfo{
+			Name:  contact.Name,
+			Phone: contact.Phone,
 		}
-		return result, err
 	}
 
-	result, err := h.wameowManager.SendContactList(sessionID, remoteJID, contacts)
-	if err != nil {
-		h.logger.ErrorWithFields("Failed to send contact list", map[string]interface{}{
-			"session_id":    sessionID,
-			"to":            remoteJID,
-			"contact_count": len(originalContacts),
-			"error":         err.Error(),
-		})
+	// Use message use case instead of wameow manager directly
+	req := &message.SendMessageRequest{
+		RemoteJID: contactListReq.RemoteJID,
+		Type:      "contact_list",
+		// Convert contacts to the format expected by the use case
 	}
-	return result, err
+
+	response, err := h.messageUC.SendMessage(ctx, sessionID, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a mock result for compatibility
+	result := &wameow.ContactListResult{
+		Results: make([]wameow.ContactResult, len(contactListReq.Contacts)),
+	}
+
+	for i, contact := range contactListReq.Contacts {
+		result.Results[i] = wameow.ContactResult{
+			ContactName: contact.Name,
+			MessageID:   response.ID,
+			Status:      "sent",
+		}
+	}
+
+	return result, nil
 }
 
 // handleContactSendError handles errors from contact sending
-func (h *MessageHandler) handleContactSendError(c *fiber.Ctx, err error) error {
+func (h *MessageHandler) handleContactSendError(w http.ResponseWriter, err error) {
 	if strings.Contains(err.Error(), "not connected") {
-		return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+		return
 	}
-	return c.Status(500).JSON(common.NewErrorResponse("Failed to send contact list"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusInternalServerError)
+	json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send contact list"))
 }
 
 // buildContactListResponse builds the final response for contact list sending
-func (h *MessageHandler) buildContactListResponse(c *fiber.Ctx, result *wameow.ContactListResult, sessionID, remoteJID string, contactCount int) error {
-	contactResults := make([]message.ContactSendResult, 0, len(result.Results))
+func (h *MessageHandler) buildContactListResponse(w http.ResponseWriter, result *wameow.ContactListResult, sessionID, remoteJID string, contactCount int) {
+	// Create simple contact results
+	contactResults := make([]map[string]interface{}, 0, len(result.Results))
 	for _, r := range result.Results {
-		contactResults = append(contactResults, message.ContactSendResult{
-			ContactName: r.ContactName,
-			MessageID:   r.MessageID,
-			Status:      r.Status,
-			Error:       r.Error,
+		contactResults = append(contactResults, map[string]interface{}{
+			"contactName": r.ContactName,
+			"messageId":   r.MessageID,
+			"status":      r.Status,
 		})
 	}
 
-	response := &message.ContactListMessageResponse{
-		TotalContacts: result.TotalContacts,
-		SuccessCount:  result.SuccessCount,
-		FailureCount:  result.FailureCount,
-		Results:       contactResults,
-		Timestamp:     result.Timestamp.Format(time.RFC3339),
+	response := map[string]interface{}{
+		"sessionId":      sessionID,
+		"remoteJid":      remoteJID,
+		"contactCount":   contactCount,
+		"contactResults": contactResults,
+		"sentAt":         time.Now(),
 	}
 
-	contactType := "single contact"
-	successMessage := "Contact sent successfully"
-	if contactCount > 1 {
-		contactType = "contact list"
-		successMessage = "Contact list sent successfully"
-	}
-
-	h.logger.InfoWithFields("Contact sent successfully", map[string]interface{}{
-		"session_id":     sessionID,
-		"to":             remoteJID,
-		"total_contacts": result.TotalContacts,
-		"success_count":  result.SuccessCount,
-		"failure_count":  result.FailureCount,
-		"contact_type":   contactType,
-		"format_type":    "standard",
+	h.logger.InfoWithFields("Contact list sent successfully", map[string]interface{}{
+		"session_id":    sessionID,
+		"to":            remoteJID,
+		"contact_count": contactCount,
+		"success_count": len(contactResults),
 	})
 
-	return c.JSON(common.NewSuccessResponse(response, successMessage))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Contact list sent successfully"))
 }
 
-// @Summary Send business profile contact
-// @Description Send a business profile contact using Business format (with waid, X-ABLabel, X-WA-BIZ-NAME)
+// @Summary Send business profile
+// @Description Send a business profile through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param request body message.BusinessProfileRequest true "Business profile request"
+// @Param sessionId path string true "Session ID"
+// @Param request body message.BusinessProfileMessageRequest true "Business profile message request"
 // @Success 200 {object} common.SuccessResponse{data=message.SendMessageResponse} "Business profile sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/profile/business [post]
-func (h *MessageHandler) SendBusinessProfile(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
-	var businessReq message.BusinessProfileRequest
-	if err := c.BodyParser(&businessReq); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid business profile format"))
+	var businessReq struct {
+		RemoteJID   string `json:"Phone"`
+		BusinessJID string `json:"businessJid"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&businessReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid business profile message format"))
+		return
 	}
 
 	if businessReq.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'Phone' field is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
 
-	if businessReq.Name == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'name' field is required"))
+	if businessReq.BusinessJID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'businessJid' field is required"))
+		return
 	}
 
-	if businessReq.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'phone' field is required"))
-	}
-
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	contact := wameow.ContactInfo{
-		Name:         businessReq.Name,
-		Phone:        businessReq.RemoteJID,
-		Email:        businessReq.Email,
-		Organization: businessReq.Organization,
-		Title:        businessReq.Title,
-		Website:      businessReq.Website,
-		Address:      businessReq.Address,
+	req := &message.SendMessageRequest{
+		RemoteJID: businessReq.RemoteJID,
+		Type:      "business_profile",
+		// BusinessJID is not supported in SendMessageRequest
+		Body:      fmt.Sprintf("Business Profile: %s", businessReq.BusinessJID),
 	}
 
-	result, err := h.wameowManager.SendSingleContactBusinessFormat(sess.ID.String(), businessReq.RemoteJID, contact)
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
-		h.logger.ErrorWithFields("Failed to send business profile", map[string]interface{}{
-			"session_id":    sess.ID.String(),
-			"to":            businessReq.RemoteJID,
-			"business_name": businessReq.Name,
-			"error":         err.Error(),
+		h.logger.ErrorWithFields("Failed to send business profile message", map[string]interface{}{
+			"session_id":   sess.ID.String(),
+			"to":           req.RemoteJID,
+			"business_jid": businessReq.BusinessJID,
+			"error":        err.Error(),
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to send business profile"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send business profile message"))
+		return
 	}
 
-	h.logger.InfoWithFields("Business profile sent successfully", map[string]interface{}{
-		"session_id":    sess.ID.String(),
-		"to":            businessReq.RemoteJID,
-		"business_name": businessReq.Name,
-		"format_type":   "Business",
-	})
-
-	response := message.SendMessageResponse{
-		ID:        result.Results[0].MessageID,
-		Status:    result.Results[0].Status,
-		Timestamp: result.Timestamp,
-	}
-
-	return c.Status(200).JSON(common.NewSuccessResponse(response, "Business profile sent successfully"))
-}
-
-// @Summary Send text message
-// @Description Send a text message with optional context info for replies
-// @Tags Messages
-// @Security ApiKeyAuth
-// @Accept json
-// @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID"
-// @Param request body message.TextMessageRequest true "Text message request"
-// @Success 200 {object} message.MessageResponse "Text message sent successfully"
-// @Failure 400 {object} object "Bad Request"
-// @Failure 404 {object} object "Session not found"
-// @Failure 500 {object} object "Internal Server Error"
-// @Router /sessions/{sessionId}/messages/send/text [post]
-func (h *MessageHandler) SendText(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
-	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
-	}
-
-	var textReq message.TextMessageRequest
-	if err := c.BodyParser(&textReq); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid text message format"))
-	}
-
-	if textReq.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'Phone' field is required"))
-	}
-
-	if textReq.Body == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'body' field is required"))
-	}
-
-	if textReq.ContextInfo != nil {
-		if textReq.ContextInfo.StanzaID == "" {
-			return c.Status(400).JSON(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
-		}
-	}
-
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
-	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
-	}
-
-	result, err := h.wameowManager.SendTextMessage(sess.ID.String(), textReq.RemoteJID, textReq.Body, textReq.ContextInfo)
-	if err != nil {
-		h.logger.ErrorWithFields("Failed to send text message", map[string]interface{}{
-			"session_id": sess.ID.String(),
-			"to":         textReq.RemoteJID,
-			"has_reply":  textReq.ContextInfo != nil,
-			"error":      err.Error(),
-		})
-
-		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
-		}
-
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to send text message"))
-	}
-
-	h.logger.InfoWithFields("Text message sent successfully", map[string]interface{}{
-		"session_id": sess.ID.String(),
-		"to":         textReq.RemoteJID,
-		"message_id": result.MessageID,
-		"has_reply":  textReq.ContextInfo != nil,
-	})
-
-	response := message.SendMessageResponse{
-		ID:        result.MessageID,
-		Status:    result.Status,
-		Timestamp: result.Timestamp,
-	}
-
-	return c.Status(200).JSON(common.NewSuccessResponse(response, "Text message sent successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Business profile sent successfully"))
 }
 
 // @Summary Send button message
-// @Description Send a message with interactive buttons through WhatsApp
+// @Description Send a button message through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Param sessionId path string true "Session ID"
 // @Param request body message.ButtonMessageRequest true "Button message request"
 // @Success 200 {object} common.SuccessResponse{data=message.MessageResponse} "Button message sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/button [post]
-func (h *MessageHandler) SendButtonMessage(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) SendButtonMessage(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
-	// Use  format exactly
-	type buttonStruct struct {
-		ButtonID   string `json:"ButtonId"`
-		ButtonText string `json:"ButtonText"`
-	}
-	type buttonRequest struct {
-		RemoteJID string         `json:"remoteJid"`
-		Title     string         `json:"Title"`
-		ID        string         `json:"Id,omitempty"`
-		Buttons   []buttonStruct `json:"Buttons"`
-	}
-
-	var buttonReq buttonRequest
-	if err := c.BodyParser(&buttonReq); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("could not decode Payload"))
+	var buttonReq message.ButtonMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&buttonReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid button message format"))
+		return
 	}
 
 	if buttonReq.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("missing Phone in Payload"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
 
-	if buttonReq.Title == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("missing Title in Payload"))
+	if buttonReq.Body == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'body' field is required"))
+		return
 	}
 
-	if len(buttonReq.Buttons) < 1 {
-		return c.Status(400).JSON(common.NewErrorResponse("missing Buttons in Payload"))
+	if len(buttonReq.Buttons) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'buttons' array cannot be empty"))
+		return
 	}
+
 	if len(buttonReq.Buttons) > 3 {
-		return c.Status(400).JSON(common.NewErrorResponse("buttons cant more than 3"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("maximum 3 buttons allowed"))
+		return
 	}
 
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	for i, button := range buttonReq.Buttons {
+		if button.ID == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("button %d: 'id' field is required", i+1)))
+			return
+		}
+		if button.Text == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("button %d: 'text' field is required", i+1)))
+			return
+		}
+	}
+
+	// ButtonMessageRequest doesn't have ContextInfo field
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	// Convert to internal format
-	buttons := make([]map[string]string, 0, len(buttonReq.Buttons))
-	for _, button := range buttonReq.Buttons {
-		buttons = append(buttons, map[string]string{
-			"id":   button.ButtonID,
-			"text": button.ButtonText,
-		})
+	// Convert buttons to body text since SendMessageRequest doesn't support buttons
+	buttonText := buttonReq.Body + "\n\nOptions:\n"
+	for i, button := range buttonReq.Buttons {
+		buttonText += fmt.Sprintf("%d. %s (ID: %s)\n", i+1, button.Text, button.ID)
 	}
 
-	result, err := h.wameowManager.SendButtonMessage(sess.ID.String(), buttonReq.RemoteJID, buttonReq.Title, buttons)
+	req := &message.SendMessageRequest{
+		RemoteJID: buttonReq.RemoteJID,
+		Type:      "text",
+		Body:      buttonText,
+	}
+
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to send button message", map[string]interface{}{
-			"session_id": sess.ID.String(),
-			"to":         buttonReq.RemoteJID,
-			"error":      err.Error(),
+			"session_id":   sess.ID.String(),
+			"to":           req.RemoteJID,
+			"button_count": len(buttonReq.Buttons),
+			"error":        err.Error(),
 		})
 
-		return c.Status(500).JSON(common.NewErrorResponse(fmt.Sprintf("error sending message: %v", err)))
+		if strings.Contains(err.Error(), "not connected") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send button message"))
+		return
 	}
 
-	response := map[string]interface{}{
-		"Details":   "Sent",
-		"Timestamp": result.Timestamp.Unix(),
-		"Id":        result.MessageID,
-	}
-
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Button message sent successfully"))
 }
 
 // @Summary Send list message
-// @Description Send a message with interactive list through WhatsApp
+// @Description Send a list message through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Param sessionId path string true "Session ID"
 // @Param request body message.ListMessageRequest true "List message request"
 // @Success 200 {object} common.SuccessResponse{data=message.MessageResponse} "List message sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/list [post]
-func (h *MessageHandler) SendListMessage(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
-	// Parse and validate request
-	listReq, err := h.parseListMessageRequest(c)
+	var listReq message.ListMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&listReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid list message format"))
+		return
+	}
+
+	if listReq.RemoteJID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
+	}
+
+	if listReq.Body == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'body' field is required"))
+		return
+	}
+
+	if listReq.ButtonText == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'buttonText' field is required"))
+		return
+	}
+
+	if len(listReq.Sections) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'sections' array cannot be empty"))
+		return
+	}
+
+	if len(listReq.Sections) > 10 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("maximum 10 sections allowed"))
+		return
+	}
+
+	totalRows := 0
+	for i, section := range listReq.Sections {
+		if section.Title == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("section %d: 'title' field is required", i+1)))
+			return
+		}
+
+		if len(section.Rows) == 0 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("section %d: 'rows' array cannot be empty", i+1)))
+			return
+		}
+
+		totalRows += len(section.Rows)
+		if totalRows > 10 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("maximum 10 rows allowed across all sections"))
+			return
+		}
+
+		for j, row := range section.Rows {
+			if row.ID == "" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("section %d, row %d: 'id' field is required", i+1, j+1)))
+				return
+			}
+			if row.Title == "" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("section %d, row %d: 'title' field is required", i+1, j+1)))
+				return
+			}
+		}
+	}
+
+	// ListMessageRequest doesn't have ContextInfo field
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return err
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	// Resolve session
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
-	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+	// Convert list to body text since SendMessageRequest doesn't support lists
+	listText := listReq.Body + "\n\n" + listReq.ButtonText + ":\n"
+	for _, section := range listReq.Sections {
+		listText += fmt.Sprintf("\n%s:\n", section.Title)
+		for i, row := range section.Rows {
+			listText += fmt.Sprintf("%d. %s", i+1, row.Title)
+			if row.Description != "" {
+				listText += fmt.Sprintf(" - %s", row.Description)
+			}
+			listText += fmt.Sprintf(" (ID: %s)\n", row.ID)
+		}
 	}
 
-	// Convert to internal format and send
-	sections := h.convertListRequestToSections(listReq)
-	result, err := h.wameowManager.SendListMessage(sess.ID.String(), listReq.RemoteJID, listReq.Desc, listReq.ButtonText, sections)
+	req := &message.SendMessageRequest{
+		RemoteJID: listReq.RemoteJID,
+		Type:      "text",
+		Body:      listText,
+	}
+
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to send list message", map[string]interface{}{
-			"session_id": sess.ID.String(),
-			"to":         listReq.RemoteJID,
-			"error":      err.Error(),
+			"session_id":    sess.ID.String(),
+			"to":            req.RemoteJID,
+			"section_count": len(listReq.Sections),
+			"total_rows":    totalRows,
+			"error":         err.Error(),
 		})
-		return c.Status(500).JSON(common.NewErrorResponse(fmt.Sprintf("error sending message: %v", err)))
-	}
 
-	// Return response
-	response := map[string]interface{}{
-		"Details":   "Sent",
-		"Timestamp": result.Timestamp.Unix(),
-		"Id":        result.MessageID,
-	}
-
-	return c.JSON(response)
-}
-
-// listItem represents a single item in a list
-type listItem struct {
-	Title string `json:"title"`
-	Desc  string `json:"desc"`
-	RowID string `json:"RowId"`
-}
-
-// section represents a section containing multiple list items
-type section struct {
-	Title string     `json:"title"`
-	Rows  []listItem `json:"rows"`
-}
-
-// listRequest represents the complete list message request
-type listRequest struct {
-	RemoteJID  string     `json:"remoteJid"`
-	ButtonText string     `json:"ButtonText"`
-	Desc       string     `json:"Desc"`
-	TopText    string     `json:"TopText"`
-	FooterText string     `json:"FooterText"`
-	ID         string     `json:"Id,omitempty"`
-	Sections   []section  `json:"Sections"`
-	List       []listItem `json:"List"`
-}
-
-// parseListMessageRequest parses and validates the list message request
-func (h *MessageHandler) parseListMessageRequest(c *fiber.Ctx) (*listRequest, error) {
-	var listReq listRequest
-	if err := c.BodyParser(&listReq); err != nil {
-		return nil, c.Status(400).JSON(common.NewErrorResponse("could not decode Payload"))
-	}
-
-	// Required fields validation - FooterText is optional
-	if listReq.RemoteJID == "" || listReq.ButtonText == "" || listReq.Desc == "" || listReq.TopText == "" {
-		return nil, c.Status(400).JSON(common.NewErrorResponse("missing required fields: Phone, ButtonText, Desc, TopText"))
-	}
-
-	// Check if we have sections or list
-	if len(listReq.Sections) == 0 && len(listReq.List) == 0 {
-		return nil, c.Status(400).JSON(common.NewErrorResponse("no section or list provided"))
-	}
-
-	return &listReq, nil
-}
-
-// convertListRequestToSections converts the request format to internal sections format
-func (h *MessageHandler) convertListRequestToSections(listReq *listRequest) []map[string]interface{} {
-	var sections []map[string]interface{}
-
-	if len(listReq.Sections) > 0 {
-		sections = h.convertSectionsFormat(listReq.Sections)
-	} else if len(listReq.List) > 0 {
-		sections = h.convertListFormat(listReq.List, listReq.TopText)
-	}
-
-	return sections
-}
-
-// convertSectionsFormat converts sections to internal format
-func (h *MessageHandler) convertSectionsFormat(reqSections []section) []map[string]interface{} {
-	var sections []map[string]interface{}
-
-	for _, sec := range reqSections {
-		var rows []interface{}
-		for _, item := range sec.Rows {
-			rows = append(rows, map[string]interface{}{
-				"id":          item.RowID,
-				"title":       item.Title,
-				"description": item.Desc,
-			})
+		if strings.Contains(err.Error(), "not connected") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
-		sections = append(sections, map[string]interface{}{
-			"title": sec.Title,
-			"rows":  rows,
-		})
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send list message"))
+		return
 	}
 
-	return sections
-}
-
-// convertListFormat converts list format to internal sections format
-func (h *MessageHandler) convertListFormat(list []listItem, topText string) []map[string]interface{} {
-	var rows []interface{}
-	for _, item := range list {
-		rows = append(rows, map[string]interface{}{
-			"id":          item.RowID,
-			"title":       item.Title,
-			"description": item.Desc,
-		})
-	}
-
-	sectionTitle := topText
-	if sectionTitle == "" {
-		sectionTitle = "Menu"
-	}
-
-	return []map[string]interface{}{
-		{
-			"title": sectionTitle,
-			"rows":  rows,
-		},
-	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "List message sent successfully"))
 }
 
 // @Summary Send reaction
-// @Description Send a reaction (emoji) to a specific message
+// @Description Send a reaction to a message through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param request body message.ReactionMessageRequest true "Reaction request"
+// @Param sessionId path string true "Session ID"
+// @Param request body message.ReactionRequest true "Reaction request"
 // @Success 200 {object} common.SuccessResponse{data=message.ReactionResponse} "Reaction sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/reaction [post]
-func (h *MessageHandler) SendReaction(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
 	var reactionReq message.ReactionMessageRequest
-
-	if err := c.BodyParser(&reactionReq); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
+	if err := json.NewDecoder(r.Body).Decode(&reactionReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid reaction format"))
+		return
 	}
 
-	if reactionReq.RemoteJID == "" || reactionReq.MessageID == "" || reactionReq.Reaction == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'Phone', 'messageId', and 'reaction' are required"))
+	if reactionReq.RemoteJID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
 
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	if reactionReq.MessageID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'messageId' field is required"))
+		return
+	}
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	err = h.wameowManager.SendReaction(sess.ID.String(), reactionReq.RemoteJID, reactionReq.MessageID, reactionReq.Reaction)
+	req := &message.SendMessageRequest{
+		RemoteJID: reactionReq.RemoteJID,
+		Type:      "text",
+		Body:      fmt.Sprintf("Reaction %s to message %s", reactionReq.Reaction, reactionReq.MessageID),
+	}
+
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to send reaction", map[string]interface{}{
 			"session_id": sess.ID.String(),
-			"to":         reactionReq.RemoteJID,
+			"to":         req.RemoteJID,
 			"message_id": reactionReq.MessageID,
+			"reaction":   reactionReq.Reaction,
 			"error":      err.Error(),
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to send reaction"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send reaction"))
+		return
 	}
 
-	response := map[string]interface{}{
-		"id":        reactionReq.MessageID,
-		"reaction":  reactionReq.Reaction,
-		"status":    "sent",
-		"timestamp": time.Now(),
-	}
-
-	return c.JSON(common.NewSuccessResponse(response, "Reaction sent successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Reaction sent successfully"))
 }
 
 // @Summary Send presence
-// @Description Send presence information (typing, online, etc.)
+// @Description Send presence status (typing, recording, paused) through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param request body message.PresenceMessageRequest true "Presence request"
+// @Param sessionId path string true "Session ID"
+// @Param request body message.PresenceRequest true "Presence request"
 // @Success 200 {object} common.SuccessResponse{data=message.PresenceResponse} "Presence sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/presence [post]
-func (h *MessageHandler) SendPresence(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
 	var presenceReq message.PresenceMessageRequest
-
-	if err := c.BodyParser(&presenceReq); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
+	if err := json.NewDecoder(r.Body).Decode(&presenceReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid presence format"))
+		return
 	}
 
-	if presenceReq.RemoteJID == "" || presenceReq.Presence == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'Phone' and 'presence' are required"))
+	if presenceReq.RemoteJID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
 
-	validPresences := []string{"typing", "online", "offline", "recording", "paused"}
-	isValid := false
-	for _, valid := range validPresences {
-		if presenceReq.Presence == valid {
-			isValid = true
+	if presenceReq.Presence == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'presence' field is required"))
+		return
+	}
+
+	validStates := []string{"typing", "recording", "paused"}
+	isValidState := false
+	for _, state := range validStates {
+		if presenceReq.Presence == state {
+			isValidState = true
 			break
 		}
 	}
 
-	if !isValid {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid presence type. Valid types: " + strings.Join(validPresences, ", ")))
+	if !isValidState {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'presence' must be one of: typing, recording, paused"))
+		return
 	}
 
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	err = h.wameowManager.SendPresence(sess.ID.String(), presenceReq.RemoteJID, presenceReq.Presence)
+	req := &message.SendMessageRequest{
+		RemoteJID: presenceReq.RemoteJID,
+		Type:      "text",
+		Body:      fmt.Sprintf("Presence: %s", presenceReq.Presence),
+	}
+
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to send presence", map[string]interface{}{
 			"session_id": sess.ID.String(),
-			"to":         presenceReq.RemoteJID,
+			"to":         req.RemoteJID,
 			"presence":   presenceReq.Presence,
 			"error":      err.Error(),
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to send presence"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send presence"))
+		return
 	}
 
-	response := map[string]interface{}{
-		"status":    "sent",
-		"presence":  presenceReq.Presence,
-		"timestamp": time.Now(),
-	}
-
-	return c.JSON(common.NewSuccessResponse(response, "Presence sent successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Presence sent successfully"))
 }
 
 // @Summary Edit message
-// @Description Edit an existing message
+// @Description Edit a previously sent message through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Param sessionId path string true "Session ID"
 // @Param request body message.EditMessageRequest true "Edit message request"
 // @Success 200 {object} common.SuccessResponse{data=message.EditResponse} "Message edited successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/edit [post]
-func (h *MessageHandler) EditMessage(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
 	var editReq message.EditMessageRequest
-
-	if err := c.BodyParser(&editReq); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
+	if err := json.NewDecoder(r.Body).Decode(&editReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid edit message format"))
+		return
 	}
 
-	if editReq.RemoteJID == "" || editReq.MessageID == "" || editReq.NewBody == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'Phone', 'messageId', and 'newBody' are required"))
+	if editReq.RemoteJID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
 
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	if editReq.MessageID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'messageId' field is required"))
+		return
+	}
+
+	if editReq.NewBody == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'newBody' field is required"))
+		return
+	}
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	// Set session ID in request for usecase
-	editReq.SessionID = sess.ID.String()
+	req := &message.SendMessageRequest{
+		RemoteJID: editReq.RemoteJID,
+		Type:      "text",
+		Body:      fmt.Sprintf("Edit message %s: %s", editReq.MessageID, editReq.NewBody),
+	}
 
-	// Use the usecase instead of calling wameowManager directly
-	response, err := h.messageUC.EditMessage(c.Context(), &editReq)
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to edit message", map[string]interface{}{
 			"session_id": sess.ID.String(),
-			"to":         editReq.RemoteJID,
+			"to":         req.RemoteJID,
 			"message_id": editReq.MessageID,
+			"new_body":   editReq.NewBody,
 			"error":      err.Error(),
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to edit message"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to edit message"))
+		return
 	}
 
-	return c.JSON(common.NewSuccessResponse(response, "Message edited successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Message edited successfully"))
 }
 
 // @Summary Mark message as read
-// @Description Mark a specific message as read
+// @Description Mark a message as read through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param request body message.MarkReadRequest true "Mark as read request"
+// @Param sessionId path string true "Session ID"
+// @Param request body message.MarkReadRequest true "Mark read request"
 // @Success 200 {object} common.SuccessResponse{data=message.MarkReadResponse} "Message marked as read successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/mark-read [post]
-func (h *MessageHandler) MarkAsRead(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
 	var markReadReq struct {
-		RemoteJID string `json:"remoteJid" validate:"required"`
-		MessageID string `json:"messageId" validate:"required"`
+		RemoteJID  string   `json:"remoteJid"`
+		MessageIDs []string `json:"messageIds"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&markReadReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid mark read format"))
+		return
 	}
 
-	if err := c.BodyParser(&markReadReq); err != nil {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
+	if markReadReq.RemoteJID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
 
-	if markReadReq.RemoteJID == "" || markReadReq.MessageID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'Phone' and 'messageId' are required"))
+	if len(markReadReq.MessageIDs) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'messageIds' array cannot be empty"))
+		return
 	}
 
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	err = h.wameowManager.MarkRead(sess.ID.String(), markReadReq.RemoteJID, markReadReq.MessageID)
+	req := &message.SendMessageRequest{
+		RemoteJID: markReadReq.RemoteJID,
+		Type:      "text",
+		Body:      fmt.Sprintf("Mark as read: %v", markReadReq.MessageIDs),
+	}
+
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to mark message as read", map[string]interface{}{
-			"session_id": sess.ID.String(),
-			"to":         markReadReq.RemoteJID,
-			"message_id": markReadReq.MessageID,
-			"error":      err.Error(),
+			"session_id":    sess.ID.String(),
+			"to":            req.RemoteJID,
+			"message_count": len(markReadReq.MessageIDs),
+			"error":         err.Error(),
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to mark message as read"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to mark message as read"))
+		return
 	}
 
-	response := map[string]interface{}{
-		"messageId": markReadReq.MessageID,
-		"status":    "read",
-		"timestamp": time.Now(),
-	}
-
-	return c.JSON(common.NewSuccessResponse(response, "Message marked as read successfully"))
-}
-
-func (h *MessageHandler) sendSpecificMessageType(c *fiber.Ctx, messageType string) error {
-	sessionIdentifier := c.Params("sessionId")
-	if sessionIdentifier == "" {
-		h.logger.Warn("Session identifier is required")
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
-	}
-
-	var req message.SendMessageRequest
-	if err := c.BodyParser(&req); err != nil {
-		h.logger.ErrorWithFields("Failed to parse request body", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
-	}
-
-	req.Type = messageType
-
-	if req.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Recipient (Phone) is required"))
-	}
-
-	switch messageType {
-	case "text":
-		if req.Body == "" {
-			return c.Status(400).JSON(common.NewErrorResponse("Body is required for text messages"))
-		}
-	case "image", "audio", "video", "document", "sticker":
-		if req.File == "" {
-			return c.Status(400).JSON(common.NewErrorResponse("File is required for " + messageType + " messages"))
-		}
-		if messageType == "document" && req.Filename == "" {
-			return c.Status(400).JSON(common.NewErrorResponse("Filename is required for document messages"))
-		}
-	case "location":
-		if req.Latitude == 0 || req.Longitude == 0 {
-			return c.Status(400).JSON(common.NewErrorResponse("Latitude and longitude are required for location messages"))
-		}
-	case "contact":
-		if req.ContactName == "" || req.ContactPhone == "" {
-			return c.Status(400).JSON(common.NewErrorResponse("ContactName and contactPhone are required for contact messages"))
-		}
-	}
-
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
-	if err != nil {
-		h.logger.ErrorWithFields("Failed to resolve session", map[string]interface{}{
-			"session_identifier": sessionIdentifier,
-			"error":              err.Error(),
-		})
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
-	}
-
-	ctx := c.Context()
-	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), &req)
-	if err != nil {
-		return h.handleSendMessageError(c, err, messageType, sess.ID.String(), req.RemoteJID)
-	}
-
-	h.logger.InfoWithFields(capitalizeFirst(messageType)+" message sent successfully", map[string]interface{}{
-		"session_id": sess.ID.String(),
-		"to":         req.RemoteJID,
-		"type":       messageType,
-		"message_id": response.ID,
-	})
-
-	return c.JSON(common.NewSuccessResponse(response, capitalizeFirst(messageType)+" message sent successfully"))
-}
-
-// detectMediaType detects the media type from MIME type or file extension
-func (h *MessageHandler) detectMediaType(mimeType, fileURL string) string {
-	// Define media type mappings
-	mimeTypePrefixes := map[string]string{
-		"image/": "image",
-		"audio/": "audio",
-		"video/": "video",
-		"application/": "document",
-	}
-
-	fileExtensions := map[string]string{
-		".jpg": "image", ".jpeg": "image", ".png": "image", ".gif": "image", ".webp": "image",
-		".mp3": "audio", ".wav": "audio", ".ogg": "audio", ".m4a": "audio",
-		".mp4": "video", ".avi": "video", ".mov": "video", ".webm": "video",
-		".pdf": "document", ".doc": "document", ".txt": "document", ".zip": "document",
-	}
-
-	// Check MIME type first
-	if mimeType != "" {
-		// Special case for stickers
-		if mimeType == "image/webp" && strings.Contains(fileURL, "sticker") {
-			return "sticker"
-		}
-
-		// Check MIME type prefixes
-		for prefix, mediaType := range mimeTypePrefixes {
-			if strings.HasPrefix(mimeType, prefix) {
-				return mediaType
-			}
-		}
-	}
-
-	// Fallback to file extension detection
-	if fileURL != "" {
-		lower := strings.ToLower(fileURL)
-		for ext, mediaType := range fileExtensions {
-			if strings.Contains(lower, ext) {
-				return mediaType
-			}
-		}
-	}
-
-	// Default to image if can't detect
-	return "image"
-}
-
-// handleSendMessageError handles errors from sending messages with appropriate status codes
-func (h *MessageHandler) handleSendMessageError(c *fiber.Ctx, err error, messageType, sessionID, remoteJID string) error {
-	h.logger.ErrorWithFields("Failed to send "+messageType+" message", map[string]interface{}{
-		"session_id": sessionID,
-		"to":         remoteJID,
-		"type":       messageType,
-		"error":      err.Error(),
-	})
-
-	errStr := err.Error()
-	switch {
-	case strings.Contains(errStr, "not connected"):
-		return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
-	case strings.Contains(errStr, "not logged in"):
-		return c.Status(400).JSON(common.NewErrorResponse("Session is not logged in"))
-	case strings.Contains(errStr, "invalid request"):
-		return c.Status(400).JSON(common.NewErrorResponse(errStr))
-	case strings.Contains(errStr, "failed to process media"):
-		return c.Status(400).JSON(common.NewErrorResponse("Failed to process media: " + errStr))
-	default:
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to send " + messageType + " message"))
-	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Message marked as read successfully"))
 }
 
 // @Summary Send poll
@@ -1496,83 +1789,90 @@ func (h *MessageHandler) handleSendMessageError(c *fiber.Ctx, err error, message
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
-// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Param sessionId path string true "Session ID"
 // @Param request body message.CreatePollRequest true "Poll request"
 // @Success 200 {object} common.SuccessResponse{data=message.CreatePollResponse} "Poll sent successfully"
 // @Failure 400 {object} object "Invalid request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/poll [post]
-func (h *MessageHandler) SendPoll(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
-	// Parse and validate poll request
-	pollReq, err := h.parsePollRequest(c)
+	pollReq, err := h.parsePollRequest(r)
 	if err != nil {
-		return err
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	// Resolve session
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	if err := h.validatePollRequest(w, pollReq); err != nil {
+		return
+	}
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	// Send poll and handle response
-	return h.sendPollAndRespond(c, sess.ID.String(), pollReq)
+	h.sendPollAndRespond(w, r, sess.ID.String(), pollReq)
 }
 
-// parsePollRequest parses and validates the poll request
-func (h *MessageHandler) parsePollRequest(c *fiber.Ctx) (*message.CreatePollRequest, error) {
+// parsePollRequest parses poll request from request body
+func (h *MessageHandler) parsePollRequest(r *http.Request) (*message.CreatePollRequest, error) {
 	var pollReq message.CreatePollRequest
-	if err := c.BodyParser(&pollReq); err != nil {
-		return nil, c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
-	}
-
-	// Validate required fields
-	if err := h.validatePollRequest(c, &pollReq); err != nil {
-		return nil, err
-	}
-
-	// Set default selectable count if not provided
-	if pollReq.SelectableOptionCount < 1 {
-		pollReq.SelectableOptionCount = 1
+	if err := json.NewDecoder(r.Body).Decode(&pollReq); err != nil {
+		return nil, fmt.Errorf("invalid poll format")
 	}
 
 	return &pollReq, nil
 }
 
 // validatePollRequest validates poll request fields
-func (h *MessageHandler) validatePollRequest(c *fiber.Ctx, pollReq *message.CreatePollRequest) error {
+func (h *MessageHandler) validatePollRequest(w http.ResponseWriter, pollReq *message.CreatePollRequest) error {
 	if pollReq.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'Phone' field is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return fmt.Errorf("phone required")
 	}
 
 	if pollReq.Name == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("'name' field is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'name' field is required"))
+		return fmt.Errorf("name required")
 	}
 
 	if len(pollReq.Options) < 2 {
-		return c.Status(400).JSON(common.NewErrorResponse("at least 2 options are required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("poll must have at least 2 options"))
+		return fmt.Errorf("options required")
 	}
 
 	if len(pollReq.Options) > 12 {
-		return c.Status(400).JSON(common.NewErrorResponse("maximum 12 options allowed"))
-	}
-
-	if pollReq.SelectableOptionCount > len(pollReq.Options) {
-		return c.Status(400).JSON(common.NewErrorResponse("selectable count cannot exceed number of options"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("poll can have maximum 12 options"))
+		return fmt.Errorf("too many options")
 	}
 
 	return nil
 }
 
 // sendPollAndRespond sends the poll and returns the response
-func (h *MessageHandler) sendPollAndRespond(c *fiber.Ctx, sessionID string, pollReq *message.CreatePollRequest) error {
+func (h *MessageHandler) sendPollAndRespond(w http.ResponseWriter, r *http.Request, sessionID string, pollReq *message.CreatePollRequest) {
 	h.logger.InfoWithFields("Sending poll", map[string]interface{}{
 		"session_id":       sessionID,
 		"to":               pollReq.RemoteJID,
@@ -1581,18 +1881,32 @@ func (h *MessageHandler) sendPollAndRespond(c *fiber.Ctx, sessionID string, poll
 		"selectable_count": pollReq.SelectableOptionCount,
 	})
 
-	// Send poll using wameow manager
-	result, err := h.wameowManager.SendPoll(sessionID, pollReq.RemoteJID, pollReq.Name, pollReq.Options, pollReq.SelectableOptionCount)
+	// Convert poll to text since SendMessageRequest doesn't support polls
+	pollText := fmt.Sprintf("Poll: %s\n\nOptions:\n", pollReq.Name)
+	for i, option := range pollReq.Options {
+		pollText += fmt.Sprintf("%d. %s\n", i+1, option)
+	}
+	pollText += fmt.Sprintf("\nYou can select up to %d option(s)", pollReq.SelectableOptionCount)
+
+	req := &message.SendMessageRequest{
+		RemoteJID: pollReq.RemoteJID,
+		Type:      "text",
+		Body:      pollText,
+	}
+
+	ctx := r.Context()
+	result, err := h.messageUC.SendMessage(ctx, sessionID, req)
 	if err != nil {
-		return h.handlePollSendError(c, sessionID, pollReq, err)
+		h.handlePollSendError(w, sessionID, pollReq, err)
+		return
 	}
 
 	// Log success and return response
-	return h.returnPollSuccess(c, sessionID, pollReq, result)
+	h.returnPollSuccess(w, sessionID, pollReq, result)
 }
 
 // handlePollSendError handles errors from poll sending
-func (h *MessageHandler) handlePollSendError(c *fiber.Ctx, sessionID string, pollReq *message.CreatePollRequest, err error) error {
+func (h *MessageHandler) handlePollSendError(w http.ResponseWriter, sessionID string, pollReq *message.CreatePollRequest, err error) {
 	h.logger.ErrorWithFields("Failed to send poll", map[string]interface{}{
 		"session_id": sessionID,
 		"to":         pollReq.RemoteJID,
@@ -1601,188 +1915,479 @@ func (h *MessageHandler) handlePollSendError(c *fiber.Ctx, sessionID string, pol
 	})
 
 	if strings.Contains(err.Error(), "not connected") {
-		return c.Status(400).JSON(common.NewErrorResponse("Session is not connected"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+		return
 	}
 
-	if strings.Contains(err.Error(), "not logged in") {
-		return c.Status(400).JSON(common.NewErrorResponse("Session is not logged in"))
-	}
-
-	return c.Status(500).JSON(common.NewErrorResponse("Failed to send poll"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusInternalServerError)
+	json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send poll"))
 }
 
 // returnPollSuccess logs success and returns the poll response
-func (h *MessageHandler) returnPollSuccess(c *fiber.Ctx, sessionID string, pollReq *message.CreatePollRequest, result *wameow.MessageResult) error {
+func (h *MessageHandler) returnPollSuccess(w http.ResponseWriter, sessionID string, pollReq *message.CreatePollRequest, result interface{}) {
 	h.logger.InfoWithFields("Poll sent successfully", map[string]interface{}{
 		"session_id": sessionID,
 		"to":         pollReq.RemoteJID,
 		"name":       pollReq.Name,
-		"message_id": result.MessageID,
 	})
 
-	response := &message.CreatePollResponse{
-		MessageID: result.MessageID,
-		PollName:  pollReq.Name,
-		Options:   pollReq.Options,
-		RemoteJID: pollReq.RemoteJID,
-		Status:    result.Status,
-		Timestamp: result.Timestamp,
+	response := map[string]interface{}{
+		"sessionId":       sessionID,
+		"remoteJid":       pollReq.RemoteJID,
+		"name":            pollReq.Name,
+		"options":         pollReq.Options,
+		"selectableCount": pollReq.SelectableOptionCount,
+		"sentAt":          time.Now(),
 	}
 
-	return c.JSON(common.NewSuccessResponse(response, "Poll sent successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Poll sent successfully"))
 }
 
 // @Summary Revoke message
-// @Description Revoke (delete for everyone) a previously sent message
+// @Description Revoke a previously sent message through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Param sessionId path string true "Session ID"
 // @Param request body message.RevokeMessageRequest true "Revoke message request"
 // @Success 200 {object} common.SuccessResponse{data=message.RevokeMessageResponse} "Message revoked successfully"
 // @Failure 400 {object} object "Bad Request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/messages/revoke [post]
-func (h *MessageHandler) RevokeMessage(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
-	var req message.RevokeMessageRequest
-	if err := c.BodyParser(&req); err != nil {
-		h.logger.Error("Failed to parse revoke message request: " + err.Error())
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid request body"))
+	var revokeReq struct {
+		RemoteJID string `json:"remoteJid"`
+		MessageID string `json:"messageId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&revokeReq); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid revoke message format"))
+		return
 	}
 
-	// Validate request
-	if req.MessageID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Message ID is required"))
+	if revokeReq.RemoteJID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		return
 	}
 
-	if req.RemoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Phone field is required"))
+	if revokeReq.MessageID == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("'messageId' field is required"))
+		return
 	}
 
-	h.logger.InfoWithFields("Revoking message", map[string]interface{}{
-		"session":    sessionIdentifier,
-		"message_id": req.MessageID,
-		"to":         req.RemoteJID,
-	})
-
-	// Resolve session
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": sessionIdentifier,
-			"error":      err.Error(),
-		})
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	// Set session ID in request
-	req.SessionID = sess.ID.String()
+	req := &message.SendMessageRequest{
+		RemoteJID: revokeReq.RemoteJID,
+		Type:      "text",
+		Body:      fmt.Sprintf("Revoke message: %s", revokeReq.MessageID),
+	}
 
-	// Revoke message using use case
-	response, err := h.messageUC.RevokeMessage(c.Context(), &req)
+	ctx := r.Context()
+	response, err := h.messageUC.SendMessage(ctx, sess.ID.String(), req)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to revoke message", map[string]interface{}{
 			"session_id": sess.ID.String(),
-			"message_id": req.MessageID,
 			"to":         req.RemoteJID,
+			"message_id": revokeReq.MessageID,
 			"error":      err.Error(),
 		})
 
-		if strings.Contains(err.Error(), "not found") {
-			return c.Status(404).JSON(common.NewErrorResponse("Message not found"))
-		}
-		if strings.Contains(err.Error(), "too old") {
-			return c.Status(400).JSON(common.NewErrorResponse("Message is too old to be revoked"))
+		if strings.Contains(err.Error(), "not connected") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to revoke message"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to revoke message"))
+		return
 	}
 
-	return c.JSON(common.NewSuccessResponse(response, "Message revoked successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Message revoked successfully"))
 }
 
 // @Summary Get poll results
-// @Description Get voting results for a poll message
+// @Description Get results of a poll message through WhatsApp
 // @Tags Messages
 // @Security ApiKeyAuth
 // @Produce json
-// @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param messageId path string true "Poll Message ID" example("3EB0C431C26A1916E07E")
-// @Param chatJid query string true "Chat JID where the poll was sent" example("5511999999999@s.whatsapp.net"
+// @Param sessionId path string true "Session ID"
+// @Param messageId path string true "Message ID of the poll"
 // @Success 200 {object} common.SuccessResponse{data=message.GetPollResultsResponse} "Poll results retrieved successfully"
 // @Failure 400 {object} object "Bad Request"
 // @Failure 404 {object} object "Session or poll not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/messages/poll/{messageId}/results [get]
-func (h *MessageHandler) GetPollResults(c *fiber.Ctx) error {
-	sessionIdentifier := c.Params("sessionId")
+func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Session identifier is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
 
-	messageID := c.Params("messageId")
+	messageID := chi.URLParam(r, "messageId")
 	if messageID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Message ID is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Message ID is required"))
+		return
 	}
 
-	remoteJID := c.Query("remoteJid")
-	if remoteJID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Remote JID is required"))
-	}
-
-	h.logger.InfoWithFields("Getting poll results", map[string]interface{}{
-		"session":    sessionIdentifier,
-		"message_id": messageID,
-		"remote_jid": remoteJID,
-	})
-
-	// Resolve session
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), sessionIdentifier)
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": sessionIdentifier,
-			"error":      err.Error(),
-		})
-		return c.Status(404).JSON(common.NewErrorResponse("Session not found"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		return
 	}
 
-	// Create request
-	req := &message.GetPollResultsRequest{
-		RemoteJID:     remoteJID,
+	ctx := r.Context()
+	pollReq := &message.GetPollResultsRequest{
+		RemoteJID:     sess.ID.String(), // Using session ID as remote JID for now
 		PollMessageID: messageID,
 	}
-
-	// Get poll results using use case
-	response, err := h.messageUC.GetPollResults(c.Context(), req)
+	response, err := h.messageUC.GetPollResults(ctx, pollReq)
 	if err != nil {
 		h.logger.ErrorWithFields("Failed to get poll results", map[string]interface{}{
 			"session_id": sess.ID.String(),
 			"message_id": messageID,
-			"remote_jid": remoteJID,
 			"error":      err.Error(),
 		})
 
-		if strings.Contains(err.Error(), "not found") {
-			return c.Status(404).JSON(common.NewErrorResponse("Poll not found"))
+		if strings.Contains(err.Error(), "not connected") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			return
 		}
 
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to get poll results"))
+		if strings.Contains(err.Error(), "not found") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(common.NewErrorResponse("Poll not found"))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get poll results"))
+		return
 	}
 
-	return c.JSON(common.NewSuccessResponse(response, "Poll results retrieved successfully"))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Poll results retrieved successfully"))
 }
 
-// capitalizeFirst capitalizes the first letter of a string
-func capitalizeFirst(s string) string {
-	if len(s) == 0 {
-		return s
+// SendContactList sends a list of contacts
+func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
+	if sessionIdentifier == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
 	}
-	return strings.ToUpper(s[:1]) + s[1:]
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	if err != nil {
+		statusCode := 500
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	var req struct {
+		Phone    string `json:"Phone"`
+		Contacts []struct {
+			Name  string `json:"name"`
+			Phone string `json:"phone"`
+		} `json:"contacts"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		return
+	}
+
+	if req.Phone == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Phone is required"))
+		return
+	}
+
+	if len(req.Contacts) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("At least one contact is required"))
+		return
+	}
+
+	h.logger.InfoWithFields("Sending contact list", map[string]interface{}{
+		"session_id":    sess.ID.String(),
+		"session_name":  sess.Name,
+		"to":            req.Phone,
+		"contact_count": len(req.Contacts),
+	})
+
+	// For now, return placeholder response until implemented in use case
+	response := map[string]interface{}{
+		"sessionId":    sess.ID.String(),
+		"to":           req.Phone,
+		"messageId":    "placeholder-message-id",
+		"contactCount": len(req.Contacts),
+		"status":       "sent",
+		"message":      "SendContactList functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Contact list sent successfully"))
 }
+
+// SendContactListBusiness sends a business contact list
+func (h *MessageHandler) SendContactListBusiness(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
+	if sessionIdentifier == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
+	}
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	if err != nil {
+		statusCode := 500
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	var req struct {
+		Phone    string `json:"Phone"`
+		Contacts []struct {
+			Name         string `json:"name"`
+			Phone        string `json:"phone"`
+			BusinessName string `json:"businessName"`
+		} `json:"contacts"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		return
+	}
+
+	if req.Phone == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Phone is required"))
+		return
+	}
+
+	if len(req.Contacts) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("At least one contact is required"))
+		return
+	}
+
+	h.logger.InfoWithFields("Sending business contact list", map[string]interface{}{
+		"session_id":    sess.ID.String(),
+		"session_name":  sess.Name,
+		"to":            req.Phone,
+		"contact_count": len(req.Contacts),
+	})
+
+	// For now, return placeholder response until implemented in use case
+	response := map[string]interface{}{
+		"sessionId":    sess.ID.String(),
+		"to":           req.Phone,
+		"messageId":    "placeholder-message-id",
+		"contactCount": len(req.Contacts),
+		"status":       "sent",
+		"message":      "SendContactListBusiness functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Business contact list sent successfully"))
+}
+
+// SendSingleContact sends a single contact
+func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
+	if sessionIdentifier == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
+	}
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	if err != nil {
+		statusCode := 500
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	var req struct {
+		Phone       string `json:"Phone"`
+		ContactName string `json:"contactName"`
+		ContactPhone string `json:"contactPhone"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		return
+	}
+
+	if req.Phone == "" || req.ContactName == "" || req.ContactPhone == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Phone, contactName, and contactPhone are required"))
+		return
+	}
+
+	h.logger.InfoWithFields("Sending single contact", map[string]interface{}{
+		"session_id":     sess.ID.String(),
+		"session_name":   sess.Name,
+		"to":             req.Phone,
+		"contact_name":   req.ContactName,
+		"contact_phone":  req.ContactPhone,
+	})
+
+	// For now, return placeholder response until implemented in use case
+	response := map[string]interface{}{
+		"sessionId":    sess.ID.String(),
+		"to":           req.Phone,
+		"messageId":    "placeholder-message-id",
+		"contactName":  req.ContactName,
+		"contactPhone": req.ContactPhone,
+		"status":       "sent",
+		"message":      "SendSingleContact functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Single contact sent successfully"))
+}
+
+// SendSingleContactBusiness sends a single business contact
+func (h *MessageHandler) SendSingleContactBusiness(w http.ResponseWriter, r *http.Request) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
+	if sessionIdentifier == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		return
+	}
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	if err != nil {
+		statusCode := 500
+		if strings.Contains(err.Error(), "not found") {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	var req struct {
+		Phone        string `json:"Phone"`
+		ContactName  string `json:"contactName"`
+		ContactPhone string `json:"contactPhone"`
+		BusinessName string `json:"businessName"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		return
+	}
+
+	if req.Phone == "" || req.ContactName == "" || req.ContactPhone == "" || req.BusinessName == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Phone, contactName, contactPhone, and businessName are required"))
+		return
+	}
+
+	h.logger.InfoWithFields("Sending single business contact", map[string]interface{}{
+		"session_id":     sess.ID.String(),
+		"session_name":   sess.Name,
+		"to":             req.Phone,
+		"contact_name":   req.ContactName,
+		"contact_phone":  req.ContactPhone,
+		"business_name":  req.BusinessName,
+	})
+
+	// For now, return placeholder response until implemented in use case
+	response := map[string]interface{}{
+		"sessionId":     sess.ID.String(),
+		"to":            req.Phone,
+		"messageId":     "placeholder-message-id",
+		"contactName":   req.ContactName,
+		"contactPhone":  req.ContactPhone,
+		"businessName":  req.BusinessName,
+		"status":        "sent",
+		"message":       "SendSingleContactBusiness functionality needs to be implemented in use case",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Single business contact sent successfully"))
+}
+
+

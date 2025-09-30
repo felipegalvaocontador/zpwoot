@@ -1,17 +1,20 @@
 package handlers
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/media"
 	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 type MediaHandler struct {
@@ -28,159 +31,138 @@ func NewMediaHandler(appLogger *logger.Logger, mediaUC media.UseCase, sessionRep
 	}
 }
 
+// resolveSession resolves session from URL parameter
+func (h *MediaHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
+	idOrName := chi.URLParam(r, "sessionId")
+
+	sess, err := h.sessionResolver.ResolveSession(r.Context(), idOrName)
+	if err != nil {
+		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
+			"identifier": idOrName,
+			"error":      err.Error(),
+			"path":       r.URL.Path,
+		})
+
+		return nil, err
+	}
+
+	return sess, nil
+}
+
+// handleMediaAction handles common media action logic
+func (h *MediaHandler) handleMediaAction(
+	w http.ResponseWriter,
+	r *http.Request,
+	actionName string,
+	successMessage string,
+	parseFunc func(*http.Request, *domainSession.Session) (interface{}, error),
+	actionFunc func(context.Context, interface{}) (interface{}, error),
+) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
+	}
+
+	req, err := parseFunc(r, sess)
+	if err != nil {
+		h.logger.Error("Failed to parse request body: " + err.Error())
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		return
+	}
+
+	h.logger.InfoWithFields(actionName, map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	result, err := actionFunc(r.Context(), req)
+	if err != nil {
+		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		return
+	}
+
+	response := common.NewSuccessResponse(result, successMessage)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
 // @Summary Download media from message
-// @Description Download media (image, video, audio, document) from a WhatsApp message
+// @Description Download media content from a WhatsApp message
 // @Tags Media
 // @Security ApiKeyAuth
-// @Produce application/octet-stream
+// @Accept json
+// @Produce json
 // @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param messageId path string true "Message ID" example("3EB0C431C26A1916E07E")
-// @Success 200 {file} binary "Media file content"
+// @Param request body media.DownloadMediaRequest true "Download media request"
+// @Success 200 {object} common.SuccessResponse{data=media.DownloadMediaResponse} "Media downloaded successfully"
 // @Failure 400 {object} object "Bad Request"
-// @Failure 404 {object} object "Session or message not found"
+// @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
-// @Router /sessions/{sessionId}/media/download/{messageId} [get]
-func (h *MediaHandler) DownloadMedia(c *fiber.Ctx) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
-	}
-
-	messageID := c.Params("messageId")
-	if messageID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Message ID is required"))
-	}
-
-	h.logger.InfoWithFields("Downloading media", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-		"message_id":   messageID,
-	})
-
-	req := &media.DownloadMediaRequest{
-		SessionID: sess.ID.String(),
-		MessageID: messageID,
-	}
-
-	result, err := h.mediaUC.DownloadMedia(c.Context(), req)
-	if err != nil {
-		h.logger.Error("Failed to download media: " + err.Error())
-		if err.Error() == "message not found" {
-			return c.Status(404).JSON(common.NewErrorResponse("Message not found"))
-		}
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to download media"))
-	}
-
-	// Set appropriate headers
-	c.Set("Content-Type", result.MimeType)
-	c.Set("Content-Length", strconv.FormatInt(result.FileSize, 10))
-	if result.Filename != "" {
-		c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", result.Filename))
-	}
-
-	return c.Send(result.Data)
+// @Router /sessions/{sessionId}/media/download [post]
+func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
+	h.handleMediaAction(
+		w,
+		r,
+		"Downloading media",
+		"Media downloaded successfully",
+		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
+			var req media.DownloadMediaRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				return nil, err
+			}
+			req.SessionID = sess.ID.String()
+			return &req, nil
+		},
+		func(ctx context.Context, req interface{}) (interface{}, error) {
+			return h.mediaUC.DownloadMedia(ctx, req.(*media.DownloadMediaRequest))
+		},
+	)
 }
 
-// @Summary Download media by type
-// @Description Download media from a message filtered by media type
-// @Tags Media
-// @Security ApiKeyAuth
-// @Produce application/octet-stream
-// @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param messageId path string true "Message ID" example("3EB0C431C26A1916E07E")
-// @Param mediaType path string true "Media Type" Enums(image, video, audio, document, sticker)
-// @Success 200 {file} binary "Media file content"
-// @Failure 400 {object} object "Bad Request"
-// @Failure 404 {object} object "Session or message not found"
-// @Failure 500 {object} object "Internal Server Error"
-// @Router /sessions/{sessionId}/media/download/{messageId}/{mediaType} [get]
-func (h *MediaHandler) DownloadMediaByType(c *fiber.Ctx) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
-	}
-
-	messageID := c.Params("messageId")
-	mediaType := c.Params("mediaType")
-
-	if messageID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Message ID is required"))
-	}
-
-	if mediaType == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Media type is required"))
-	}
-
-	// Validate media type
-	validTypes := []string{"image", "video", "audio", "document", "sticker"}
-	isValid := false
-	for _, validType := range validTypes {
-		if mediaType == validType {
-			isValid = true
-			break
-		}
-	}
-
-	if !isValid {
-		return c.Status(400).JSON(common.NewErrorResponse("Invalid media type. Must be one of: image, video, audio, document, sticker"))
-	}
-
-	h.logger.InfoWithFields("Downloading media by type", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-		"message_id":   messageID,
-		"media_type":   mediaType,
-	})
-
-	req := &media.DownloadMediaRequest{
-		SessionID: sess.ID.String(),
-		MessageID: messageID,
-		MediaType: mediaType,
-	}
-
-	result, err := h.mediaUC.DownloadMedia(c.Context(), req)
-	if err != nil {
-		h.logger.Error("Failed to download media: " + err.Error())
-		if err.Error() == "message not found" {
-			return c.Status(404).JSON(common.NewErrorResponse("Message not found"))
-		}
-		if err.Error() == "media type mismatch" {
-			return c.Status(400).JSON(common.NewErrorResponse("Message does not contain the requested media type"))
-		}
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to download media"))
-	}
-
-	// Set appropriate headers
-	c.Set("Content-Type", result.MimeType)
-	c.Set("Content-Length", strconv.FormatInt(result.FileSize, 10))
-	if result.Filename != "" {
-		c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", result.Filename))
-	}
-
-	return c.Send(result.Data)
-}
-
-// @Summary Get media info
-// @Description Get information about media in a message without downloading it
+// @Summary Get media information
+// @Description Get information about media files in cache
 // @Tags Media
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param messageId path string true "Message ID" example("3EB0C431C26A1916E07E")
-// @Success 200 {object} common.SuccessResponse{data=media.MediaInfoResponse} "Media information"
+// @Param messageId query string true "Message ID containing media"
+// @Success 200 {object} common.SuccessResponse{data=media.MediaInfo} "Media information retrieved successfully"
 // @Failure 400 {object} object "Bad Request"
-// @Failure 404 {object} object "Session or message not found"
+// @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
-// @Router /sessions/{sessionId}/media/info/{messageId} [get]
-func (h *MediaHandler) GetMediaInfo(c *fiber.Ctx) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+// @Router /sessions/{sessionId}/media/info [get]
+func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	messageID := c.Params("messageId")
+	messageID := r.URL.Query().Get("messageId")
 	if messageID == "" {
-		return c.Status(400).JSON(common.NewErrorResponse("Message ID is required"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Message ID is required"))
+		return
 	}
 
 	h.logger.InfoWithFields("Getting media info", map[string]interface{}{
@@ -194,23 +176,22 @@ func (h *MediaHandler) GetMediaInfo(c *fiber.Ctx) error {
 		MessageID: messageID,
 	}
 
-	result, err := h.mediaUC.GetMediaInfo(c.Context(), req)
+	result, err := h.mediaUC.GetMediaInfo(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to get media info: " + err.Error())
-		if err.Error() == "message not found" {
-			return c.Status(404).JSON(common.NewErrorResponse("Message not found"))
-		}
-		if err.Error() == "no media in message" {
-			return c.Status(404).JSON(common.NewErrorResponse("Message does not contain media"))
-		}
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to get media info"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get media info"))
+		return
 	}
 
 	response := common.NewSuccessResponse(result, "Media information retrieved successfully")
-	return c.JSON(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
-// @Summary List cached media
+// @Summary List cached media files
 // @Description List all cached media files for a session
 // @Tags Media
 // @Security ApiKeyAuth
@@ -218,19 +199,41 @@ func (h *MediaHandler) GetMediaInfo(c *fiber.Ctx) error {
 // @Param sessionId path string true "Session ID or Name" example("mySession")
 // @Param limit query int false "Limit number of results" default(50)
 // @Param offset query int false "Offset for pagination" default(0)
-// @Success 200 {object} common.SuccessResponse{data=media.ListCachedMediaResponse} "Cached media list"
+// @Param mediaType query string false "Filter by media type (image, video, audio, document)"
+// @Success 200 {object} common.SuccessResponse{data=media.ListCachedMediaResponse} "Cached media files listed successfully"
 // @Failure 400 {object} object "Bad Request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
-// @Router /sessions/{sessionId}/media/cache [get]
-func (h *MediaHandler) ListCachedMedia(c *fiber.Ctx) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
+// @Router /sessions/{sessionId}/media/list [get]
+func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, domainSession.ErrSessionNotFound) {
+			statusCode = 404
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	limit := c.QueryInt("limit", 50)
-	offset := c.QueryInt("offset", 0)
+	// Parse query parameters
+	limit := 50
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil {
+			limit = parsedLimit
+		}
+	}
+
+	offset := 0
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if parsedOffset, err := strconv.Atoi(offsetStr); err == nil {
+			offset = parsedOffset
+		}
+	}
+
+	mediaType := r.URL.Query().Get("mediaType")
 
 	if limit <= 0 || limit > 100 {
 		limit = 50
@@ -245,85 +248,108 @@ func (h *MediaHandler) ListCachedMedia(c *fiber.Ctx) error {
 		"session_name": sess.Name,
 		"limit":        limit,
 		"offset":       offset,
+		"media_type":   mediaType,
 	})
 
 	req := &media.ListCachedMediaRequest{
 		SessionID: sess.ID.String(),
 		Limit:     limit,
 		Offset:    offset,
+		MediaType: mediaType,
 	}
 
-	result, err := h.mediaUC.ListCachedMedia(c.Context(), req)
+	result, err := h.mediaUC.ListCachedMedia(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to list cached media: " + err.Error())
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to list cached media"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to list cached media"))
+		return
 	}
 
-	response := common.NewSuccessResponse(result, "Cached media list retrieved successfully")
-	return c.JSON(response)
+	response := common.NewSuccessResponse(result, "Cached media files listed successfully")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Clear media cache
 // @Description Clear cached media files for a session
 // @Tags Media
 // @Security ApiKeyAuth
+// @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID or Name" example("mySession")
-// @Param olderThan query int false "Clear files older than X hours" default(24)
-// @Success 200 {object} common.SuccessResponse{data=media.ClearCacheResponse} "Cache cleared successfully"
+// @Param request body media.ClearCacheRequest true "Clear cache request"
+// @Success 200 {object} common.SuccessResponse{data=media.ClearCacheResponse} "Media cache cleared successfully"
 // @Failure 400 {object} object "Bad Request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
-// @Router /sessions/{sessionId}/media/cache/clear [delete]
-func (h *MediaHandler) ClearMediaCache(c *fiber.Ctx) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return c.Status(fiberErr.Code).JSON(common.NewErrorResponse(fiberErr.Message))
-	}
-
-	olderThan := c.QueryInt("olderThan", 24)
-	if olderThan < 0 {
-		olderThan = 24
-	}
-
-	h.logger.InfoWithFields("Clearing media cache", map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-		"older_than":   olderThan,
-	})
-
-	req := &media.ClearCacheRequest{
-		SessionID: sess.ID.String(),
-		OlderThan: olderThan,
-	}
-
-	result, err := h.mediaUC.ClearCache(c.Context(), req)
-	if err != nil {
-		h.logger.Error("Failed to clear media cache: " + err.Error())
-		return c.Status(500).JSON(common.NewErrorResponse("Failed to clear media cache"))
-	}
-
-	response := common.NewSuccessResponse(result, "Media cache cleared successfully")
-	return c.JSON(response)
+// @Router /sessions/{sessionId}/media/clear-cache [post]
+func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
+	h.handleMediaAction(
+		w,
+		r,
+		"Clearing media cache",
+		"Media cache cleared successfully",
+		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
+			var req media.ClearCacheRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				return nil, err
+			}
+			req.SessionID = sess.ID.String()
+			return &req, nil
+		},
+		func(ctx context.Context, req interface{}) (interface{}, error) {
+			return h.mediaUC.ClearCache(ctx, req.(*media.ClearCacheRequest))
+		},
+	)
 }
 
-func (h *MediaHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session, *fiber.Error) {
-	idOrName := c.Params("sessionId")
-
-	sess, err := h.sessionResolver.ResolveSession(c.Context(), idOrName)
+// @Summary Get media statistics
+// @Description Get statistics about media usage for a session
+// @Tags Media
+// @Security ApiKeyAuth
+// @Produce json
+// @Param sessionId path string true "Session ID or Name" example("mySession")
+// @Success 200 {object} common.SuccessResponse{data=media.GetMediaStatsResponse} "Media statistics retrieved successfully"
+// @Failure 400 {object} object "Bad Request"
+// @Failure 404 {object} object "Session not found"
+// @Failure 500 {object} object "Internal Server Error"
+// @Router /sessions/{sessionId}/media/stats [get]
+func (h *MediaHandler) GetMediaStats(w http.ResponseWriter, r *http.Request) {
+	sess, err := h.resolveSession(r)
 	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": idOrName,
-			"error":      err.Error(),
-			"path":       c.Path(),
-		})
-
+		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
-			return nil, fiber.NewError(404, "Session not found")
+			statusCode = 404
 		}
-
-		return nil, fiber.NewError(500, "Failed to resolve session")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		return
 	}
 
-	return sess, nil
+	h.logger.InfoWithFields("Getting media statistics", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	req := &media.GetMediaStatsRequest{
+		SessionID: sess.ID.String(),
+	}
+
+	result, err := h.mediaUC.GetMediaStats(r.Context(), req)
+	if err != nil {
+		h.logger.Error("Failed to get media statistics: " + err.Error())
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get media statistics"))
+		return
+	}
+
+	response := common.NewSuccessResponse(result, "Media statistics retrieved successfully")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }

@@ -1,77 +1,53 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"time"
-
-	"github.com/gofiber/fiber/v2"
 
 	"zpwoot/platform/logger"
 )
 
-func RequestID(logger *logger.Logger) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		requestID := c.Get("X-Request-ID")
-		if requestID == "" {
-			requestID = generateRequestID()
-			c.Set("X-Request-ID", requestID)
-		}
+// RequestID middleware for Chi router
+func RequestID(logger *logger.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestID := r.Header.Get("X-Request-ID")
+			if requestID == "" {
+				requestID = generateRequestID()
+				w.Header().Set("X-Request-ID", requestID)
+			}
 
-		c.Locals("request_id", requestID)
+			// Add request ID to context
+			ctx := context.WithValue(r.Context(), "request_id", requestID)
+			
+			// Create logger with request ID
+			requestLogger := logger.WithField("request_id", requestID)
+			ctx = context.WithValue(ctx, "logger", requestLogger)
 
-		requestLogger := logger.WithField("request_id", requestID)
-		c.Locals("logger", requestLogger)
-
-		return c.Next()
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }
 
-func generateRequestID() string {
-	return fmt.Sprintf("req_%d", time.Now().UnixNano())
-}
-
-func GetLoggerFromContext(c *fiber.Ctx) *logger.Logger {
-	if logger, ok := c.Locals("logger").(*logger.Logger); ok {
+// GetLoggerFromContext extracts logger from Chi context
+func GetLoggerFromContext(r *http.Request) *logger.Logger {
+	if logger, ok := r.Context().Value("logger").(*logger.Logger); ok {
 		return logger
 	}
 	return logger.New()
 }
 
-func LogError(c *fiber.Ctx, err error, message string) {
-	requestLogger := GetLoggerFromContext(c)
-
-	fields := map[string]interface{}{
-		"component": "http",
-		"method":    c.Method(),
-		"path":      c.Path(),
-		"ip":        c.IP(),
+// GetRequestIDFromContext extracts request ID from Chi context
+func GetRequestIDFromContext(r *http.Request) string {
+	if requestID, ok := r.Context().Value("request_id").(string); ok {
+		return requestID
 	}
-
-	if requestID := c.Locals("request_id"); requestID != nil {
-		fields["request_id"] = requestID
-	}
-
-	requestLogger.ErrorWithFields(message, fields)
+	return ""
 }
 
-func LogInfo(c *fiber.Ctx, message string, additionalFields ...map[string]interface{}) {
-	requestLogger := GetLoggerFromContext(c)
-
-	fields := map[string]interface{}{
-		"component": "http",
-		"method":    c.Method(),
-		"path":      c.Path(),
-	}
-
-	if requestID := c.Locals("request_id"); requestID != nil {
-		fields["request_id"] = requestID
-	}
-
-	for _, additional := range additionalFields {
-		for k, v := range additional {
-			fields[k] = v
-		}
-	}
-
-	requestLogger.InfoWithFields(message, fields)
+// generateRequestID generates a unique request ID
+func generateRequestID() string {
+	return fmt.Sprintf("req_%d", time.Now().UnixNano())
 }

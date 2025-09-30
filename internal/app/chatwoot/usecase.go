@@ -321,7 +321,7 @@ func (uc *useCaseImpl) TestConnection(ctx context.Context) (*TestChatwootConnect
 		return &TestChatwootConnectionResponse{
 			Success: false,
 			Error:   err.Error(),
-		}, nil
+		}, err
 	}
 
 	response := &TestChatwootConnectionResponse{

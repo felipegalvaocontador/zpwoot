@@ -97,7 +97,7 @@ func (im *IntegrationManager) processMessageToChatwoot(ctx context.Context, sess
 	}
 
 	// Get or create contact and conversation
-	conversation, err := im.setupContactAndConversation(client, phoneNumber, sessionID, messageID, inboxID)
+	conversation, err := im.setupContactAndConversation(ctx, client, phoneNumber, sessionID, messageID, inboxID)
 	if err != nil {
 		return err
 	}
@@ -170,11 +170,11 @@ func (im *IntegrationManager) getInboxID(ctx context.Context, sessionID, message
 }
 
 // setupContactAndConversation gets or creates contact and conversation
-func (im *IntegrationManager) setupContactAndConversation(client ports.ChatwootClient, phoneNumber, sessionID, messageID string, inboxID int) (*ports.ChatwootConversation, error) {
+func (im *IntegrationManager) setupContactAndConversation(ctx context.Context, client ports.ChatwootClient, phoneNumber, sessionID, messageID string, inboxID int) (*ports.ChatwootConversation, error) {
 	// Get or create contact
 	contact, err := im.getOrCreateContact(client, phoneNumber, sessionID, inboxID)
 	if err != nil {
-		if markErr := im.messageMapper.MarkAsFailed(context.Background(), sessionID, messageID); markErr != nil {
+		if markErr := im.messageMapper.MarkAsFailed(ctx, sessionID, messageID); markErr != nil {
 			im.logger.WarnWithFields("Failed to mark message as failed", map[string]interface{}{
 				"session_id": sessionID,
 				"message_id": messageID,
@@ -187,7 +187,7 @@ func (im *IntegrationManager) setupContactAndConversation(client ports.ChatwootC
 	// Get or create conversation
 	conversation, err := im.getOrCreateConversation(client, contact.ID, sessionID, inboxID)
 	if err != nil {
-		if markErr := im.messageMapper.MarkAsFailed(context.Background(), sessionID, messageID); markErr != nil {
+		if markErr := im.messageMapper.MarkAsFailed(ctx, sessionID, messageID); markErr != nil {
 			im.logger.WarnWithFields("Failed to mark message as failed", map[string]interface{}{
 				"session_id": sessionID,
 				"message_id": messageID,

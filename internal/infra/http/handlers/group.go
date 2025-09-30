@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"context"
 	"errors"
-	"fmt"
 
 	"zpwoot/internal/app/group"
 	domainSession "zpwoot/internal/domain/session"
@@ -49,49 +47,7 @@ func (h *GroupHandler) resolveSession(c *fiber.Ctx) (*domainSession.Session, *fi
 }
 
 // handleGroupActionWithJID handles common group action logic for requests with GroupJID
-func (h *GroupHandler) handleGroupActionWithJID(
-	c *fiber.Ctx,
-	actionName string,
-	parseFunc func(*fiber.Ctx) (interface{}, error),
-	actionFunc func(context.Context, string, interface{}) (interface{}, error),
-	extractJID func(interface{}) string,
-) error {
-	sess, fiberErr := h.resolveSession(c)
-	if fiberErr != nil {
-		return fiberErr
-	}
 
-	req, err := parseFunc(c)
-	if err != nil {
-		h.logger.WarnWithFields("Invalid request body", map[string]interface{}{
-			"session_id": sess.ID.String(),
-			"error":      err.Error(),
-		})
-		return fiber.NewError(400, "Invalid request body")
-	}
-
-	groupJID := extractJID(req)
-	if groupJID == "" {
-		return fiber.NewError(400, "Group JID is required in request body")
-	}
-
-	h.logger.InfoWithFields(actionName, map[string]interface{}{
-		"session_id": sess.ID.String(),
-		"group_jid":  groupJID,
-	})
-
-	response, err := actionFunc(c.Context(), sess.ID.String(), req)
-	if err != nil {
-		h.logger.ErrorWithFields(fmt.Sprintf("Failed to %s", actionName), map[string]interface{}{
-			"session_id": sess.ID.String(),
-			"group_jid":  groupJID,
-			"error":      err.Error(),
-		})
-		return fiber.NewError(500, err.Error())
-	}
-
-	return c.JSON(response)
-}
 
 // CreateGroup creates a new WhatsApp group
 func (h *GroupHandler) CreateGroup(c *fiber.Ctx) error {
@@ -228,73 +184,116 @@ func (h *GroupHandler) UpdateGroupParticipants(c *fiber.Ctx) error {
 
 // SetGroupName updates the group name
 func (h *GroupHandler) SetGroupName(c *fiber.Ctx) error {
-	return h.handleGroupActionWithJID(
-		c,
-		"Setting group name",
-		func(c *fiber.Ctx) (interface{}, error) {
-			var req group.SetGroupNameRequest
-			if err := c.BodyParser(&req); err != nil {
-				return nil, err
-			}
-			return &req, nil
-		},
-		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.groupUC.SetGroupName(ctx, sessionID, req.(*group.SetGroupNameRequest)) //nolint:errcheck // Error is handled by handleGroupAction wrapper
-		},
-		func(req interface{}) string {
-			return req.(*group.SetGroupNameRequest).GroupJID //nolint:errcheck // Return value is used by wrapper function
-		},
-	)
+	sess, fiberErr := h.resolveSession(c)
+	if fiberErr != nil {
+		return fiberErr
+	}
+
+	var req group.SetGroupNameRequest
+	if err := c.BodyParser(&req); err != nil {
+		h.logger.WarnWithFields("Invalid request body", map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"error":      err.Error(),
+		})
+		return fiber.NewError(400, "Invalid request body")
+	}
+
+	if req.GroupJID == "" {
+		return fiber.NewError(400, "Group JID is required in request body")
+	}
+
+	h.logger.InfoWithFields("Setting group name", map[string]interface{}{
+		"session_id": sess.ID.String(),
+		"group_jid":  req.GroupJID,
+	})
+
+	response, err := h.groupUC.SetGroupName(c.Context(), sess.ID.String(), &req)
+	if err != nil {
+		h.logger.ErrorWithFields("Failed to Setting group name", map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"group_jid":  req.GroupJID,
+			"error":      err.Error(),
+		})
+		return fiber.NewError(500, err.Error())
+	}
+
+	return c.JSON(response)
 }
 
 // SetGroupDescription updates the group description
 func (h *GroupHandler) SetGroupDescription(c *fiber.Ctx) error {
-	return h.handleGroupActionWithJID(
-		c,
-		"Setting group description",
-		func(c *fiber.Ctx) (interface{}, error) {
-			var req group.SetGroupDescriptionRequest
-			if err := c.BodyParser(&req); err != nil {
-				return nil, err
-			}
-			return &req, nil
-		},
-		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			//nolint:errcheck // Error is handled by handleGroupAction wrapper
+	sess, fiberErr := h.resolveSession(c)
+	if fiberErr != nil {
+		return fiberErr
+	}
 
-			return h.groupUC.SetGroupDescription(ctx, sessionID, req.(*group.SetGroupDescriptionRequest)) //nolint:errcheck // Error is handled by handleGroupAction wrapper
-		},
-		func(req interface{}) string {
-			//nolint:errcheck // Return value is used by wrapper function
+	var req group.SetGroupDescriptionRequest
+	if err := c.BodyParser(&req); err != nil {
+		h.logger.WarnWithFields("Invalid request body", map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"error":      err.Error(),
+		})
+		return fiber.NewError(400, "Invalid request body")
+	}
 
-			return req.(*group.SetGroupDescriptionRequest).GroupJID //nolint:errcheck // Return value is used by wrapper function
-		},
-	)
+	if req.GroupJID == "" {
+		return fiber.NewError(400, "Group JID is required in request body")
+	}
+
+	h.logger.InfoWithFields("Setting group description", map[string]interface{}{
+		"session_id": sess.ID.String(),
+		"group_jid":  req.GroupJID,
+	})
+
+	response, err := h.groupUC.SetGroupDescription(c.Context(), sess.ID.String(), &req)
+	if err != nil {
+		h.logger.ErrorWithFields("Failed to Setting group description", map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"group_jid":  req.GroupJID,
+			"error":      err.Error(),
+		})
+		return fiber.NewError(500, err.Error())
+	}
+
+	return c.JSON(response)
 }
 
 // SetGroupPhoto updates the group photo
 func (h *GroupHandler) SetGroupPhoto(c *fiber.Ctx) error {
-	return h.handleGroupActionWithJID(
-		c,
-		"Setting group photo",
-		func(c *fiber.Ctx) (interface{}, error) {
-			var req group.SetGroupPhotoRequest
-			if err := c.BodyParser(&req); err != nil {
-				return nil, err
-			}
-			return &req, nil
-		},
-		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			//nolint:errcheck // Error is handled by handleGroupAction wrapper
+	sess, fiberErr := h.resolveSession(c)
+	if fiberErr != nil {
+		return fiberErr
+	}
 
-			return h.groupUC.SetGroupPhoto(ctx, sessionID, req.(*group.SetGroupPhotoRequest)) //nolint:errcheck // Error is handled by handleGroupAction wrapper
-		},
-		func(req interface{}) string {
-			//nolint:errcheck // Return value is used by wrapper function
+	var req group.SetGroupPhotoRequest
+	if err := c.BodyParser(&req); err != nil {
+		h.logger.WarnWithFields("Invalid request body", map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"error":      err.Error(),
+		})
+		return fiber.NewError(400, "Invalid request body")
+	}
 
-			return req.(*group.SetGroupPhotoRequest).GroupJID //nolint:errcheck // Return value is used by wrapper function
-		},
-	)
+	if req.GroupJID == "" {
+		return fiber.NewError(400, "Group JID is required in request body")
+	}
+
+	h.logger.InfoWithFields("Setting group photo", map[string]interface{}{
+		"session_id": sess.ID.String(),
+		"group_jid":  req.GroupJID,
+	})
+
+	response, err := h.groupUC.SetGroupPhoto(c.Context(), sess.ID.String(), &req)
+	if err != nil {
+		h.logger.ErrorWithFields("Failed to Setting group photo", map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"group_jid":  req.GroupJID,
+			"error":      err.Error(),
+		})
+		return fiber.NewError(500, err.Error())
+	}
+
+	return c.JSON(response)
 }
 
 // GetGroupInviteLink retrieves or generates a group invite link
@@ -369,27 +368,40 @@ func (h *GroupHandler) JoinGroup(c *fiber.Ctx) error {
 
 // LeaveGroup leaves a group
 func (h *GroupHandler) LeaveGroup(c *fiber.Ctx) error {
-	return h.handleGroupActionWithJID(
-		c,
-		"Leaving group",
-		func(c *fiber.Ctx) (interface{}, error) {
-			var req group.LeaveGroupRequest
-			if err := c.BodyParser(&req); err != nil {
-				return nil, err
-			}
-			return &req, nil
-		},
-		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			//nolint:errcheck // Error is handled by handleGroupAction wrapper
+	sess, fiberErr := h.resolveSession(c)
+	if fiberErr != nil {
+		return fiberErr
+	}
 
-			return h.groupUC.LeaveGroup(ctx, sessionID, req.(*group.LeaveGroupRequest)) //nolint:errcheck // Error is handled by handleGroupAction wrapper
-		},
-		func(req interface{}) string {
-			//nolint:errcheck // Return value is used by wrapper function
+	var req group.LeaveGroupRequest
+	if err := c.BodyParser(&req); err != nil {
+		h.logger.WarnWithFields("Invalid request body", map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"error":      err.Error(),
+		})
+		return fiber.NewError(400, "Invalid request body")
+	}
 
-			return req.(*group.LeaveGroupRequest).GroupJID //nolint:errcheck // Return value is used by wrapper function
-		},
-	)
+	if req.GroupJID == "" {
+		return fiber.NewError(400, "Group JID is required in request body")
+	}
+
+	h.logger.InfoWithFields("Leaving group", map[string]interface{}{
+		"session_id": sess.ID.String(),
+		"group_jid":  req.GroupJID,
+	})
+
+	response, err := h.groupUC.LeaveGroup(c.Context(), sess.ID.String(), &req)
+	if err != nil {
+		h.logger.ErrorWithFields("Failed to Leaving group", map[string]interface{}{
+			"session_id": sess.ID.String(),
+			"group_jid":  req.GroupJID,
+			"error":      err.Error(),
+		})
+		return fiber.NewError(500, err.Error())
+	}
+
+	return c.JSON(response)
 }
 
 // UpdateGroupSettings updates group settings (announce, locked)

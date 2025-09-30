@@ -378,7 +378,7 @@ func (uc *useCaseImpl) JoinGroupWithInvite(ctx context.Context, sessionID string
 	// Join group with invite via wameow manager
 	err := uc.wameowMgr.JoinGroupWithInvite(sessionID, req.GroupJID, req.Inviter, req.Code, req.Expiration)
 	if err != nil {
-		return NewJoinGroupWithInviteResponse(req.GroupJID, false, "Failed to join group: "+err.Error()), nil
+		return NewJoinGroupWithInviteResponse(req.GroupJID, false, "Failed to join group: "+err.Error()), err
 	}
 
 	return NewJoinGroupWithInviteResponse(req.GroupJID, true, "Successfully joined group"), nil

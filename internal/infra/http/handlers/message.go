@@ -1924,14 +1924,14 @@ func (h *MessageHandler) sendPollAndRespond(w http.ResponseWriter, r *http.Reque
 	}
 
 	ctx := r.Context()
-	result, err := h.messageUC.SendMessage(ctx, sessionID, req)
+	_, err := h.messageUC.SendMessage(ctx, sessionID, req)
 	if err != nil {
 		h.handlePollSendError(w, sessionID, pollReq, err)
 		return
 	}
 
 	// Log success and return response
-	h.returnPollSuccess(w, sessionID, pollReq, result)
+	h.returnPollSuccess(w, sessionID, pollReq)
 }
 
 // handlePollSendError handles errors from poll sending
@@ -1956,7 +1956,7 @@ func (h *MessageHandler) handlePollSendError(w http.ResponseWriter, sessionID st
 }
 
 // returnPollSuccess logs success and returns the poll response
-func (h *MessageHandler) returnPollSuccess(w http.ResponseWriter, sessionID string, pollReq *message.CreatePollRequest, result interface{}) {
+func (h *MessageHandler) returnPollSuccess(w http.ResponseWriter, sessionID string, pollReq *message.CreatePollRequest) {
 	h.logger.InfoWithFields("Poll sent successfully", map[string]interface{}{
 		"session_id": sessionID,
 		"to":         pollReq.RemoteJID,

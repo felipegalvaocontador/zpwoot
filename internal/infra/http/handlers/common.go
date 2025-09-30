@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"zpwoot/internal/app/common"
@@ -356,113 +355,11 @@ func (h *BaseHandler) handleSimpleGetRequest(
 
 
 
-// handleStructActionRequest handles action requests with struct validation
-func (h *BaseHandler) handleStructActionRequest(
-	w http.ResponseWriter,
-	r *http.Request,
-	actionName string,
-	successMessage string,
-	requestStruct interface{},
-	validateFunc func(interface{}) error,
-	actionFunc func(context.Context, interface{}) (interface{}, error),
-) {
-	sess, err := h.resolveSessionFromChi(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, session.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		h.writeErrorResponse(w, statusCode, err.Error())
-		return
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(requestStruct); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
-		return
-	}
-
-	if validateFunc != nil {
-		if err := validateFunc(requestStruct); err != nil {
-			h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-	}
-
-	h.logger.InfoWithFields(actionName, map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-	})
-
-	result, err := actionFunc(r.Context(), requestStruct)
-	if err != nil {
-		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
-		h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to %s", actionName))
-		return
-	}
-
-	h.writeSuccessResponse(w, result, successMessage)
-}
 
 
 
-// handleListRequest is a generic handler for list requests with pagination
-func (h *BaseHandler) handleListRequest(
-	w http.ResponseWriter,
-	r *http.Request,
-	actionName string,
-	successMessage string,
-	listFunc func(context.Context, *session.Session, int, int, string) (interface{}, error),
-) {
-	sess, err := h.resolveSession(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, session.ErrSessionNotFound) {
-			statusCode = 404
-		}
-		h.writeErrorResponse(w, statusCode, err.Error())
-		return
-	}
 
-	// Parse query parameters
-	limit := h.parseIntParam(r, "limit", 50)
-	offset := h.parseIntParam(r, "offset", 0)
-	search := r.URL.Query().Get("search")
 
-	// Validate parameters
-	if limit <= 0 || limit > 100 {
-		limit = 50
-	}
-	if offset < 0 {
-		offset = 0
-	}
-
-	h.logger.InfoWithFields(actionName, map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
-		"limit":        limit,
-		"offset":       offset,
-		"search":       search,
-	})
-
-	result, err := listFunc(r.Context(), sess, limit, offset, search)
-	if err != nil {
-		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
-		h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to %s", actionName))
-		return
-	}
-
-	h.writeSuccessResponse(w, result, successMessage)
-}
-
-// parseIntParam parses an integer parameter from query string with default value
-func (h *BaseHandler) parseIntParam(r *http.Request, param string, defaultValue int) int {
-	if valueStr := r.URL.Query().Get(param); valueStr != "" {
-		if value, err := strconv.Atoi(valueStr); err == nil {
-			return value
-		}
-	}
-	return defaultValue
-}
 
 // writeErrorResponse writes an error response
 func (h *BaseHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {

@@ -582,7 +582,9 @@ func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Re
 	if jid == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("JID is required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("JID is required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -602,7 +604,9 @@ func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Re
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Profile picture info retrieved successfully"))
+	if encErr := json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Profile picture info retrieved successfully")); encErr != nil {
+		h.logger.Error("Failed to encode success response: " + encErr.Error())
+	}
 }
 
 func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Request) {
@@ -614,7 +618,9 @@ func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Requ
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -624,14 +630,18 @@ func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Requ
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
 	if len(req.JIDs) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("JIDs are required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("JIDs are required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 

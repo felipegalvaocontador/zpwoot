@@ -17,7 +17,7 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.6
-	go.mau.fi/whatsmeow v0.0.0-20250922112717-258fd9454b95
+	go.mau.fi/whatsmeow v0.0.0-20250930215512-38f9aaa3ba7c
 	golang.org/x/text v0.29.0
 	google.golang.org/protobuf v1.36.9
 )
@@ -28,6 +28,7 @@ require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/beeper/argo-go v1.1.2 // indirect
 	github.com/elliotchance/orderedmap/v3 v3.1.0 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/go-openapi/jsonpointer v0.22.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.1 // indirect
 	github.com/go-openapi/spec v0.21.0 // indirect
@@ -43,8 +44,12 @@ require (
 	github.com/go-openapi/swag/stringutils v0.25.0 // indirect
 	github.com/go-openapi/swag/typeutils v0.25.0 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.0 // indirect
+	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/go-playground/validator/v10 v10.27.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.17 // indirect

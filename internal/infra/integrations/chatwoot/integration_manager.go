@@ -487,7 +487,6 @@ func (im *IntegrationManager) ProcessPendingMessages(sessionID string, limit int
 	failed := 0
 
 	for _, mapping := range pendingMappings {
-
 		err := im.messageMapper.MarkAsFailed(ctx, sessionID, mapping.ZpMessageID)
 		if err != nil {
 			im.logger.WarnWithFields("Failed to mark mapping as failed", map[string]interface{}{

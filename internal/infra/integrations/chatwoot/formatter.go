@@ -197,7 +197,6 @@ func (mf *MessageFormatter) ExtractMentions(content string) []string {
 }
 
 func (mf *MessageFormatter) SanitizeContent(content string) string {
-
 	re := regexp.MustCompile(`(?i)<script[^>]*>.*?</script>`)
 	content = re.ReplaceAllString(content, "")
 

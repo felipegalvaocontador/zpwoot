@@ -45,7 +45,6 @@ func Metrics(container *app.Container, logger *logger.Logger) func(http.Handler)
 			default:
 				logger.DebugWithFields("HTTP request completed", fields)
 			}
-
 		})
 	}
 }

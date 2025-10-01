@@ -177,7 +177,7 @@ func (uc *useCaseImpl) SendMessageToChatwoot(ctx context.Context, req *SendMessa
 func (uc *useCaseImpl) ProcessWebhook(ctx context.Context, sessionID string, payload *ChatwootWebhookPayload) error {
 	domainPayload := uc.convertToDomainPayload(payload)
 
-	if err := uc.resolveSenderPhoneNumber(ctx, domainPayload); err != nil {
+	if err := uc.resolveSenderPhoneNumber(domainPayload); err != nil {
 		uc.logger.WarnWithFields("Failed to resolve sender phone number", map[string]interface{}{
 			"session_id": sessionID,
 			"error":      err.Error(),
@@ -247,7 +247,7 @@ func (uc *useCaseImpl) mapSenderData(payload *ChatwootWebhookPayload, domainPayl
 	}
 }
 
-func (uc *useCaseImpl) resolveSenderPhoneNumber(ctx context.Context, domainPayload *chatwoot.ChatwootWebhookPayload) error {
+func (uc *useCaseImpl) resolveSenderPhoneNumber(domainPayload *chatwoot.ChatwootWebhookPayload) error {
 	if domainPayload.Sender.PhoneNumber != "" || domainPayload.Conversation.ID == 0 {
 		return nil
 	}

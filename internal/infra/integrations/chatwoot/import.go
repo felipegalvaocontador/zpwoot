@@ -144,7 +144,6 @@ func (im *ImportManager) ProcessMessageForImport(ctx context.Context, message Wh
 }
 
 func (im *ImportManager) GetImportProgress(sessionID string) (*ImportProgress, error) {
-
 	return &ImportProgress{
 		SessionID:         sessionID,
 		Status:            "not_found",

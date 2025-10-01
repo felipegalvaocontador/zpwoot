@@ -79,7 +79,6 @@ func (m *Manager) InitInstanceChatwoot(sessionID, inboxName, webhookURL string, 
 			"inbox_name":  inboxName,
 			"webhook_url": webhookURL,
 		})
-
 	}
 
 	return nil

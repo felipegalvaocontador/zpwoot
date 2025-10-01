@@ -1070,7 +1070,6 @@ func (h *MessageHandler) buildContactListResponse(w http.ResponseWriter, result 
 // @Failure 500 {object} object "Internal server error"
 // @Router /sessions/{sessionId}/messages/send/profile/business [post]
 func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Request) {
-
 	h.handleMessageActionWithTwoFields(
 		w,
 		r,

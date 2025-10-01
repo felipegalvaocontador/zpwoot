@@ -178,7 +178,7 @@ func (s *WebhookDeliveryService) DeliverEvent(ctx context.Context, event *webhoo
 	return nil
 }
 
-func (s *WebhookDeliveryService) getWebhooksForEvent(ctx context.Context, event *webhook.WebhookEvent) ([]*webhook.WebhookConfig, error) {
+func (s *WebhookDeliveryService) getWebhooksForEvent(ctx context.Context, event *webhook.WebhookEvent) []*webhook.WebhookConfig {
 	var webhooks []*webhook.WebhookConfig
 
 	if event.SessionID != "" {
@@ -212,7 +212,7 @@ func (s *WebhookDeliveryService) getWebhooksForEvent(ctx context.Context, event 
 		}
 	}
 
-	return webhooks, nil
+	return webhooks
 }
 
 func (s *WebhookDeliveryService) processDeliveryTask(ctx context.Context, task *DeliveryTask, workerID int) {

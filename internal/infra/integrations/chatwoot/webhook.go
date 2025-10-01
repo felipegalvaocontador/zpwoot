@@ -61,7 +61,6 @@ func (h *WebhookHandler) handleConversationStatusChanged(webhook *chatwootdomain
 			"conversation_id": webhook.Conversation.ID,
 			"session_id":      sessionID,
 		})
-
 	}
 
 	return nil

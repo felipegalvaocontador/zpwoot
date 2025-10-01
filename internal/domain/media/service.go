@@ -248,10 +248,7 @@ func (s *serviceImpl) buildCachedMediaResponse(ctx context.Context, files []stri
 		return s.buildEmptyResponse(req, total), nil
 	}
 
-	items, totalSize, err := s.buildCachedMediaItems(ctx, files[start:end])
-	if err != nil {
-		return nil, err
-	}
+	items, totalSize := s.buildCachedMediaItems(ctx, files[start:end])
 
 	return &ListCachedMediaResponse{
 		Items:     items,
@@ -285,7 +282,7 @@ func (s *serviceImpl) buildEmptyResponse(req *ListCachedMediaRequest, total int)
 	}
 }
 
-func (s *serviceImpl) buildCachedMediaItems(ctx context.Context, filePaths []string) ([]CachedMediaItem, int64, error) {
+func (s *serviceImpl) buildCachedMediaItems(ctx context.Context, filePaths []string) ([]CachedMediaItem, int64) {
 	items := make([]CachedMediaItem, 0, len(filePaths))
 	var totalSize int64
 
@@ -299,7 +296,7 @@ func (s *serviceImpl) buildCachedMediaItems(ctx context.Context, filePaths []str
 		totalSize += size
 	}
 
-	return items, totalSize, nil
+	return items, totalSize
 }
 
 func (s *serviceImpl) buildCachedMediaItem(ctx context.Context, filePath string) (CachedMediaItem, int64, error) {

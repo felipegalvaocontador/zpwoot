@@ -137,21 +137,21 @@ func (uc *useCaseImpl) GetNewsletterInfo(ctx context.Context, sessionID string, 
 	return uc.getNewsletterInfoGeneric(ctx, sessionID, jid, "jid", uc.newsletterManager.GetNewsletterInfo)
 }
 
-func (uc *useCaseImpl) validateSessionAndConnection(ctx context.Context, sessionID string) (*session.Session, error) {
+func (uc *useCaseImpl) validateSessionAndConnection(ctx context.Context, sessionID string) error {
 	session, err := uc.sessionRepo.GetByID(ctx, sessionID)
 	if err != nil {
 		uc.logger.ErrorWithFields("Session not found", map[string]interface{}{
 			"session_id": sessionID,
 			"error":      err.Error(),
 		})
-		return nil, fmt.Errorf("session not found: %w", err)
+		return fmt.Errorf("session not found: %w", err)
 	}
 
 	if !session.IsConnected {
-		return nil, fmt.Errorf("session is not connected")
+		return fmt.Errorf("session is not connected")
 	}
 
-	return session, nil
+	return nil
 }
 
 func (uc *useCaseImpl) processNewsletterInfoCommon(sessionID string, newsletterInfo *newsletter.NewsletterInfo) error {
@@ -173,8 +173,7 @@ func (uc *useCaseImpl) getNewsletterInfoGeneric(
 	identifierType string,
 	getInfoFunc func(context.Context, string, string) (*newsletter.NewsletterInfo, error),
 ) (*NewsletterInfoResponse, error) {
-	_, err := uc.validateSessionAndConnection(ctx, sessionID)
-	if err != nil {
+	if err := uc.validateSessionAndConnection(ctx, sessionID); err != nil {
 		return nil, err
 	}
 
@@ -207,8 +206,7 @@ func (uc *useCaseImpl) getNewsletterInfoGeneric(
 }
 
 func (uc *useCaseImpl) validateNewsletterActionRequest(ctx context.Context, sessionID, jid string) (string, error) {
-	_, err := uc.validateSessionAndConnection(ctx, sessionID)
-	if err != nil {
+	if err := uc.validateSessionAndConnection(ctx, sessionID); err != nil {
 		return "", err
 	}
 

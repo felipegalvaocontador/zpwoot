@@ -107,7 +107,7 @@ func (h *NewsletterHandler) handleNewsletterAction(
 	result, err := actionFunc(r.Context(), sess.ID.String(), req)
 	if err != nil {
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
-		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to "+actionName)
 		return
 	}
 

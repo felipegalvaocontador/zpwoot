@@ -266,9 +266,9 @@ func createContainer(repositories *repository.Repositories, managers managers, d
 
 	services := createDomainServices(repositories, managers, appLogger, adapters)
 
-	config := createContainerConfig(repositories, managers, database, appLogger, adapters, services)
+	containerConfig := createContainerConfig(repositories, managers, database, appLogger, adapters, services)
 
-	return app.NewContainer(config)
+	return app.NewContainer(containerConfig)
 }
 
 func createAdapters(repositories *repository.Repositories, managers managers, appLogger *logger.Logger) *containerAdapters {
@@ -410,8 +410,8 @@ func showMigrationStatus(migrations []*db.Migration) {
 	fmt.Printf("\n")
 }
 
-func seedDatabase(database *platformDB.DB, logger *logger.Logger) error {
-	logger.Info("Starting database seeding...")
+func seedDatabase(database *platformDB.DB, appLogger *logger.Logger) error {
+	appLogger.Info("Starting database seeding...")
 
 	sampleSessions := []map[string]interface{}{
 		{
@@ -483,7 +483,7 @@ func configureChatwootIntegration(whatsappManager *wameow.Manager, integrationMa
 	appLogger.Info("Chatwoot integration configured successfully")
 }
 
-func connectOnStartup(container *app.Container, logger *logger.Logger) {
+func connectOnStartup(container *app.Container, appLogger *logger.Logger) {
 	const (
 		startupDelay     = 3 * time.Second
 		operationTimeout = 60 * time.Second
@@ -497,26 +497,26 @@ func connectOnStartup(container *app.Container, logger *logger.Logger) {
 	sessionRepo := container.GetSessionRepository()
 
 	if sessionUC == nil || sessionRepo == nil {
-		logger.Error("Required components not available, skipping auto-connect")
+		appLogger.Error("Required components not available, skipping auto-connect")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
-	sessions := getExistingSessions(ctx, sessionRepo, sessionLimit, logger)
+	sessions := getExistingSessions(ctx, sessionRepo, sessionLimit, appLogger)
 	if len(sessions) == 0 {
-		logger.Info("No existing sessions found, skipping auto-connect")
+		appLogger.Info("No existing sessions found, skipping auto-connect")
 		return
 	}
 
-	logger.InfoWithFields("Starting auto-reconnect", map[string]interface{}{
+	appLogger.InfoWithFields("Starting auto-reconnect", map[string]interface{}{
 		"total_sessions": len(sessions),
 	})
 
-	stats := reconnectSessions(ctx, sessions, sessionUC, logger, reconnectDelay)
+	stats := reconnectSessions(ctx, sessions, sessionUC, appLogger, reconnectDelay)
 
-	logger.InfoWithFields("Auto-reconnect completed", map[string]interface{}{
+	appLogger.InfoWithFields("Auto-reconnect completed", map[string]interface{}{
 		"connected": stats.connected,
 		"skipped":   stats.skipped,
 		"failed":    stats.failed,
@@ -529,7 +529,7 @@ type reconnectStats struct {
 	failed    int
 }
 
-func getExistingSessions(ctx context.Context, sessionRepo ports.SessionRepository, limit int, logger *logger.Logger) []*session.Session {
+func getExistingSessions(ctx context.Context, sessionRepo ports.SessionRepository, limit int, appLogger *logger.Logger) []*session.Session {
 	sessions, _, err := sessionRepo.List(ctx, &session.ListSessionsRequest{
 		Limit:  limit,
 		Offset: 0,
@@ -586,8 +586,12 @@ func setupGracefulShutdown(appLogger *logger.Logger) {
 
 func startServer(handler http.Handler, cfg *config.Config, appLogger *logger.Logger) {
 	server := &http.Server{
-		Addr:    ":" + cfg.Port,
-		Handler: handler,
+		Addr:              ":" + cfg.Port,
+		Handler:           handler,
+		ReadHeaderTimeout: 30 * time.Second,
+		ReadTimeout:       60 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	appLogger.InfoWithFields("Starting zpwoot server with Chi", map[string]interface{}{

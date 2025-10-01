@@ -82,7 +82,7 @@ func (h *ContactHandler) handleActionRequest(
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to "+actionName)); encErr != nil {
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName)); encErr != nil {
 			h.logger.Error("Failed to encode error response: " + encErr.Error())
 		}
 		return
@@ -152,7 +152,7 @@ func (h *ContactHandler) handleListRequest(
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to "+actionName)); encErr != nil {
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName)); encErr != nil {
 			h.logger.Error("Failed to encode error response: " + encErr.Error())
 		}
 		return

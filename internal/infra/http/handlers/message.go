@@ -111,7 +111,7 @@ func (h *MessageHandler) handleMessageActionWithTwoFields(
 			return
 		}
 
-		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to "+actionName)
 		return
 	}
 

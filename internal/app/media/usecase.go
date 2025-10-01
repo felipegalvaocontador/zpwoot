@@ -28,11 +28,11 @@ type useCaseImpl struct {
 	logger       *logger.Logger
 }
 
-func NewUseCase(mediaService media.Service, mediaRepo ports.MediaRepository, logger *logger.Logger) UseCase {
+func NewUseCase(mediaService media.Service, mediaRepo ports.MediaRepository, appLogger *logger.Logger) UseCase {
 	return &useCaseImpl{
 		mediaService: mediaService,
 		mediaRepo:    mediaRepo,
-		logger:       logger,
+		logger:       appLogger,
 	}
 }
 

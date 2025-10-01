@@ -28,7 +28,7 @@ type useCaseImpl struct {
 func NewUseCase(
 	sessionRepo ports.SessionRepository,
 	wameowManager ports.WameowManager,
-	logger *logger.Logger,
+	appLogger *logger.Logger,
 ) UseCase {
 	return &useCaseImpl{
 		sessionRepo:    sessionRepo,

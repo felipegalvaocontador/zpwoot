@@ -23,10 +23,10 @@ type useCaseImpl struct {
 	logger         *logger.Logger
 }
 
-func NewUseCase(contactService contact.Service, logger *logger.Logger) UseCase {
+func NewUseCase(contactService contact.Service, appLogger *logger.Logger) UseCase {
 	return &useCaseImpl{
 		contactService: contactService,
-		logger:         logger,
+		logger:         appLogger,
 	}
 }
 

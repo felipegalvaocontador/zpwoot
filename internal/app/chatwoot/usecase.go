@@ -36,14 +36,14 @@ func NewUseCase(
 	chatwootIntegration ports.ChatwootIntegration,
 	chatwootManager ports.ChatwootManager,
 	chatwootService *chatwoot.Service,
-	logger *logger.Logger,
+	appLogger *logger.Logger,
 ) UseCase {
 	return &useCaseImpl{
 		chatwootRepo:        chatwootRepo,
 		chatwootIntegration: chatwootIntegration,
 		chatwootManager:     chatwootManager,
 		chatwootService:     chatwootService,
-		logger:              logger,
+		logger:              appLogger,
 	}
 }
 

@@ -464,7 +464,7 @@ func seedDatabase(database *platformDB.DB, appLogger *logger.Logger) error {
 		}
 	}
 
-	logger.InfoWithFields("Database seeding completed", map[string]interface{}{
+	appLogger.InfoWithFields("Database seeding completed", map[string]interface{}{
 		"sessions_created": len(sampleSessions),
 		"webhooks_created": len(sampleWebhooks),
 	})
@@ -555,7 +555,7 @@ func reconnectSessions(ctx context.Context, sessions []*session.Session, session
 		}
 
 		if _, err := sessionUC.ConnectSession(ctx, sessionID); err != nil {
-			logger.ErrorWithFields("Failed to auto-connect session", map[string]interface{}{
+			appLogger.ErrorWithFields("Failed to auto-connect session", map[string]interface{}{
 				"session_id": sessionID,
 				"error":      err.Error(),
 			})

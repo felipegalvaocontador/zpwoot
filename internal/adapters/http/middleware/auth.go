@@ -110,7 +110,7 @@ func extractAPIKey(r *http.Request) string {
 // isValidAPIKey valida se API key é válida
 func isValidAPIKey(apiKey string, cfg *config.Config) bool {
 	// Validar contra API key global
-	if cfg.Security.GlobalAPIKey != "" && apiKey == cfg.Security.GlobalAPIKey {
+	if cfg.Security.APIKey != "" && apiKey == cfg.Security.APIKey {
 		return true
 	}
 

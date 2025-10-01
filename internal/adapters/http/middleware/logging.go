@@ -1,10 +1,8 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"zpwoot/platform/logger"

@@ -314,3 +314,38 @@ func (g *Gateway) processAndDispatchEvent(evt interface{}, sessionName string, h
 		"handlers":     len(handlers),
 	})
 }
+
+// GetSessionInfo implementa session.WhatsAppGateway.GetSessionInfo
+// TODO: Implementar busca real de informações da sessão
+func (g *Gateway) GetSessionInfo(ctx context.Context, sessionName string) (*session.DeviceInfo, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	_, exists := g.clients[sessionName]
+	if !exists {
+		return nil, fmt.Errorf("session %s not found", sessionName)
+	}
+
+	// Por enquanto retorna informações básicas
+	// TODO: Implementar busca real de device info do whatsmeow
+	return &session.DeviceInfo{
+		Platform:    "whatsmeow",
+		DeviceModel: "zpwoot-gateway",
+		OSVersion:   "1.0.0",
+		AppVersion:  "2.0.0",
+	}, nil
+}
+
+// SetEventHandler implementa session.WhatsAppGateway.SetEventHandler
+func (g *Gateway) SetEventHandler(handler session.EventHandler) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	// Adicionar handler global para todas as sessões
+	if g.eventHandlers["global"] == nil {
+		g.eventHandlers["global"] = make([]session.EventHandler, 0)
+	}
+	g.eventHandlers["global"] = append(g.eventHandlers["global"], handler)
+
+	g.logger.Debug("Global event handler registered")
+}

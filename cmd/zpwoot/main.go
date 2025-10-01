@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"zpwoot/platform/config"
+	"zpwoot/platform/container"
+	"zpwoot/platform/database"
 	"zpwoot/platform/logger"
 )
 
@@ -40,10 +43,47 @@ func main() {
 		"port":        cfg.Server.Port,
 	})
 
-	// Inicializar aplicação
-	app, err := initializeApplication(cfg, log)
+	// Inicializar banco de dados
+	log.Info("Initializing database connection...")
+	db, err := database.NewFromAppConfig(cfg, log)
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Failed to initialize application: %v", err))
+		log.Fatal(fmt.Sprintf("Failed to initialize database: %v", err))
+	}
+	defer db.Close()
+
+	// Executar migrações se habilitado
+	if cfg.Database.AutoMigrate {
+		log.Info("Running database migrations...")
+		if err := runMigrations(db, cfg, log); err != nil {
+			log.Fatal(fmt.Sprintf("Failed to run migrations: %v", err))
+		}
+	}
+
+	// Inicializar container de DI
+	log.Info("Initializing dependency injection container...")
+	containerConfig := &container.Config{
+		AppConfig: cfg,
+		Logger:    log,
+		Database:  db,
+	}
+
+	diContainer, err := container.New(containerConfig)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Failed to initialize DI container: %v", err))
+	}
+
+	// Iniciar componentes do container
+	if err := diContainer.Start(ctx); err != nil {
+		log.Fatal(fmt.Sprintf("Failed to start container components: %v", err))
+	}
+
+	// Configurar servidor HTTP
+	server := &http.Server{
+		Addr:         cfg.GetServerAddress(),
+		Handler:      diContainer.Handler(),
+		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
+		IdleTimeout:  time.Duration(cfg.Server.IdleTimeout) * time.Second,
 	}
 
 	// Canal para capturar sinais do sistema
@@ -53,14 +93,14 @@ func main() {
 	// Canal para erros da aplicação
 	errChan := make(chan error, 1)
 
-	// Iniciar aplicação em goroutine
+	// Iniciar servidor HTTP em goroutine
 	go func() {
 		log.InfoWithFields("Starting HTTP server", map[string]interface{}{
-			"address": cfg.GetServerAddress(),
+			"address": server.Addr,
 		})
 
-		if err := app.Start(ctx); err != nil {
-			errChan <- fmt.Errorf("server error: %w", err)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errChan <- fmt.Errorf("HTTP server error: %w", err)
 		}
 	}()
 
@@ -81,143 +121,31 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
-	if err := app.Shutdown(shutdownCtx); err != nil {
-		log.ErrorWithFields("Error during shutdown", map[string]interface{}{
+	// Parar servidor HTTP
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.ErrorWithFields("Error shutting down HTTP server", map[string]interface{}{
 			"error": err.Error(),
 		})
-		os.Exit(1)
+	}
+
+	// Parar componentes do container
+	if err := diContainer.Stop(shutdownCtx); err != nil {
+		log.ErrorWithFields("Error stopping container components", map[string]interface{}{
+			"error": err.Error(),
+		})
 	}
 
 	log.Info("Application shutdown completed successfully")
 }
 
-// Application representa a aplicação principal
-type Application struct {
-	config *config.Config
-	logger *logger.Logger
-	// TODO: Adicionar dependências conforme implementação
-	// database *database.Database
-	// server   *server.Server
-}
-
-// initializeApplication inicializa todos os componentes da aplicação
-func initializeApplication(cfg *config.Config, log *logger.Logger) (*Application, error) {
-	log.Info("Initializing application components...")
-
-	app := &Application{
-		config: cfg,
-		logger: log,
-	}
-
-	// TODO: Inicializar banco de dados
-	// log.Info("Initializing database connection...")
-	// db, err := database.NewFromAppConfig(cfg, log)
-	// if err != nil {
-	//     return nil, fmt.Errorf("failed to initialize database: %w", err)
-	// }
-	// app.database = db
-
-	// TODO: Executar migrações se habilitado
-	// if cfg.Database.AutoMigrate {
-	//     log.Info("Running database migrations...")
-	//     if err := runMigrations(db, cfg, log); err != nil {
-	//         return nil, fmt.Errorf("failed to run migrations: %w", err)
-	//     }
-	// }
-
-	// TODO: Inicializar repositórios
-	// log.Info("Initializing repositories...")
-
-	// TODO: Inicializar serviços do core
-	// log.Info("Initializing core services...")
-
-	// TODO: Inicializar adapters
-	// log.Info("Initializing adapters...")
-
-	// TODO: Inicializar servidor HTTP
-	// log.Info("Initializing HTTP server...")
-	// server := server.New(cfg, log)
-	// app.server = server
-
-	log.Info("Application components initialized successfully")
-	return app, nil
-}
-
-// Start inicia a aplicação
-func (a *Application) Start(ctx context.Context) error {
-	a.logger.Info("Starting application services...")
-
-	// TODO: Iniciar serviços em background
-	// go a.startBackgroundServices(ctx)
-
-	// TODO: Iniciar servidor HTTP
-	// return a.server.Start(ctx)
-
-	// Placeholder - remover quando servidor for implementado
-	a.logger.Info("Application started successfully (placeholder mode)")
-	<-ctx.Done()
-	return ctx.Err()
-}
-
-// Shutdown para a aplicação graciosamente
-func (a *Application) Shutdown(ctx context.Context) error {
-	a.logger.Info("Shutting down application...")
-
-	// TODO: Parar servidor HTTP
-	// if a.server != nil {
-	//     a.logger.Info("Stopping HTTP server...")
-	//     if err := a.server.Shutdown(ctx); err != nil {
-	//         a.logger.ErrorWithFields("Error stopping HTTP server", map[string]interface{}{
-	//             "error": err.Error(),
-	//         })
-	//     }
-	// }
-
-	// TODO: Parar serviços em background
-	// a.logger.Info("Stopping background services...")
-
-	// TODO: Fechar conexão com banco de dados
-	// if a.database != nil {
-	//     a.logger.Info("Closing database connection...")
-	//     if err := a.database.Close(); err != nil {
-	//         a.logger.ErrorWithFields("Error closing database", map[string]interface{}{
-	//             "error": err.Error(),
-	//         })
-	//     }
-	// }
-
-	a.logger.Info("Application shutdown completed")
+// runMigrations executa as migrações do banco de dados
+func runMigrations(db *database.Database, cfg *config.Config, log *logger.Logger) error {
+	// TODO: Implementar sistema de migrações
+	log.Info("Database migrations completed (placeholder)")
 	return nil
 }
 
-// startBackgroundServices inicia serviços em background
-func (a *Application) startBackgroundServices(ctx context.Context) {
-	a.logger.Info("Starting background services...")
-
-	// TODO: Implementar serviços em background
-	// - Health check periodic
-	// - Session monitoring
-	// - Webhook retry mechanism
-	// - Cleanup tasks
-
-	<-ctx.Done()
-	a.logger.Info("Background services stopped")
-}
-
-// runMigrations executa migrações do banco de dados
-// func runMigrations(db *database.Database, cfg *config.Config, log *logger.Logger) error {
-//     log.Info("Running database migrations...")
-//
-//     migrator := migrations.New(db, cfg.Database.MigrationsPath, log)
-//     if err := migrator.Up(); err != nil {
-//         return fmt.Errorf("failed to run migrations: %w", err)
-//     }
-//
-//     log.Info("Database migrations completed successfully")
-//     return nil
-// }
-
-// printBanner exibe banner da aplicação
+// printBanner exibe o banner da aplicação
 func printBanner() {
 	banner := `
  ███████╗██████╗ ██╗    ██╗ ██████╗  ██████╗ ████████╗
@@ -229,11 +157,7 @@ func printBanner() {
 
  WhatsApp Business API Gateway - Clean Architecture
  Version: %s
- Environment: %s
-`
-	env := os.Getenv("NODE_ENV")
-	if env == "" {
-		env = "development"
-	}
-	fmt.Printf(banner, appVersion, env)
+ Environment: development`
+
+	fmt.Printf(banner+"\n", appVersion)
 }

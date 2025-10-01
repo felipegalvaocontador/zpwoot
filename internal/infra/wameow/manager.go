@@ -807,7 +807,7 @@ func (m *Manager) ListJoinedGroups(sessionID string) ([]*ports.GroupInfo, error)
 		return nil, err
 	}
 
-	var result []*ports.GroupInfo
+	result := make([]*ports.GroupInfo, 0, len(groups))
 	for _, group := range groups {
 		result = append(result, convertToPortsGroupInfo(group))
 	}
@@ -1359,7 +1359,7 @@ func (m *Manager) SendContactList(sessionID, to string, contacts []ContactInfo) 
 		Timestamp:     time.Now(),
 	}
 
-	var wameowContacts []ContactInfo
+	wameowContacts := make([]ContactInfo, 0, len(contacts))
 	for _, contact := range contacts {
 		wameowContacts = append(wameowContacts, ContactInfo{
 			Name:         contact.Name,
@@ -1407,7 +1407,7 @@ func (m *Manager) SendContactListBusiness(sessionID, to string, contacts []Conta
 		return nil, fmt.Errorf("session %s is not connected", sessionID)
 	}
 
-	var wameowContacts []ContactInfo
+	wameowContacts := make([]ContactInfo, 0, len(contacts))
 	for _, contact := range contacts {
 		wameowContacts = append(wameowContacts, ContactInfo{
 			Name:         contact.Name,

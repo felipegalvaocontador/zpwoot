@@ -91,7 +91,7 @@ func (uc *useCaseImpl) ListGroups(ctx context.Context, sessionID string) (*ListG
 		return nil, err
 	}
 
-	var groupList []GroupInfo
+	groupList := make([]GroupInfo, 0, len(groups))
 	for _, group := range groups {
 		groupList = append(groupList, GroupInfo{
 			GroupJID:         group.GroupJID,
@@ -246,7 +246,7 @@ func (uc *useCaseImpl) UpdateGroupSettings(ctx context.Context, sessionID string
 }
 
 func convertParticipants(participants []ports.GroupParticipant) []GroupParticipant {
-	var result []GroupParticipant
+	result := make([]GroupParticipant, 0, len(participants))
 	for _, p := range participants {
 		result = append(result, GroupParticipant{
 			JID:          p.JID,

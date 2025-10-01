@@ -196,7 +196,7 @@ func (m *Migrator) categorizeMigrationFile(filename, content string, files map[s
 }
 
 func (m *Migrator) buildMigrationObjects(migrationFiles map[int]map[string]string) []*Migration {
-	var migrations []*Migration
+	migrations := make([]*Migration, 0, len(migrationFiles))
 
 	for version, files := range migrationFiles {
 		migration := &Migration{

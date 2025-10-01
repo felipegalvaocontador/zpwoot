@@ -778,7 +778,7 @@ func (c *WameowClient) createContactMessages(contacts []ContactInfo, format stri
 		displayName = contacts[0].Name
 	}
 
-	var contactMessages []*waE2E.ContactMessage
+	contactMessages := make([]*waE2E.ContactMessage, 0, len(contacts))
 	for _, contact := range contacts {
 		vcard := c.generateVCard(contact, format)
 
@@ -1430,7 +1430,7 @@ func (c *WameowClient) validateListMessageRequest(to string) (types.JID, error) 
 }
 
 func (c *WameowClient) buildListSections(sections []map[string]interface{}) []*waE2E.ListMessage_Section {
-	var listSections []*waE2E.ListMessage_Section
+	listSections := make([]*waE2E.ListMessage_Section, 0, len(sections))
 
 	for _, section := range sections {
 		title, ok := section["title"].(string)
@@ -1455,7 +1455,7 @@ func (c *WameowClient) buildListSections(sections []map[string]interface{}) []*w
 }
 
 func (c *WameowClient) buildListRows(rows []interface{}) []*waE2E.ListMessage_Row {
-	var listRows []*waE2E.ListMessage_Row
+	listRows := make([]*waE2E.ListMessage_Row, 0, len(rows))
 
 	for _, rowInterface := range rows {
 		row, ok := rowInterface.(map[string]interface{})
@@ -2135,7 +2135,8 @@ func (c *WameowClient) UpdateGroupParticipants(ctx context.Context, groupJID str
 		"participants": len(participantJIDs),
 	})
 
-	var success, failed []string
+	success := make([]string, 0, len(participants))
+	failed := make([]string, 0, len(participants))
 
 	switch action {
 	case "add":

@@ -880,7 +880,11 @@ func (h *GroupHandler) SetGroupName(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.groupUC.SetGroupName(ctx, sessionID, req.(*group.SetGroupNameRequest))
+			result, err := h.groupUC.SetGroupName(ctx, sessionID, req.(*group.SetGroupNameRequest))
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
 		},
 		func(req interface{}) string {
 			return req.(*group.SetGroupNameRequest).GroupJID
@@ -914,7 +918,11 @@ func (h *GroupHandler) SetGroupDescription(w http.ResponseWriter, r *http.Reques
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.groupUC.SetGroupDescription(ctx, sessionID, req.(*group.SetGroupDescriptionRequest))
+			result, err := h.groupUC.SetGroupDescription(ctx, sessionID, req.(*group.SetGroupDescriptionRequest))
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
 		},
 		func(req interface{}) string {
 			return req.(*group.SetGroupDescriptionRequest).GroupJID
@@ -948,7 +956,11 @@ func (h *GroupHandler) SetGroupPhoto(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.groupUC.SetGroupPhoto(ctx, sessionID, req.(*group.SetGroupPhotoRequest))
+			result, err := h.groupUC.SetGroupPhoto(ctx, sessionID, req.(*group.SetGroupPhotoRequest))
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
 		},
 		func(req interface{}) string {
 			return req.(*group.SetGroupPhotoRequest).GroupJID

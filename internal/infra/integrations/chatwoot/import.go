@@ -33,7 +33,7 @@ func NewImportManager(
 	}
 }
 
-func (im *ImportManager) ImportHistoricalMessages(ctx context.Context, sessionID string, daysLimit int, inboxID int) (*ImportResult, error) {
+func (im *ImportManager) ImportHistoricalMessages(ctx context.Context, sessionID string, daysLimit, inboxID int) (*ImportResult, error) {
 	im.logger.InfoWithFields("Starting historical message import", map[string]interface{}{
 		"session_id": sessionID,
 		"days_limit": daysLimit,
@@ -225,7 +225,7 @@ type WhatsAppMessage struct {
 	QuotedContent   string `json:"quoted_content,omitempty"`
 }
 
-func (im *ImportManager) ValidateImportRequest(sessionID string, daysLimit int, inboxID int) error {
+func (im *ImportManager) ValidateImportRequest(sessionID string, daysLimit, inboxID int) error {
 	if sessionID == "" {
 		return fmt.Errorf("session_id is required")
 	}

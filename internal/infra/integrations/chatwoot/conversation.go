@@ -123,7 +123,7 @@ func (cm *ConversationManager) SendMessage(conversationID int, content string) (
 	return message, nil
 }
 
-func (cm *ConversationManager) GetConversationMessages(conversationID int, before int) ([]ports.ChatwootMessage, error) {
+func (cm *ConversationManager) GetConversationMessages(conversationID, before int) ([]ports.ChatwootMessage, error) {
 	messages, err := cm.client.GetMessages(conversationID, before)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get messages: %w", err)

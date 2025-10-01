@@ -11,7 +11,7 @@ import (
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/contact"
 	domainSession "zpwoot/internal/domain/session"
-	"zpwoot/internal/infra/http/helpers"
+
 	"zpwoot/platform/logger"
 )
 
@@ -21,17 +21,13 @@ type ContactHandler struct {
 }
 
 func NewContactHandler(appLogger *logger.Logger, contactUC contact.UseCase, sessionRepo helpers.SessionRepository) *ContactHandler {
-	sessionResolver := &SessionResolver{
-		logger:      appLogger,
-		sessionRepo: sessionRepo,
-	}
 	return &ContactHandler{
-		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		contactUC:   contactUC,
 	}
 }
 
-// resolveSession removido - usar h.sessionUtils.QuickResolveFromURL(r)
+// ContactHandler usa SessionResolver unificado através do BaseHandler
 
 func (h *ContactHandler) handleActionRequest(
 	w http.ResponseWriter,
@@ -41,10 +37,11 @@ func (h *ContactHandler) handleActionRequest(
 	parseFunc func(*http.Request, *domainSession.Session) (interface{}, error),
 	actionFunc func(context.Context, interface{}) (interface{}, error),
 ) {
-	sess, err := h.resolveSession(r)
+	// Resolve sessão da URL
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if err == domainSession.ErrSessionNotFound {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -96,10 +93,11 @@ func (h *ContactHandler) handleListRequest(
 	successMessage string,
 	listFunc func(context.Context, *domainSession.Session, int, int, string) (interface{}, error),
 ) {
-	sess, err := h.resolveSession(r)
+	// Resolve sessão da URL
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if err == domainSession.ErrSessionNotFound {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -210,7 +208,7 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts/avatar [get]
 func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -390,7 +388,7 @@ func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/contacts/business [get]
 func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -453,7 +451,7 @@ func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -525,7 +523,7 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -558,7 +556,7 @@ func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -604,7 +602,7 @@ func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Re
 }
 
 func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {

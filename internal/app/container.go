@@ -218,13 +218,13 @@ func createBusinessUseCases(config *ContainerConfig, services *domainServices) *
 			config.NewsletterManager,
 			services.newsletter,
 			config.SessionRepo,
-			*config.Logger,
+			config.Logger,
 		),
 		community: community.NewUseCase(
 			config.CommunityManager,
 			services.community,
 			config.SessionRepo,
-			*config.Logger,
+			config.Logger,
 		),
 	}
 }

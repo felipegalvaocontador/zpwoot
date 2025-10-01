@@ -55,11 +55,11 @@ type serviceImpl struct {
 	maxFileSize    int64
 }
 
-func NewService(whatsappClient WhatsAppClient, cacheManager CacheManager, logger *logger.Logger, cacheDir string) Service {
+func NewService(whatsappClient WhatsAppClient, cacheManager CacheManager, log *logger.Logger, cacheDir string) Service {
 	return &serviceImpl{
 		whatsappClient: whatsappClient,
 		cacheManager:   cacheManager,
-		logger:         logger,
+		logger:         log,
 		cacheDir:       cacheDir,
 		maxFileSize:    100 * 1024 * 1024,
 	}

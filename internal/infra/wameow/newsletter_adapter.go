@@ -25,7 +25,7 @@ func NewNewsletterAdapter(wameowManager ports.WameowManager, logger logger.Logge
 	}
 }
 
-func (na *NewsletterAdapter) CreateNewsletter(ctx context.Context, sessionID string, name, description string) (*newsletter.NewsletterInfo, error) {
+func (na *NewsletterAdapter) CreateNewsletter(ctx context.Context, sessionID, name, description string) (*newsletter.NewsletterInfo, error) {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
 		return nil, fmt.Errorf("wameow manager is not a Manager instance")
@@ -44,7 +44,7 @@ func (na *NewsletterAdapter) CreateNewsletter(ctx context.Context, sessionID str
 	return convertNewsletterMetadata(metadata), nil
 }
 
-func (na *NewsletterAdapter) GetNewsletterInfo(ctx context.Context, sessionID string, jid string) (*newsletter.NewsletterInfo, error) {
+func (na *NewsletterAdapter) GetNewsletterInfo(ctx context.Context, sessionID, jid string) (*newsletter.NewsletterInfo, error) {
 	manager, ok := na.wameowManager.(*Manager)
 	if !ok {
 		return nil, fmt.Errorf("wameow manager is not a Manager instance")

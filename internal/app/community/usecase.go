@@ -30,13 +30,13 @@ func NewUseCase(
 	communityManager ports.CommunityManager,
 	communityService community.Service,
 	sessionRepo ports.SessionRepository,
-	logger logger.Logger,
+	logger *logger.Logger,
 ) UseCase {
 	return &useCaseImpl{
 		communityManager: communityManager,
 		communityService: communityService,
 		sessionRepo:      sessionRepo,
-		logger:           logger,
+		logger:           *logger,
 	}
 }
 

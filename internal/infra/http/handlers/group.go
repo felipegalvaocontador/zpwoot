@@ -10,7 +10,7 @@ import (
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/group"
 	domainSession "zpwoot/internal/domain/session"
-	"zpwoot/internal/infra/http/helpers"
+
 	"zpwoot/platform/logger"
 )
 
@@ -20,12 +20,8 @@ type GroupHandler struct {
 }
 
 func NewGroupHandler(appLogger *logger.Logger, groupUC group.UseCase, sessionRepo helpers.SessionRepository) *GroupHandler {
-	sessionResolver := &SessionResolver{
-		logger:      appLogger,
-		sessionRepo: sessionRepo,
-	}
 	return &GroupHandler{
-		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		groupUC:     groupUC,
 	}
 }
@@ -39,7 +35,7 @@ func (h *GroupHandler) handleGroupActionWithValidation(
 	fieldValidationMessage string,
 	responseBuilder func(string) map[string]interface{},
 ) {
-	sess, err := h.resolveSessionFromURL(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -80,7 +76,7 @@ func (h *GroupHandler) handleGroupActionWithTwoFields(
 	field2Name, field2ValidationMessage string,
 	responseBuilder func(string, string) map[string]interface{},
 ) {
-	sess, err := h.resolveSessionFromURL(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -120,7 +116,7 @@ func (h *GroupHandler) handleGroupActionWithTwoFields(
 }
 
 func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSessionFromURL(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -196,10 +192,11 @@ func (h *GroupHandler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *GroupHandler) UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	// Resolve sessão da URL
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if err == domainSession.ErrSessionNotFound {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -249,7 +246,7 @@ func (h *GroupHandler) UpdateGroupSettings(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *GroupHandler) GetGroupRequestParticipants(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -289,7 +286,7 @@ func (h *GroupHandler) GetGroupRequestParticipants(w http.ResponseWriter, r *htt
 }
 
 func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -402,7 +399,7 @@ func (h *GroupHandler) SetGroupMemberAddMode(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *GroupHandler) GetGroupInfoFromLink(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -446,7 +443,7 @@ func (h *GroupHandler) GetGroupInfoFromLink(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *GroupHandler) GetGroupInfoFromInvite(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -500,7 +497,7 @@ func (h *GroupHandler) GetGroupInfoFromInvite(w http.ResponseWriter, r *http.Req
 }
 
 func (h *GroupHandler) JoinGroupWithInvite(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -557,7 +554,7 @@ func (h *GroupHandler) handleGroupActionWithJID(
 	actionFunc func(context.Context, string, interface{}) (interface{}, error),
 	extractJID func(interface{}) string,
 ) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -632,7 +629,7 @@ func (h *GroupHandler) handleGroupActionWithJID(
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/groups [post]
 func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -692,7 +689,7 @@ func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/groups/info [get]
 func (h *GroupHandler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -751,7 +748,7 @@ func (h *GroupHandler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/groups [get]
 func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -796,7 +793,7 @@ func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/groups/participants [post]
 func (h *GroupHandler) UpdateGroupParticipants(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {

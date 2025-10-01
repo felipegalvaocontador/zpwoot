@@ -14,9 +14,9 @@ type HealthHandler struct {
 	wameowManager *wameow.Manager
 }
 
-func NewHealthHandler(logger *logger.Logger, wameowManager *wameow.Manager) *HealthHandler {
+func NewHealthHandler(log *logger.Logger, wameowManager *wameow.Manager) *HealthHandler {
 	return &HealthHandler{
-		logger:        logger,
+		logger:        log,
 		wameowManager: wameowManager,
 	}
 }

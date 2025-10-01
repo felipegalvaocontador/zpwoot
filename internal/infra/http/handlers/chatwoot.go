@@ -11,7 +11,6 @@ import (
 
 	"zpwoot/internal/app/chatwoot"
 	domainSession "zpwoot/internal/domain/session"
-	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
 )
 
@@ -25,13 +24,8 @@ func NewChatwootHandler(
 	sessionRepo helpers.SessionRepository,
 	logger *logger.Logger,
 ) *ChatwootHandler {
-	sessionResolver := &SessionResolver{
-		logger:      logger,
-		sessionRepo: sessionRepo,
-	}
-
 	return &ChatwootHandler{
-		BaseHandler: NewBaseHandler(logger, sessionResolver),
+		BaseHandler: NewBaseHandler(logger, sessionRepo),
 		chatwootUC:  chatwootUC,
 	}
 }
@@ -43,7 +37,7 @@ func (h *ChatwootHandler) handleChatwootAction(
 	successMessage string,
 	actionFunc func(context.Context) (interface{}, error),
 ) {
-	sess, err := h.resolveSessionFromURL(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -86,7 +80,7 @@ func (h *ChatwootHandler) handleChatwootAction(
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot/set [post]
 func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSessionFromURL(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -169,7 +163,7 @@ func (h *ChatwootHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot [put]
 func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSessionFromURL(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -216,7 +210,7 @@ func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot [delete]
 func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSessionFromURL(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -294,7 +288,7 @@ func (h *ChatwootHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/chatwoot/auto-create-inbox [post]
 func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSessionFromURL(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -359,12 +353,8 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	sess, err := h.sessionUtils.ResolveSession(r, helpers.SessionResolutionOptions{
-		Strategy:    helpers.FromAny,
-		ParamName:   "sessionId",
-		Required:    true,
-		LogFailures: true,
-	})
+	// Resolve sessão por ID ou nome
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {

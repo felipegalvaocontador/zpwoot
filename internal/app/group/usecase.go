@@ -264,13 +264,13 @@ func convertSettings(settings ports.GroupSettings) GroupSettings {
 	}
 }
 
-func (uc *useCaseImpl) isUserAdmin(group *ports.GroupInfo, sessionID string) bool {
+func (uc *useCaseImpl) isUserAdmin(groupInfo *ports.GroupInfo, sessionID string) bool {
 	userJID, err := uc.wameowMgr.GetUserJID(sessionID)
 	if err != nil {
 		return false
 	}
 
-	for _, participant := range group.Participants {
+	for _, participant := range groupInfo.Participants {
 		if participant.JID == userJID && (participant.IsAdmin || participant.IsSuperAdmin) {
 			return true
 		}

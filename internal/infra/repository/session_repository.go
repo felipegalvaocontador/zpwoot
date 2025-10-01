@@ -104,6 +104,20 @@ func (r *sessionRepository) GetByID(ctx context.Context, id string) (*session.Se
 	return sess, nil
 }
 
+func (r *sessionRepository) GetByIDOrName(ctx context.Context, idOrName string) (*session.Session, error) {
+	r.logger.InfoWithFields("Getting session by ID or name", map[string]interface{}{
+		"identifier": idOrName,
+	})
+
+	// Primeiro tenta por ID (UUID)
+	if isValidUUID(idOrName) {
+		return r.GetByID(ctx, idOrName)
+	}
+
+	// Se não é UUID, tenta por nome
+	return r.GetByName(ctx, idOrName)
+}
+
 func (r *sessionRepository) GetByName(ctx context.Context, name string) (*session.Session, error) {
 	r.logger.InfoWithFields("Getting session by name", map[string]interface{}{
 		"session_name": name,
@@ -462,4 +476,10 @@ func (r *sessionRepository) fromModel(model *sessionModel) (*session.Session, er
 	}
 
 	return sess, nil
+}
+
+// isValidUUID verifica se a string é um UUID válido
+func isValidUUID(str string) bool {
+	_, err := uuid.Parse(str)
+	return err == nil
 }

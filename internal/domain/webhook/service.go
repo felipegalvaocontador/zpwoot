@@ -24,9 +24,9 @@ type Service struct {
 	webhookRepo WebhookRepository
 }
 
-func NewService(logger *logger.Logger, webhookRepo WebhookRepository) *Service {
+func NewService(log *logger.Logger, webhookRepo WebhookRepository) *Service {
 	return &Service{
-		logger:      logger,
+		logger:      log,
 		webhookRepo: webhookRepo,
 	}
 }

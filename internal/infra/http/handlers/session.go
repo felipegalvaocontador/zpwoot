@@ -11,7 +11,8 @@ import (
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/session"
-	"zpwoot/internal/infra/http/helpers"
+	domainSession "zpwoot/internal/domain/session"
+
 	pkgErrors "zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
 )
@@ -22,30 +23,20 @@ type SessionHandler struct {
 }
 
 func NewSessionHandler(appLogger *logger.Logger, sessionUC session.UseCase, sessionRepo helpers.SessionRepository) *SessionHandler {
-	sessionResolver := &SessionResolver{
-		logger:      appLogger,
-		sessionRepo: sessionRepo,
-	}
 	return &SessionHandler{
-		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		sessionUC:   sessionUC,
 	}
 }
 
 func NewSessionHandlerWithoutUseCase(appLogger *logger.Logger, sessionRepo helpers.SessionRepository) *SessionHandler {
-	sessionResolver := &SessionResolver{
-		logger:      appLogger,
-		sessionRepo: sessionRepo,
-	}
 	return &SessionHandler{
-		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		sessionUC:   nil,
 	}
 }
 
-// writeErrorResponse e writeSuccessResponse removidos - usar h.writeErrorResponse() e h.writeSuccessResponse() do BaseHandler
-
-// resolveSession removido - usar h.resolveSessionFromURL(r) do BaseHandler
+// SessionHandler usa SessionResolver unificado através do BaseHandler
 
 func (h *SessionHandler) handleSessionAction(
 	w http.ResponseWriter,
@@ -58,10 +49,11 @@ func (h *SessionHandler) handleSessionAction(
 		return
 	}
 
-	sess, err := h.resolveSession(r)
+	// Resolve sessão da URL
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
-		if strings.Contains(err.Error(), "not found") {
+		if err == domainSession.ErrSessionNotFound {
 			statusCode = http.StatusNotFound
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -99,7 +91,7 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 		return
 	}
 
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
@@ -406,7 +398,7 @@ func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
@@ -466,7 +458,7 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
@@ -531,7 +523,7 @@ func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
@@ -570,7 +562,7 @@ func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
@@ -603,7 +595,7 @@ func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *SessionHandler) GetUserJID(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
@@ -632,7 +624,7 @@ func (h *SessionHandler) GetUserJID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SessionHandler) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {

@@ -32,10 +32,10 @@ type service struct {
 	logger        *logger.Logger
 }
 
-func NewService(wameowManager WameowManager, logger *logger.Logger) Service {
+func NewService(wameowManager WameowManager, log *logger.Logger) Service {
 	return &service{
 		wameowManager: wameowManager,
-		logger:        logger,
+		logger:        log,
 	}
 }
 
@@ -216,7 +216,7 @@ func (s *service) processContactsData(contactsList []map[string]interface{}, sea
 	for _, contactData := range contactsList {
 		contact := s.mapContactData(contactData)
 
-		if search != "" && !s.matchesSearchCriteria(contact, search) {
+		if search != "" && !s.matchesSearchCriteria(&contact, search) {
 			continue
 		}
 
@@ -249,7 +249,7 @@ func (s *service) mapContactData(contactData map[string]interface{}) Contact {
 	}
 }
 
-func (s *service) matchesSearchCriteria(contact Contact, search string) bool {
+func (s *service) matchesSearchCriteria(contact *Contact, search string) bool {
 	searchLower := strings.ToLower(search)
 	return strings.Contains(strings.ToLower(contact.Name), searchLower) ||
 		strings.Contains(strings.ToLower(contact.ShortName), searchLower) ||

@@ -52,13 +52,13 @@ func NewUseCase(
 	newsletterManager ports.NewsletterManager,
 	newsletterService ports.NewsletterService,
 	sessionRepo ports.SessionRepository,
-	logger logger.Logger,
+	logger *logger.Logger,
 ) UseCase {
 	return &useCaseImpl{
 		newsletterManager: newsletterManager,
 		newsletterService: newsletterService,
 		sessionRepo:       sessionRepo,
-		logger:            logger,
+		logger:            *logger,
 	}
 }
 

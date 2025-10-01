@@ -10,7 +10,6 @@ import (
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/webhook"
 	domainSession "zpwoot/internal/domain/session"
-	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
 )
 
@@ -20,17 +19,13 @@ type WebhookHandler struct {
 }
 
 func NewWebhookHandler(appLogger *logger.Logger, webhookUC webhook.UseCase, sessionRepo helpers.SessionRepository) *WebhookHandler {
-	sessionResolver := &SessionResolver{
-		logger:      appLogger,
-		sessionRepo: sessionRepo,
-	}
 	return &WebhookHandler{
-		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		webhookUC:   webhookUC,
 	}
 }
 
-// resolveSession removido - usar h.resolveSessionFromURL(r) do BaseHandler
+// WebhookHandler usa SessionResolver unificado através do BaseHandler
 
 func (h *WebhookHandler) handleWebhookAction(
 	w http.ResponseWriter,
@@ -40,7 +35,7 @@ func (h *WebhookHandler) handleWebhookAction(
 	parseFunc func(*http.Request, *domainSession.Session) (interface{}, error),
 	actionFunc func(context.Context, interface{}) (interface{}, error),
 ) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -164,7 +159,7 @@ func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/webhook/test [post]
 func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {

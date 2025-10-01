@@ -679,7 +679,7 @@ type ContactInfo struct {
 	Address      string
 }
 
-func (c *WameowClient) SendDetailedContactMessage(ctx context.Context, to string, contact ContactInfo) (*whatsmeow.SendResponse, error) {
+func (c *WameowClient) SendDetailedContactMessage(ctx context.Context, to string, contact *ContactInfo) (*whatsmeow.SendResponse, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
 	}
@@ -3115,7 +3115,7 @@ func (c *WameowClient) GetNewsletterMessages(ctx context.Context, jid string, co
 	return messages, nil
 }
 
-func (c *WameowClient) GetNewsletterMessageUpdates(ctx context.Context, jid string, count int, since string, after string) ([]*types.NewsletterMessage, error) {
+func (c *WameowClient) GetNewsletterMessageUpdates(ctx context.Context, jid string, count int, since, after string) ([]*types.NewsletterMessage, error) {
 	newsletterJID, err := c.validateNewsletterUpdatesRequest(jid)
 	if err != nil {
 		return nil, err
@@ -3300,7 +3300,7 @@ func (c *WameowClient) NewsletterMarkViewed(ctx context.Context, jid string, ser
 	return nil
 }
 
-func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid string, serverID string, reaction string, messageID string) error {
+func (c *WameowClient) NewsletterSendReaction(ctx context.Context, jid, serverID, reaction, messageID string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
 	}

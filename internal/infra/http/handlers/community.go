@@ -10,7 +10,6 @@ import (
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/community"
 	domainSession "zpwoot/internal/domain/session"
-	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
 )
 
@@ -28,17 +27,13 @@ type CommunityHandler struct {
 }
 
 func NewCommunityHandler(appLogger *logger.Logger, communityUC community.UseCase, sessionRepo helpers.SessionRepository) *CommunityHandler {
-	sessionResolver := &SessionResolver{
-		logger:      appLogger,
-		sessionRepo: sessionRepo,
-	}
 	return &CommunityHandler{
-		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		communityUC: communityUC,
 	}
 }
 
-// resolveSession removido - usar h.resolveSessionFromURL(r) do BaseHandler
+// CommunityHandler usa SessionResolver unificado através do BaseHandler
 
 func (h *CommunityHandler) handleGroupLinkAction(
 	w http.ResponseWriter,
@@ -47,7 +42,7 @@ func (h *CommunityHandler) handleGroupLinkAction(
 	parseFunc func(*http.Request) (interface{}, error),
 	actionFunc func(context.Context, string, interface{}) (interface{}, error),
 ) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -117,7 +112,7 @@ func (h *CommunityHandler) handleCommunityQueryAction(
 	createRequestFunc func(string) interface{},
 	actionFunc func(context.Context, string, interface{}) (interface{}, error),
 ) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {

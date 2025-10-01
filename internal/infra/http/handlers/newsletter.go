@@ -10,7 +10,6 @@ import (
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/newsletter"
 	domainSession "zpwoot/internal/domain/session"
-	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
 )
 
@@ -20,12 +19,8 @@ type NewsletterHandler struct {
 }
 
 func NewNewsletterHandler(appLogger *logger.Logger, newsletterUC newsletter.UseCase, sessionRepo helpers.SessionRepository) *NewsletterHandler {
-	sessionResolver := &SessionResolver{
-		logger:      appLogger,
-		sessionRepo: sessionRepo,
-	}
 	return &NewsletterHandler{
-		BaseHandler:  NewBaseHandler(appLogger, sessionResolver),
+		BaseHandler:  NewBaseHandler(appLogger, sessionRepo),
 		newsletterUC: newsletterUC,
 	}
 }
@@ -74,7 +69,7 @@ func (h *NewsletterHandler) handleNewsletterAction(
 	actionFunc func(context.Context, string, interface{}) (interface{}, error),
 	requestFactory func() interface{},
 ) {
-	sess, err := h.resolveSessionFromURL(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -132,7 +127,7 @@ func (h *NewsletterHandler) handleNewsletterAction(
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/newsletters/info [get]
 func (h *NewsletterHandler) GetNewsletterInfo(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {

@@ -9,7 +9,6 @@ import (
 
 	"zpwoot/internal/app/media"
 	domainSession "zpwoot/internal/domain/session"
-	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
 )
 
@@ -19,12 +18,8 @@ type MediaHandler struct {
 }
 
 func NewMediaHandler(appLogger *logger.Logger, mediaUC media.UseCase, sessionRepo helpers.SessionRepository) *MediaHandler {
-	sessionResolver := &SessionResolver{
-		logger:      appLogger,
-		sessionRepo: sessionRepo,
-	}
 	return &MediaHandler{
-		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		mediaUC:     mediaUC,
 	}
 }
@@ -43,31 +38,36 @@ func NewMediaHandler(appLogger *logger.Logger, mediaUC media.UseCase, sessionRep
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/media/download [post]
 func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
-	h.handleActionRequest(
-		w,
-		r,
-		"Downloading media",
-		"Media downloaded successfully",
-		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
-			var req media.DownloadMediaRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				return nil, err
-			}
-			req.SessionID = sess.ID.String()
-			return &req, nil
-		},
-		func(ctx context.Context, req interface{}) (interface{}, error) {
-			downloadReq, ok := req.(*media.DownloadMediaRequest)
-			if !ok {
-				return nil, errors.New("invalid request type")
-			}
-			result, err := h.mediaUC.DownloadMedia(ctx, downloadReq)
-			if err != nil {
-				return nil, err
-			}
-			return result, nil
-		},
-	)
+	sess, err := h.GetSessionFromURL(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if err == domainSession.ErrSessionNotFound {
+			statusCode = http.StatusNotFound
+		}
+		h.writeErrorResponse(w, statusCode, err.Error())
+		return
+	}
+
+	var req media.DownloadMediaRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	req.SessionID = sess.ID.String()
+
+	h.logger.InfoWithFields("Downloading media", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	result, err := h.mediaUC.DownloadMedia(r.Context(), &req)
+	if err != nil {
+		h.logger.Error("Failed to download media: " + err.Error())
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to download media")
+		return
+	}
+
+	h.writeSuccessResponse(w, result, "Media downloaded successfully")
 }
 
 // @Summary Get media information
@@ -83,7 +83,7 @@ func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/media/info [get]
 func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -135,7 +135,7 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/media/list [get]
 func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
@@ -208,31 +208,36 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/media/clear-cache [post]
 func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
-	h.handleActionRequest(
-		w,
-		r,
-		"Clearing media cache",
-		"Media cache cleared successfully",
-		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
-			var req media.ClearCacheRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				return nil, err
-			}
-			req.SessionID = sess.ID.String()
-			return &req, nil
-		},
-		func(ctx context.Context, req interface{}) (interface{}, error) {
-			clearReq, ok := req.(*media.ClearCacheRequest)
-			if !ok {
-				return nil, errors.New("invalid request type")
-			}
-			result, err := h.mediaUC.ClearCache(ctx, clearReq)
-			if err != nil {
-				return nil, err
-			}
-			return result, nil
-		},
-	)
+	sess, err := h.GetSessionFromURL(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if err == domainSession.ErrSessionNotFound {
+			statusCode = http.StatusNotFound
+		}
+		h.writeErrorResponse(w, statusCode, err.Error())
+		return
+	}
+
+	var req media.ClearCacheRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	req.SessionID = sess.ID.String()
+
+	h.logger.InfoWithFields("Clearing media cache", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	result, err := h.mediaUC.ClearCache(r.Context(), &req)
+	if err != nil {
+		h.logger.Error("Failed to clear media cache: " + err.Error())
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to clear media cache")
+		return
+	}
+
+	h.writeSuccessResponse(w, result, "Media cache cleared successfully")
 }
 
 // @Summary Get media statistics
@@ -247,7 +252,7 @@ func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/media/stats [get]
 func (h *MediaHandler) GetMediaStats(w http.ResponseWriter, r *http.Request) {
-	sess, err := h.resolveSession(r)
+	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {

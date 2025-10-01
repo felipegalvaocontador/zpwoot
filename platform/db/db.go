@@ -45,12 +45,12 @@ func NewWithMigrations(databaseURL string, logger *logger.Logger) (*DB, error) {
 	return database, nil
 }
 
-func (db *DB) Close() error {
-	return db.DB.Close()
+func (d *DB) Close() error {
+	return d.DB.Close()
 }
 
-func (db *DB) Transaction(fn func(*sqlx.Tx) error) error {
-	tx, err := db.Beginx()
+func (d *DB) Transaction(fn func(*sqlx.Tx) error) error {
+	tx, err := d.Beginx()
 	if err != nil {
 		return err
 	}
@@ -74,30 +74,30 @@ func (db *DB) Transaction(fn func(*sqlx.Tx) error) error {
 	return err
 }
 
-func (db *DB) Health() error {
-	return db.Ping()
+func (d *DB) Health() error {
+	return d.Ping()
 }
 
-func (db *DB) GetDB() *sqlx.DB {
-	return db.DB
+func (d *DB) GetDB() *sqlx.DB {
+	return d.DB
 }
 
-func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return db.DB.Exec(query, args...)
+func (d *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return d.DB.Exec(query, args...)
 }
 
-func (db *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	return db.DB.Query(query, args...)
+func (d *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return d.DB.Query(query, args...)
 }
 
-func (db *DB) QueryRow(query string, args ...interface{}) *sql.Row {
-	return db.DB.QueryRow(query, args...)
+func (d *DB) QueryRow(query string, args ...interface{}) *sql.Row {
+	return d.DB.QueryRow(query, args...)
 }
 
-func (db *DB) Get(dest interface{}, query string, args ...interface{}) error {
-	return db.DB.Get(dest, query, args...)
+func (d *DB) Get(dest interface{}, query string, args ...interface{}) error {
+	return d.DB.Get(dest, query, args...)
 }
 
-func (db *DB) Select(dest interface{}, query string, args ...interface{}) error {
-	return db.DB.Select(dest, query, args...)
+func (d *DB) Select(dest interface{}, query string, args ...interface{}) error {
+	return d.DB.Select(dest, query, args...)
 }

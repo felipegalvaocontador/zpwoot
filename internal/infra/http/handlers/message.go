@@ -11,8 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"zpwoot/internal/app/message"
-	domainSession "zpwoot/internal/domain/session"
-	"zpwoot/internal/infra/http/helpers"
+
 	"zpwoot/internal/infra/wameow"
 	"zpwoot/platform/logger"
 )
@@ -29,29 +28,14 @@ func NewMessageHandler(
 	sessionRepo helpers.SessionRepository,
 	logger *logger.Logger,
 ) *MessageHandler {
-	sessionResolver := &SessionResolver{
-		logger:      logger,
-		sessionRepo: sessionRepo,
-	}
-
 	return &MessageHandler{
-		BaseHandler:   NewBaseHandler(logger, sessionResolver),
+		BaseHandler:   NewBaseHandler(logger, sessionRepo),
 		messageUC:     messageUC,
 		wameowManager: wameowManager,
 	}
 }
 
-// writeErrorResponse e writeSuccessResponse removidos - usar do BaseHandler
-
-// Helper method para resolver sessão a partir de sessionIdentifier
-func (h *MessageHandler) resolveSessionByIdentifier(r *http.Request, sessionIdentifier string) (*domainSession.Session, error) {
-	return h.sessionUtils.ResolveSession(r, helpers.SessionResolutionOptions{
-		Strategy:    helpers.FromAny,
-		ParamName:   "sessionId",
-		Required:    true,
-		LogFailures: true,
-	})
-}
+// MessageHandler usa SessionResolver unificado diretamente
 
 func (h *MessageHandler) handleMessageActionWithTwoFields(
 	w http.ResponseWriter,
@@ -87,7 +71,8 @@ func (h *MessageHandler) handleMessageActionWithTwoFields(
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	// Resolve sessão por ID ou nome
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, "Session not found")
 		return
@@ -132,7 +117,8 @@ func (h *MessageHandler) handleMediaMessage(
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	// USA SESSIONRESOLVER UNIFICADO
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, "Session not found")
 		return
@@ -235,7 +221,8 @@ func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	// USA SESSIONRESOLVER UNIFICADO
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -364,7 +351,7 @@ func (h *MessageHandler) SendText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -481,7 +468,7 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -600,7 +587,7 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -689,7 +676,7 @@ func (h *MessageHandler) sendSpecificMessageType(w http.ResponseWriter, r *http.
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		h.logger.WarnWithFields("Session not found", map[string]interface{}{
 			"session_identifier": sessionIdentifier,
@@ -875,7 +862,7 @@ func (h *MessageHandler) handleSingleContact(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -927,7 +914,7 @@ func (h *MessageHandler) handleContactList(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	sess, sessionErr := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, sessionErr := h.ResolveSession(r.Context(), sessionIdentifier)
 	if sessionErr != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -1164,7 +1151,7 @@ func (h *MessageHandler) SendButtonMessage(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -1314,7 +1301,7 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -1411,7 +1398,7 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -1512,7 +1499,7 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -1603,7 +1590,7 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -1691,7 +1678,7 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -1765,7 +1752,7 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -1955,7 +1942,7 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -2008,7 +1995,7 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		statusCode := 500
 		if strings.Contains(err.Error(), "not found") {
@@ -2076,7 +2063,7 @@ func (h *MessageHandler) SendContactListBusiness(w http.ResponseWriter, r *http.
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		statusCode := 500
 		if strings.Contains(err.Error(), "not found") {
@@ -2145,7 +2132,7 @@ func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		statusCode := 500
 		if strings.Contains(err.Error(), "not found") {
@@ -2206,7 +2193,7 @@ func (h *MessageHandler) SendSingleContactBusiness(w http.ResponseWriter, r *htt
 		return
 	}
 
-	sess, err := h.resolveSessionByIdentifier(r, sessionIdentifier)
+	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		statusCode := 500
 		if strings.Contains(err.Error(), "not found") {

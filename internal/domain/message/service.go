@@ -22,9 +22,9 @@ type MediaProcessor struct {
 	timeout time.Duration
 }
 
-func NewMediaProcessor(logger *logger.Logger) *MediaProcessor {
+func NewMediaProcessor(log *logger.Logger) *MediaProcessor {
 	return &MediaProcessor{
-		logger:  logger,
+		logger:  log,
 		tempDir: os.TempDir(),
 		maxSize: 100 * 1024 * 1024,
 		timeout: 60 * time.Second,

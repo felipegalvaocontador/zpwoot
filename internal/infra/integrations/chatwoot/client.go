@@ -274,12 +274,12 @@ func (c *Client) GetMessages(conversationID, before int) ([]ports.ChatwootMessag
 		Payload []ports.ChatwootMessage `json:"payload"`
 	}
 
-	url := fmt.Sprintf("/conversations/%d/messages", conversationID)
+	endpoint := fmt.Sprintf("/conversations/%d/messages", conversationID)
 	if before > 0 {
-		url += fmt.Sprintf("?before=%d", before)
+		endpoint += fmt.Sprintf("?before=%d", before)
 	}
 
-	err := c.makeRequest("GET", url, nil, &response)
+	err := c.makeRequest("GET", endpoint, nil, &response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get messages: %w", err)
 	}
@@ -307,7 +307,7 @@ func (c *Client) UpdateAccount(updates map[string]interface{}) error {
 }
 
 func (c *Client) makeRequest(method, endpoint string, payload, result interface{}) error {
-	url := fmt.Sprintf("%s/api/v1/accounts/%s%s", c.baseURL, c.accountID, endpoint)
+	requestURL := fmt.Sprintf("%s/api/v1/accounts/%s%s", c.baseURL, c.accountID, endpoint)
 
 	var body io.Reader
 	if payload != nil {
@@ -318,7 +318,7 @@ func (c *Client) makeRequest(method, endpoint string, payload, result interface{
 		body = bytes.NewBuffer(jsonData)
 	}
 
-	req, err := http.NewRequest(method, url, body)
+	req, err := http.NewRequest(method, requestURL, body)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -360,9 +360,9 @@ func (c *Client) MergeContacts(baseContactID, mergeContactID int) error {
 		"mergee_contact_id": mergeContactID,
 	}
 
-	url := fmt.Sprintf("/api/v1/accounts/%s/actions/contact_merge", c.accountID)
+	endpoint := fmt.Sprintf("/api/v1/accounts/%s/actions/contact_merge", c.accountID)
 
-	err := c.makeRequest("POST", url, requestBody, nil)
+	err := c.makeRequest("POST", endpoint, requestBody, nil)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to merge contacts", map[string]interface{}{
 			"base_contact_id":  baseContactID,

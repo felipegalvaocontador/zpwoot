@@ -18,9 +18,9 @@ type Service struct {
 	messageMapper ports.ChatwootMessageMapper
 }
 
-func NewService(logger *logger.Logger, repository ports.ChatwootRepository, wameowManager ports.WameowManager) *Service {
+func NewService(log *logger.Logger, repository ports.ChatwootRepository, wameowManager ports.WameowManager) *Service {
 	return &Service{
-		logger:        logger,
+		logger:        log,
 		repository:    repository,
 		wameowManager: wameowManager,
 	}

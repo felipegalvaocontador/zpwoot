@@ -574,7 +574,7 @@ func (m *Manager) handlePairSuccessEvent(sessionID string, handler ports.EventHa
 	}
 }
 
-func (m *Manager) UnregisterEventHandler(sessionID string, handlerID string) error {
+func (m *Manager) UnregisterEventHandler(sessionID, handlerID string) error {
 	m.handlersMutex.Lock()
 	defer m.handlersMutex.Unlock()
 
@@ -962,7 +962,7 @@ func (m *Manager) SetGroupJoinApprovalMode(sessionID, groupJID string, requireAp
 	return client.SetGroupJoinApprovalMode(ctx, groupJID, requireApproval)
 }
 
-func (m *Manager) SetGroupMemberAddMode(sessionID, groupJID string, mode string) error {
+func (m *Manager) SetGroupMemberAddMode(sessionID, groupJID, mode string) error {
 	client := m.getClient(sessionID)
 	if client == nil {
 		return fmt.Errorf("session %s not found", sessionID)
@@ -975,7 +975,7 @@ func (m *Manager) SetGroupMemberAddMode(sessionID, groupJID string, mode string)
 	return client.SetGroupMemberAddMode(ctx, groupJID, mode)
 }
 
-func (m *Manager) GetGroupInfoFromLink(sessionID string, inviteLink string) (*types.GroupInfo, error) {
+func (m *Manager) GetGroupInfoFromLink(sessionID, inviteLink string) (*types.GroupInfo, error) {
 	client := m.getClient(sessionID)
 	if client == nil {
 		return nil, fmt.Errorf("session %s not found", sessionID)

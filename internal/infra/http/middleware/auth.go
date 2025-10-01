@@ -17,7 +17,7 @@ const (
 	authenticatedContextKey contextKey = "authenticated"
 )
 
-func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) http.Handler {
+func APIKeyAuth(cfg *config.Config, log *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
@@ -35,7 +35,7 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 			}
 
 			if apiKey == "" {
-				logger.WarnWithFields("Missing API key", map[string]interface{}{
+				log.WarnWithFields("Missing API key", map[string]interface{}{
 					"path":   path,
 					"method": r.Method,
 					"ip":     getClientIP(r),
@@ -48,13 +48,13 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 					"message": "API key is required. Provide it via Authorization header or X-API-Key header",
 					"code":    "MISSING_API_KEY",
 				}); err != nil {
-					logger.Error("Failed to encode unauthorized response: " + err.Error())
+					log.Error("Failed to encode unauthorized response: " + err.Error())
 				}
 				return
 			}
 
 			if apiKey != cfg.GlobalAPIKey {
-				logger.WarnWithFields("Invalid API key", map[string]interface{}{
+				log.WarnWithFields("Invalid API key", map[string]interface{}{
 					"path":    path,
 					"method":  r.Method,
 					"ip":      getClientIP(r),
@@ -68,12 +68,12 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 					"message": "Invalid API key",
 					"code":    "INVALID_API_KEY",
 				}); err != nil {
-					logger.Error("Failed to encode unauthorized response: " + err.Error())
+					log.Error("Failed to encode unauthorized response: " + err.Error())
 				}
 				return
 			}
 
-			logger.DebugWithFields("API key authenticated", map[string]interface{}{
+			log.DebugWithFields("API key authenticated", map[string]interface{}{
 				"path":    path,
 				"method":  r.Method,
 				"ip":      getClientIP(r),

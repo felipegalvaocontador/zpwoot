@@ -24,7 +24,7 @@ func NewCommunityAdapter(wameowManager ports.WameowManager, logger logger.Logger
 	}
 }
 
-func (ca *CommunityAdapter) LinkGroup(ctx context.Context, sessionID string, communityJID, groupJID string) error {
+func (ca *CommunityAdapter) LinkGroup(ctx context.Context, sessionID, communityJID, groupJID string) error {
 	manager, ok := ca.wameowManager.(*Manager)
 	if !ok {
 		return fmt.Errorf("wameow manager is not a Manager instance")
@@ -38,7 +38,7 @@ func (ca *CommunityAdapter) LinkGroup(ctx context.Context, sessionID string, com
 	return client.LinkGroup(ctx, communityJID, groupJID)
 }
 
-func (ca *CommunityAdapter) UnlinkGroup(ctx context.Context, sessionID string, communityJID, groupJID string) error {
+func (ca *CommunityAdapter) UnlinkGroup(ctx context.Context, sessionID, communityJID, groupJID string) error {
 	manager, ok := ca.wameowManager.(*Manager)
 	if !ok {
 		return fmt.Errorf("wameow manager is not a Manager instance")
@@ -52,7 +52,7 @@ func (ca *CommunityAdapter) UnlinkGroup(ctx context.Context, sessionID string, c
 	return client.UnlinkGroup(ctx, communityJID, groupJID)
 }
 
-func (ca *CommunityAdapter) GetCommunityInfo(ctx context.Context, sessionID string, communityJID string) (*community.CommunityInfo, error) {
+func (ca *CommunityAdapter) GetCommunityInfo(ctx context.Context, sessionID, communityJID string) (*community.CommunityInfo, error) {
 	manager, ok := ca.wameowManager.(*Manager)
 	if !ok {
 		return nil, fmt.Errorf("wameow manager is not a Manager instance")
@@ -84,7 +84,7 @@ func (ca *CommunityAdapter) GetCommunityInfo(ctx context.Context, sessionID stri
 	return communityInfo, nil
 }
 
-func (ca *CommunityAdapter) GetSubGroups(ctx context.Context, sessionID string, communityJID string) ([]*community.LinkedGroup, error) {
+func (ca *CommunityAdapter) GetSubGroups(ctx context.Context, sessionID, communityJID string) ([]*community.LinkedGroup, error) {
 	manager, ok := ca.wameowManager.(*Manager)
 	if !ok {
 		return nil, fmt.Errorf("wameow manager is not a Manager instance")
@@ -127,7 +127,7 @@ func convertToLinkedGroupFromTarget(groupTarget *types.GroupLinkTarget) *communi
 	}
 }
 
-func (ca *CommunityAdapter) GetLinkedGroupsParticipants(ctx context.Context, sessionID string, communityJID string) ([]string, error) {
+func (ca *CommunityAdapter) GetLinkedGroupsParticipants(ctx context.Context, sessionID, communityJID string) ([]string, error) {
 	manager, ok := ca.wameowManager.(*Manager)
 	if !ok {
 		return nil, fmt.Errorf("wameow manager is not a Manager instance")

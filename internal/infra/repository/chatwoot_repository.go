@@ -327,7 +327,7 @@ func (r *chatwootRepository) GetMessageByID(ctx context.Context, id int) (*ports
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (r *chatwootRepository) GetMessagesByConversationID(ctx context.Context, conversationID int, limit, offset int) ([]*ports.ChatwootMessage, error) {
+func (r *chatwootRepository) GetMessagesByConversationID(ctx context.Context, conversationID, limit, offset int) ([]*ports.ChatwootMessage, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 

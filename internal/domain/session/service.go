@@ -43,13 +43,13 @@ type WameowManager interface {
 	GetProxy(sessionID string) (*ProxyConfig, error)
 }
 
-func NewService(repo Repository, wameow WameowManager, qrGenerator QRGenerator, logger *logger.Logger) *Service {
+func NewService(repo Repository, wameow WameowManager, qrGenerator QRGenerator, log *logger.Logger) *Service {
 	return &Service{
 		repo:        repo,
 		Wameow:      wameow,
 		generator:   uuid.New(),
 		qrGenerator: qrGenerator,
-		logger:      logger,
+		logger:      log,
 	}
 }
 

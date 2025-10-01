@@ -10,6 +10,7 @@ type SessionRepository interface {
 	Create(ctx context.Context, session *session.Session) error
 	GetByID(ctx context.Context, id string) (*session.Session, error)
 	GetByName(ctx context.Context, name string) (*session.Session, error)
+	GetByIDOrName(ctx context.Context, idOrName string) (*session.Session, error)
 	GetByDeviceJid(ctx context.Context, deviceJid string) (*session.Session, error)
 	List(ctx context.Context, req *session.ListSessionsRequest) ([]*session.Session, int, error)
 	Update(ctx context.Context, session *session.Session) error

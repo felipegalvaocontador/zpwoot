@@ -936,7 +936,10 @@ func (h *GroupHandler) SetGroupDescription(w http.ResponseWriter, r *http.Reques
 			return result, nil
 		},
 		func(req interface{}) string {
-			return req.(*group.SetGroupDescriptionRequest).GroupJID
+			if groupReq, ok := req.(*group.SetGroupDescriptionRequest); ok {
+				return groupReq.GroupJID
+			}
+			return ""
 		},
 	)
 }
@@ -967,14 +970,21 @@ func (h *GroupHandler) SetGroupPhoto(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			result, err := h.groupUC.SetGroupPhoto(ctx, sessionID, req.(*group.SetGroupPhotoRequest))
+			groupReq, ok := req.(*group.SetGroupPhotoRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.groupUC.SetGroupPhoto(ctx, sessionID, groupReq)
 			if err != nil {
 				return nil, err
 			}
 			return result, nil
 		},
 		func(req interface{}) string {
-			return req.(*group.SetGroupPhotoRequest).GroupJID
+			if groupReq, ok := req.(*group.SetGroupPhotoRequest); ok {
+				return groupReq.GroupJID
+			}
+			return ""
 		},
 	)
 }

@@ -49,7 +49,11 @@ func (h *NewsletterHandler) CreateNewsletter(w http.ResponseWriter, r *http.Requ
 		"Creating newsletter",
 		"Newsletter created successfully",
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			result, err := h.newsletterUC.CreateNewsletter(ctx, sessionID, req.(*newsletter.CreateNewsletterRequest))
+			newsletterReq, ok := req.(*newsletter.CreateNewsletterRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.newsletterUC.CreateNewsletter(ctx, sessionID, newsletterReq)
 			if err != nil {
 				return nil, err
 			}

@@ -65,7 +65,9 @@ func (h *WebhookHandler) handleWebhookAction(
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encodeErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encodeErr != nil {
+			h.logger.Error("Failed to encode error response: " + encodeErr.Error())
+		}
 		return
 	}
 
@@ -74,7 +76,9 @@ func (h *WebhookHandler) handleWebhookAction(
 		h.logger.Error("Failed to parse request body: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		if encodeErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); encodeErr != nil {
+			h.logger.Error("Failed to encode error response: " + encodeErr.Error())
+		}
 		return
 	}
 

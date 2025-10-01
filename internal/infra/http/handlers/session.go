@@ -139,7 +139,9 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -151,7 +153,9 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 		if errors.As(err, &appErr) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(appErr.Code)
-			json.NewEncoder(w).Encode(common.NewErrorResponse(appErr.Message))
+			if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(appErr.Message)); encErr != nil {
+				h.logger.Error("Failed to encode error response: " + encErr.Error())
+			}
 			return
 		}
 
@@ -167,7 +171,9 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 	response := common.NewSuccessResponse(nil, successMessage)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode success response: " + err.Error())
+	}
 }
 
 // @Summary Create new session
@@ -190,10 +196,12 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("Session use case not initialized")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": false,
 			"message": "Session service not available",
-		})
+		}); err != nil {
+			h.logger.Error("Failed to encode error response: " + err.Error())
+		}
 		return
 	}
 
@@ -202,7 +210,9 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("Failed to parse request body: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		if err := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); err != nil {
+			h.logger.Error("Failed to encode error response: " + err.Error())
+		}
 		return
 	}
 

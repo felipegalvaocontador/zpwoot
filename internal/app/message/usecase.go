@@ -33,8 +33,8 @@ func NewUseCase(
 	return &useCaseImpl{
 		sessionRepo:    sessionRepo,
 		wameowManager:  wameowManager,
-		mediaProcessor: message.NewMediaProcessor(logger),
-		logger:         logger,
+		mediaProcessor: message.NewMediaProcessor(appLogger),
+		logger:         appLogger,
 	}
 }
 

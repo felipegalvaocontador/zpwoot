@@ -25,9 +25,10 @@ O **zpwoot** utiliza uma **Clean Architecture Pragmática** focada em simplicida
 
 ```
 zpwoot/
-├── core/                        # 🎯 Core Business Logic
-├── services/                    # 🔧 Application Services
-├── adapters/                    # 🔌 External Connections
+├── internal/
+│   ├── core/                    # 🎯 Core Business Logic
+│   ├── services/                # 🔧 Application Services
+│   └── adapters/                # 🔌 External Connections
 ├── platform/                   # 🏗️ Infrastructure
 └── cmd/                        # 🚀 Entry Points
 ```
@@ -40,7 +41,7 @@ zpwoot/
 
 **Estrutura:**
 ```
-core/
+internal/core/
 ├── session/
 │   ├── models.go               # Entidades e Value Objects
 │   ├── service.go              # Regras de negócio
@@ -65,12 +66,12 @@ core/
 **Exemplo de Import Válido:**
 ```go
 // ✅ Permitido
-import "zpwoot/core/shared/errors"
-import "zpwoot/core/session"
+import "zpwoot/internal/core/shared/errors"
+import "zpwoot/internal/core/session"
 
 // ❌ Proibido
-import "zpwoot/adapters/database"
-import "zpwoot/services"
+import "zpwoot/internal/adapters/database"
+import "zpwoot/internal/services"
 import "github.com/gin-gonic/gin"
 ```
 
@@ -80,7 +81,7 @@ import "github.com/gin-gonic/gin"
 
 **Estrutura:**
 ```
-services/
+internal/services/
 ├── session_service.go          # Orquestração de sessões
 ├── message_service.go          # Orquestração de mensagens
 ├── integration_service.go      # Orquestração de integrações
@@ -118,7 +119,7 @@ func (s *SessionService) CreateSession(req *CreateSessionRequest) error {
 
 **Estrutura:**
 ```
-adapters/
+internal/adapters/
 ├── http/                       # REST API, handlers
 │   ├── handlers/
 │   ├── middleware/
@@ -209,45 +210,45 @@ cmd → platform → adapters → services → core
 
 ```go
 // Core pode importar
-import "zpwoot/core/shared"
-import "zpwoot/core/session"
+import "zpwoot/internal/core/shared"
+import "zpwoot/internal/core/session"
 
 // Services pode importar
-import "zpwoot/core/session"
-import "zpwoot/core/shared"
+import "zpwoot/internal/core/session"
+import "zpwoot/internal/core/shared"
 
 // Adapters pode importar
-import "zpwoot/core/session"
-import "zpwoot/services"
+import "zpwoot/internal/core/session"
+import "zpwoot/internal/services"
 import "github.com/gin-gonic/gin"
 
 // Platform pode importar
-import "zpwoot/adapters"
-import "zpwoot/services"
-import "zpwoot/core"
+import "zpwoot/internal/adapters"
+import "zpwoot/internal/services"
+import "zpwoot/internal/core"
 
 // CMD pode importar
 import "zpwoot/platform"
-import "zpwoot/adapters"
-import "zpwoot/services"
-import "zpwoot/core"
+import "zpwoot/internal/adapters"
+import "zpwoot/internal/services"
+import "zpwoot/internal/core"
 ```
 
 ### ❌ **Imports Proibidos**
 
 ```go
 // Core NÃO pode importar
-import "zpwoot/services"        // ❌
-import "zpwoot/adapters"        // ❌
-import "zpwoot/platform"        // ❌
-import "github.com/gin-gonic/gin" // ❌
+import "zpwoot/internal/services"        // ❌
+import "zpwoot/internal/adapters"        // ❌
+import "zpwoot/platform"                 // ❌
+import "github.com/gin-gonic/gin"        // ❌
 
 // Services NÃO pode importar
-import "zpwoot/adapters"        // ❌
-import "zpwoot/platform"        // ❌
+import "zpwoot/internal/adapters"        // ❌
+import "zpwoot/platform"                 // ❌
 
 // Adapters NÃO pode importar
-import "zpwoot/platform"        // ❌ (exceto para DI)
+import "zpwoot/platform"                 // ❌ (exceto para DI)
 ```
 
 ## 🧪 Estratégia de Testes

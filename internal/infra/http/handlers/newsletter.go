@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"zpwoot/internal/app/common"
@@ -236,7 +237,11 @@ func (h *NewsletterHandler) FollowNewsletter(w http.ResponseWriter, r *http.Requ
 		"Following newsletter",
 		"Newsletter followed successfully",
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			result, err := h.newsletterUC.FollowNewsletter(ctx, sessionID, req.(*newsletter.FollowNewsletterRequest))
+			newsletterReq, ok := req.(*newsletter.FollowNewsletterRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.newsletterUC.FollowNewsletter(ctx, sessionID, newsletterReq)
 			if err != nil {
 				return nil, err
 			}
@@ -268,7 +273,11 @@ func (h *NewsletterHandler) UnfollowNewsletter(w http.ResponseWriter, r *http.Re
 		"Unfollowing newsletter",
 		"Newsletter unfollowed successfully",
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			result, err := h.newsletterUC.UnfollowNewsletter(ctx, sessionID, req.(*newsletter.UnfollowNewsletterRequest))
+			newsletterReq, ok := req.(*newsletter.UnfollowNewsletterRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.newsletterUC.UnfollowNewsletter(ctx, sessionID, newsletterReq)
 			if err != nil {
 				return nil, err
 			}

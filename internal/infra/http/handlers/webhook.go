@@ -131,7 +131,11 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
-			result, err := h.webhookUC.SetConfig(ctx, req.(*webhook.SetConfigRequest))
+			webhookReq, ok := req.(*webhook.SetConfigRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.webhookUC.SetConfig(ctx, webhookReq)
 			if err != nil {
 				return nil, err
 			}

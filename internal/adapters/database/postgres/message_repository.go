@@ -161,3 +161,254 @@ func (r *MessageRepository) Update(ctx context.Context, msg *messaging.Message) 
 
 	return nil
 }
+
+// Delete remove uma mensagem do banco de dados
+func (r *MessageRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	query := `DELETE FROM "zpMessage" WHERE id = $1`
+
+	result, err := r.db.ExecContext(ctx, query, id.String())
+	if err != nil {
+		return fmt.Errorf("failed to delete message: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return errors.ErrMessageNotFound
+	}
+
+	return nil
+}
+
+// ListBySession retorna mensagens de uma sessão específica
+func (r *MessageRepository) ListBySession(ctx context.Context, sessionID uuid.UUID, limit, offset int) ([]*messaging.Message, error) {
+	var models []messageModel
+	query := `
+		SELECT * FROM "zpMessage"
+		WHERE "sessionId" = $1
+		ORDER BY "zpTimestamp" DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	err := r.db.SelectContext(ctx, &models, query, sessionID.String(), limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list messages by session: %w", err)
+	}
+
+	messages := make([]*messaging.Message, len(models))
+	for i, model := range models {
+		messages[i] = r.fromModel(&model)
+	}
+
+	return messages, nil
+}
+
+// ListByChat retorna mensagens de um chat específico
+func (r *MessageRepository) ListByChat(ctx context.Context, sessionID uuid.UUID, chatJID string, limit, offset int) ([]*messaging.Message, error) {
+	var models []messageModel
+	query := `
+		SELECT * FROM "zpMessage"
+		WHERE "sessionId" = $1 AND "zpChat" = $2
+		ORDER BY "zpTimestamp" DESC
+		LIMIT $3 OFFSET $4
+	`
+
+	err := r.db.SelectContext(ctx, &models, query, sessionID.String(), chatJID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list messages by chat: %w", err)
+	}
+
+	messages := make([]*messaging.Message, len(models))
+	for i, model := range models {
+		messages[i] = r.fromModel(&model)
+	}
+
+	return messages, nil
+}
+
+// ListBySyncStatus retorna mensagens com status de sincronização específico
+func (r *MessageRepository) ListBySyncStatus(ctx context.Context, sessionID uuid.UUID, status messaging.SyncStatus, limit, offset int) ([]*messaging.Message, error) {
+	var models []messageModel
+	query := `
+		SELECT * FROM "zpMessage"
+		WHERE "sessionId" = $1 AND "syncStatus" = $2
+		ORDER BY "createdAt" ASC
+		LIMIT $3 OFFSET $4
+	`
+
+	err := r.db.SelectContext(ctx, &models, query, sessionID.String(), string(status), limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list messages by sync status: %w", err)
+	}
+
+	messages := make([]*messaging.Message, len(models))
+	for i, model := range models {
+		messages[i] = r.fromModel(&model)
+	}
+
+	return messages, nil
+}
+
+// UpdateSyncStatus atualiza o status de sincronização de uma mensagem
+func (r *MessageRepository) UpdateSyncStatus(ctx context.Context, id uuid.UUID, status messaging.SyncStatus) error {
+	query := `
+		UPDATE "zpMessage" SET
+			"syncStatus" = $2,
+			"syncedAt" = CASE WHEN $2 = 'synced' THEN NOW() ELSE "syncedAt" END,
+			"updatedAt" = NOW()
+		WHERE id = $1
+	`
+
+	result, err := r.db.ExecContext(ctx, query, id.String(), string(status))
+	if err != nil {
+		return fmt.Errorf("failed to update sync status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return errors.ErrMessageNotFound
+	}
+
+	return nil
+}
+
+// UpdateChatwootIDs atualiza os IDs do Chatwoot para uma mensagem
+func (r *MessageRepository) UpdateChatwootIDs(ctx context.Context, id uuid.UUID, messageID, conversationID int32) error {
+	query := `
+		UPDATE "zpMessage" SET
+			"cwMessageId" = $2,
+			"cwConversationId" = $3,
+			"updatedAt" = NOW()
+		WHERE id = $1
+	`
+
+	result, err := r.db.ExecContext(ctx, query, id.String(), messageID, conversationID)
+	if err != nil {
+		return fmt.Errorf("failed to update Chatwoot IDs: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return errors.ErrMessageNotFound
+	}
+
+	return nil
+}
+
+// Count retorna o número total de mensagens
+func (r *MessageRepository) Count(ctx context.Context) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(*) FROM "zpMessage"`
+
+	err := r.db.GetContext(ctx, &count, query)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count messages: %w", err)
+	}
+
+	return count, nil
+}
+
+// CountBySession retorna o número de mensagens de uma sessão
+func (r *MessageRepository) CountBySession(ctx context.Context, sessionID uuid.UUID) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(*) FROM "zpMessage" WHERE "sessionId" = $1`
+
+	err := r.db.GetContext(ctx, &count, query, sessionID.String())
+	if err != nil {
+		return 0, fmt.Errorf("failed to count messages by session: %w", err)
+	}
+
+	return count, nil
+}
+
+// toModel converte uma entidade Message para o modelo de banco de dados
+func (r *MessageRepository) toModel(msg *messaging.Message) *messageModel {
+	model := &messageModel{
+		ID:          msg.ID.String(),
+		SessionID:   msg.SessionID.String(),
+		ZpMessageID: msg.WhatsAppID,
+		ZpSender:    msg.Sender,
+		ZpChat:      msg.Chat,
+		ZpTimestamp: msg.Timestamp,
+		ZpFromMe:    msg.FromMe,
+		ZpType:      string(msg.Type),
+		SyncStatus:  string(msg.SyncStatus),
+		CreatedAt:   msg.CreatedAt,
+		UpdatedAt:   msg.UpdatedAt,
+	}
+
+	// Content
+	if msg.Content != nil {
+		model.Content = sql.NullString{String: *msg.Content, Valid: true}
+	}
+
+	// ChatwootMessageID
+	if msg.ChatwootMessageID != nil {
+		model.CwMessageID = sql.NullInt32{Int32: *msg.ChatwootMessageID, Valid: true}
+	}
+
+	// ChatwootConversationID
+	if msg.ChatwootConversationID != nil {
+		model.CwConversationID = sql.NullInt32{Int32: *msg.ChatwootConversationID, Valid: true}
+	}
+
+	// SyncedAt
+	if msg.SyncedAt != nil {
+		model.SyncedAt = sql.NullTime{Time: *msg.SyncedAt, Valid: true}
+	}
+
+	return model
+}
+
+// fromModel converte um modelo de banco de dados para uma entidade Message
+func (r *MessageRepository) fromModel(model *messageModel) *messaging.Message {
+	id, _ := uuid.Parse(model.ID)
+	sessionID, _ := uuid.Parse(model.SessionID)
+
+	msg := &messaging.Message{
+		ID:          id,
+		SessionID:   sessionID,
+		WhatsAppID:  model.ZpMessageID,
+		Sender:      model.ZpSender,
+		Chat:        model.ZpChat,
+		Timestamp:   model.ZpTimestamp,
+		FromMe:      model.ZpFromMe,
+		Type:        messaging.MessageType(model.ZpType),
+		SyncStatus:  messaging.SyncStatus(model.SyncStatus),
+		CreatedAt:   model.CreatedAt,
+		UpdatedAt:   model.UpdatedAt,
+	}
+
+	// Content
+	if model.Content.Valid {
+		msg.Content = &model.Content.String
+	}
+
+	// ChatwootMessageID
+	if model.CwMessageID.Valid {
+		msg.ChatwootMessageID = &model.CwMessageID.Int32
+	}
+
+	// ChatwootConversationID
+	if model.CwConversationID.Valid {
+		msg.ChatwootConversationID = &model.CwConversationID.Int32
+	}
+
+	// SyncedAt
+	if model.SyncedAt.Valid {
+		msg.SyncedAt = &model.SyncedAt.Time
+	}
+
+	return msg
+}

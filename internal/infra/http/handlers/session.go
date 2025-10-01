@@ -41,6 +41,23 @@ func NewSessionHandlerWithoutUseCase(appLogger *logger.Logger, sessionRepo helpe
 	}
 }
 
+func (h *SessionHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(common.NewErrorResponse(message)); err != nil {
+		h.logger.Error("Failed to encode error response: " + err.Error())
+	}
+}
+
+func (h *SessionHandler) writeSuccessResponse(w http.ResponseWriter, data interface{}, message string) {
+	response := common.NewSuccessResponse(data, message)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode success response: " + err.Error())
+	}
+}
+
 func (h *SessionHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
 	idOrName := chi.URLParam(r, "sessionId")
 
@@ -69,9 +86,7 @@ func (h *SessionHandler) handleSessionAction(
 	actionFunc func(context.Context, string) (interface{}, error),
 ) {
 	if h.sessionUC == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Session use case not initialized")
 		return
 	}
 
@@ -90,9 +105,7 @@ func (h *SessionHandler) handleSessionAction(
 	result, err := actionFunc(r.Context(), sess.ID.String())
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to %s", actionName))
 		return
 	}
 
@@ -110,9 +123,7 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 	successMessage string,
 ) {
 	if h.sessionUC == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Session use case not initialized")
 		return
 	}
 
@@ -141,15 +152,11 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 		}
 
 		if err.Error() == "session not found" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+			h.writeErrorResponse(w, http.StatusNotFound, "Session not found")
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to %s", actionName))
 		return
 	}
 
@@ -233,9 +240,7 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to create session"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create session")
 		return
 	}
 
@@ -264,9 +269,7 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Listing sessions")
 
 	if h.sessionUC == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Session use case not initialized")
 		return
 	}
 
@@ -306,9 +309,7 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	result, err := h.sessionUC.ListSessions(r.Context(), &req)
 	if err != nil {
 		h.logger.Error("Failed to list sessions: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to list sessions"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list sessions")
 		return
 	}
 
@@ -409,9 +410,7 @@ func (h *SessionHandler) GetQRCode(w http.ResponseWriter, r *http.Request) {
 // @Router /sessions/{sessionId}/pair [post]
 func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 	if h.sessionUC == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Session use case not initialized")
 		return
 	}
 
@@ -440,9 +439,7 @@ func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 	err = h.sessionUC.PairPhone(ctx, sess.ID.String(), &req)
 	if err != nil {
 		h.logger.Error("Failed to pair phone: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to pair phone"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to pair phone")
 		return
 	}
 
@@ -467,9 +464,7 @@ func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 // @Router /sessions/{sessionId}/proxy/set [post]
 func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 	if h.sessionUC == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Session use case not initialized")
 		return
 	}
 
@@ -503,14 +498,10 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error("Failed to set proxy: " + err.Error())
 		if err.Error() == "session not found" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+			h.writeErrorResponse(w, http.StatusNotFound, "Session not found")
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to set proxy"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to set proxy")
 		return
 	}
 
@@ -532,9 +523,7 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 // @Router /sessions/{sessionId}/proxy/find [get]
 func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 	if h.sessionUC == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session use case not initialized"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Session use case not initialized")
 		return
 	}
 
@@ -559,14 +548,10 @@ func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error("Failed to get proxy: " + err.Error())
 		if err.Error() == "session not found" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+			h.writeErrorResponse(w, http.StatusNotFound, "Session not found")
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get proxy"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get proxy")
 		return
 	}
 
@@ -604,9 +589,7 @@ func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request)
 		"message":          "Session stats functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Session stats retrieved successfully"))
+	h.writeSuccessResponse(w, response, "Session stats retrieved successfully")
 }
 
 func (h *SessionHandler) GetUserJID(w http.ResponseWriter, r *http.Request) {
@@ -633,9 +616,7 @@ func (h *SessionHandler) GetUserJID(w http.ResponseWriter, r *http.Request) {
 		"message":   "Get user JID functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "User JID retrieved successfully"))
+	h.writeSuccessResponse(w, response, "User JID retrieved successfully")
 }
 
 func (h *SessionHandler) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
@@ -666,7 +647,5 @@ func (h *SessionHandler) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		"message":      "Get device info functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Device info retrieved successfully"))
+	h.writeSuccessResponse(w, response, "Device info retrieved successfully")
 }

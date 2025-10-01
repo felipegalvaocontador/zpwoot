@@ -152,9 +152,7 @@ func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request
 		"message":    "Group invite link functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group invite link retrieved successfully"))
+	h.writeSuccessResponse(w, response, "Group invite link retrieved successfully")
 }
 
 func (h *GroupHandler) JoinGroupViaLink(w http.ResponseWriter, r *http.Request) {
@@ -212,9 +210,7 @@ func (h *GroupHandler) UpdateGroupSettings(w http.ResponseWriter, r *http.Reques
 		Locked   *bool  `json:"locked,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
@@ -241,9 +237,7 @@ func (h *GroupHandler) UpdateGroupSettings(w http.ResponseWriter, r *http.Reques
 		"message":  "Update group settings functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group settings updated successfully"))
+	h.writeSuccessResponse(w, response, "Group settings updated successfully")
 }
 
 func (h *GroupHandler) GetGroupRequestParticipants(w http.ResponseWriter, r *http.Request) {
@@ -279,9 +273,7 @@ func (h *GroupHandler) GetGroupRequestParticipants(w http.ResponseWriter, r *htt
 		"message":      "Get group request participants functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group request participants retrieved successfully"))
+	h.writeSuccessResponse(w, response, "Group request participants retrieved successfully")
 }
 
 func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *http.Request) {
@@ -303,9 +295,7 @@ func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *
 		Participants []string `json:"participants"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
@@ -346,9 +336,7 @@ func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *
 		"message":      "Update group request participants functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group request participants updated successfully"))
+	h.writeSuccessResponse(w, response, "Group request participants updated successfully")
 }
 
 func (h *GroupHandler) SetGroupJoinApprovalMode(w http.ResponseWriter, r *http.Request) {
@@ -430,9 +418,7 @@ func (h *GroupHandler) GetGroupInfoFromLink(w http.ResponseWriter, r *http.Reque
 		"message": "Get group info from link functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group info retrieved from link successfully"))
+	h.writeSuccessResponse(w, response, "Group info retrieved from link successfully")
 }
 
 func (h *GroupHandler) GetGroupInfoFromInvite(w http.ResponseWriter, r *http.Request) {
@@ -453,9 +439,7 @@ func (h *GroupHandler) GetGroupInfoFromInvite(w http.ResponseWriter, r *http.Req
 		Code     string `json:"code"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
@@ -484,9 +468,7 @@ func (h *GroupHandler) GetGroupInfoFromInvite(w http.ResponseWriter, r *http.Req
 		"message": "Get group info from invite functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group info retrieved from invite successfully"))
+	h.writeSuccessResponse(w, response, "Group info retrieved from invite successfully")
 }
 
 func (h *GroupHandler) JoinGroupWithInvite(w http.ResponseWriter, r *http.Request) {
@@ -507,9 +489,7 @@ func (h *GroupHandler) JoinGroupWithInvite(w http.ResponseWriter, r *http.Reques
 		Code     string `json:"code"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
@@ -534,9 +514,7 @@ func (h *GroupHandler) JoinGroupWithInvite(w http.ResponseWriter, r *http.Reques
 		"message":  "Join group with invite functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Joined group with invite successfully"))
+	h.writeSuccessResponse(w, response, "Joined group with invite successfully")
 }
 
 func (h *GroupHandler) handleGroupActionWithJID(
@@ -591,9 +569,7 @@ func (h *GroupHandler) handleGroupActionWithJID(
 			"group_jid":  groupJID,
 			"error":      err.Error(),
 		})
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -652,15 +628,11 @@ func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 			"session_id": sess.ID.String(),
 			"error":      err.Error(),
 		})
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group created successfully"))
+	h.writeSuccessResponse(w, response, "Group created successfully")
 }
 
 // @Summary Get group information
@@ -712,15 +684,11 @@ func (h *GroupHandler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 			"group_jid":  groupJID,
 			"error":      err.Error(),
 		})
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Group information retrieved successfully"))
+	h.writeSuccessResponse(w, response, "Group information retrieved successfully")
 }
 
 // @Summary List groups
@@ -757,15 +725,11 @@ func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
 			"session_id": sess.ID.String(),
 			"error":      err.Error(),
 		})
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Groups listed successfully"))
+	h.writeSuccessResponse(w, response, "Groups listed successfully")
 }
 
 // @Summary Update group participants
@@ -827,15 +791,11 @@ func (h *GroupHandler) UpdateGroupParticipants(w http.ResponseWriter, r *http.Re
 			"group_jid":  req.GroupJID,
 			"error":      err.Error(),
 		})
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Participants updated successfully"))
+	h.writeSuccessResponse(w, response, "Participants updated successfully")
 }
 
 // @Summary Set group name

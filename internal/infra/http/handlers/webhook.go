@@ -86,9 +86,7 @@ func (h *WebhookHandler) handleWebhookAction(
 	result, err := actionFunc(r.Context(), req)
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to %s", actionName)))
+		h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to %s", actionName))
 		return
 	}
 
@@ -208,9 +206,7 @@ func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 	result, err := h.webhookUC.TestWebhook(r.Context(), webhookConfig.ID, &req)
 	if err != nil {
 		h.logger.Error("Failed to test webhook: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to test webhook"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to test webhook")
 		return
 	}
 
@@ -234,9 +230,7 @@ func (h *WebhookHandler) GetSupportedEvents(w http.ResponseWriter, r *http.Reque
 	result, err := h.webhookUC.GetSupportedWebhookEvents(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to get supported webhook events: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get supported webhook events"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get supported webhook events")
 		return
 	}
 

@@ -40,6 +40,23 @@ func NewMessageHandler(
 	}
 }
 
+func (h *MessageHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(common.NewErrorResponse(message)); err != nil {
+		h.logger.Error("Failed to encode error response: " + err.Error())
+	}
+}
+
+func (h *MessageHandler) writeSuccessResponse(w http.ResponseWriter, data interface{}, message string) {
+	response := common.NewSuccessResponse(data, message)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode success response: " + err.Error())
+	}
+}
+
 func (h *MessageHandler) handleMessageActionWithTwoFields(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -52,41 +69,31 @@ func (h *MessageHandler) handleMessageActionWithTwoFields(
 ) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
 	var reqData map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	field1Value := reqData[field1Name]
 	if field1Value == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(field1ValidationMessage))
+		h.writeErrorResponse(w, http.StatusBadRequest, field1ValidationMessage)
 		return
 	}
 
 	field2Value := reqData[field2Name]
 	if field2Value == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(field2ValidationMessage))
+		h.writeErrorResponse(w, http.StatusBadRequest, field2ValidationMessage)
 		return
 	}
 
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusNotFound, "Session not found")
 		return
 	}
 
@@ -100,21 +107,15 @@ func (h *MessageHandler) handleMessageActionWithTwoFields(
 		h.logger.ErrorWithFields("Failed to "+actionName, logFieldsMap)
 
 		if strings.Contains(err.Error(), "not connected") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, successMessage))
+	h.writeSuccessResponse(w, response, successMessage)
 }
 
 func (h *MessageHandler) handleMediaMessage(
@@ -125,25 +126,19 @@ func (h *MessageHandler) handleMediaMessage(
 ) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
 	req, err := parseFunc(r)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusNotFound, "Session not found")
 		return
 	}
 
@@ -158,21 +153,15 @@ func (h *MessageHandler) handleMediaMessage(
 		})
 
 		if strings.Contains(err.Error(), "not connected") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to send %s message", messageType)))
+		h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to send %s message", messageType))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("%s message sent successfully", titleCase(messageType))))
+	h.writeSuccessResponse(w, response, fmt.Sprintf("%s message sent successfully", titleCase(messageType)))
 }
 
 func parseMediaRequest(r *http.Request, messageType string, parseBody func(*http.Request) (string, string, string, string, string, *message.ContextInfo, error)) (*message.SendMessageRequest, error) {
@@ -224,7 +213,7 @@ func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -232,21 +221,21 @@ func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&mediaReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid media message format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid media message format")
 		return
 	}
 
 	if mediaReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if mediaReq.File == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'file' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'file' field is required")
 		return
 	}
 
@@ -254,7 +243,7 @@ func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -283,19 +272,17 @@ func (h *MessageHandler) SendMedia(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send media message"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send media message")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Media message sent successfully"))
+	h.writeSuccessResponse(w, response, "Media message sent successfully")
 }
 
 func (h *MessageHandler) detectMediaType(file, mimeType string) string {
@@ -348,7 +335,7 @@ func (h *MessageHandler) SendText(w http.ResponseWriter, r *http.Request) {
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -356,28 +343,28 @@ func (h *MessageHandler) SendText(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&textReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid text message format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid text message format")
 		return
 	}
 
 	if textReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if textReq.Body == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'body' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'body' field is required")
 		return
 	}
 
 	if textReq.ContextInfo != nil && textReq.ContextInfo.StanzaID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'contextInfo.stanzaId' is required when replying")
 		return
 	}
 
@@ -385,7 +372,7 @@ func (h *MessageHandler) SendText(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -409,19 +396,17 @@ func (h *MessageHandler) SendText(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send text message"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send text message")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Text message sent successfully"))
+	h.writeSuccessResponse(w, response, "Text message sent successfully")
 }
 
 // @Summary Send image message
@@ -467,7 +452,7 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -475,28 +460,28 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&audioReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid audio message format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid audio message format")
 		return
 	}
 
 	if audioReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if audioReq.File == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'file' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'file' field is required")
 		return
 	}
 
 	if audioReq.ContextInfo != nil && audioReq.ContextInfo.StanzaID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'contextInfo.stanzaId' is required when replying")
 		return
 	}
 
@@ -504,7 +489,7 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -530,19 +515,17 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send audio message"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send audio message")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Audio message sent successfully"))
+	h.writeSuccessResponse(w, response, "Audio message sent successfully")
 }
 
 // @Summary Send video message
@@ -588,7 +571,7 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -596,28 +579,28 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&docReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid document message format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid document message format")
 		return
 	}
 
 	if docReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if docReq.File == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'file' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'file' field is required")
 		return
 	}
 
 	if docReq.ContextInfo != nil && docReq.ContextInfo.StanzaID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'contextInfo.stanzaId' is required when replying")
 		return
 	}
 
@@ -625,7 +608,7 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -653,19 +636,17 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send document message"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send document message")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Document message sent successfully"))
+	h.writeSuccessResponse(w, response, "Document message sent successfully")
 }
 
 // @Summary Send sticker message
@@ -708,7 +689,7 @@ func (h *MessageHandler) sendSpecificMessageType(w http.ResponseWriter, r *http.
 		h.logger.Warn("Session identifier is required")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -720,7 +701,7 @@ func (h *MessageHandler) sendSpecificMessageType(w http.ResponseWriter, r *http.
 		})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -731,21 +712,21 @@ func (h *MessageHandler) sendSpecificMessageType(w http.ResponseWriter, r *http.
 		if err := json.NewDecoder(r.Body).Decode(&stickerReq); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid sticker message format"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid sticker message format")
 			return
 		}
 
 		if stickerReq.RemoteJID == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 			return
 		}
 
 		if stickerReq.File == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("'file' field is required"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "'file' field is required")
 			return
 		}
 
@@ -761,14 +742,14 @@ func (h *MessageHandler) sendSpecificMessageType(w http.ResponseWriter, r *http.
 		if err := json.NewDecoder(r.Body).Decode(&locationReq); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid location message format"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid location message format")
 			return
 		}
 
 		if locationReq.RemoteJID == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 			return
 		}
 
@@ -783,14 +764,14 @@ func (h *MessageHandler) sendSpecificMessageType(w http.ResponseWriter, r *http.
 	default:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Unsupported message type"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Unsupported message type")
 		return
 	}
 
 	if req.ContextInfo != nil && req.ContextInfo.StanzaID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'contextInfo.stanzaId' is required when replying"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'contextInfo.stanzaId' is required when replying")
 		return
 	}
 
@@ -807,9 +788,7 @@ func (h *MessageHandler) sendSpecificMessageType(w http.ResponseWriter, r *http.
 		"message_id": response.ID,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, fmt.Sprintf("%s message sent successfully", titleCase(messageType))))
+	h.writeSuccessResponse(w, response, fmt.Sprintf("%s message sent successfully", titleCase(messageType)))
 }
 
 func (h *MessageHandler) handleSendMessageError(w http.ResponseWriter, err error, messageType, sessionID, remoteJID string) {
@@ -823,20 +802,20 @@ func (h *MessageHandler) handleSendMessageError(w http.ResponseWriter, err error
 	if strings.Contains(err.Error(), "not connected") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 		return
 	}
 
 	if strings.Contains(err.Error(), "not found") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session or target not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session or target not found")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusInternalServerError)
-	json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("Failed to send %s message", messageType)))
+	h.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Failed to send %s message", messageType))
 }
 
 // @Summary Send contact message(s)
@@ -858,7 +837,7 @@ func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -875,28 +854,28 @@ func (h *MessageHandler) handleSingleContact(w http.ResponseWriter, r *http.Requ
 	if err := json.NewDecoder(r.Body).Decode(&contactReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid single contact format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid single contact format")
 		return
 	}
 
 	if contactReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if contactReq.ContactName == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'contactName' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'contactName' field is required")
 		return
 	}
 
 	if contactReq.ContactPhone == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'contactPhone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'contactPhone' field is required")
 		return
 	}
 
@@ -904,7 +883,7 @@ func (h *MessageHandler) handleSingleContact(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -930,19 +909,17 @@ func (h *MessageHandler) handleSingleContact(w http.ResponseWriter, r *http.Requ
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send contact message"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send contact message")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Contact message sent successfully"))
+	h.writeSuccessResponse(w, response, "Contact message sent successfully")
 }
 
 func (h *MessageHandler) handleContactList(w http.ResponseWriter, r *http.Request, sessionIdentifier string) {
@@ -950,7 +927,7 @@ func (h *MessageHandler) handleContactList(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -958,7 +935,7 @@ func (h *MessageHandler) handleContactList(w http.ResponseWriter, r *http.Reques
 	if sessionErr != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -1043,12 +1020,12 @@ func (h *MessageHandler) handleContactSendError(w http.ResponseWriter, err error
 	if strings.Contains(err.Error(), "not connected") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusInternalServerError)
-	json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send contact list"))
+	h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send contact list")
 }
 
 func (h *MessageHandler) buildContactListResponse(w http.ResponseWriter, result *wameow.ContactListResult, sessionID, remoteJID string, contactCount int) {
@@ -1076,9 +1053,7 @@ func (h *MessageHandler) buildContactListResponse(w http.ResponseWriter, result 
 		"success_count": len(contactResults),
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Contact list sent successfully"))
+	h.writeSuccessResponse(w, response, "Contact list sent successfully")
 }
 
 // @Summary Send business profile
@@ -1139,7 +1114,7 @@ func (h *MessageHandler) SendButtonMessage(w http.ResponseWriter, r *http.Reques
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -1147,35 +1122,35 @@ func (h *MessageHandler) SendButtonMessage(w http.ResponseWriter, r *http.Reques
 	if err := json.NewDecoder(r.Body).Decode(&buttonReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid button message format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid button message format")
 		return
 	}
 
 	if buttonReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if buttonReq.Body == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'body' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'body' field is required")
 		return
 	}
 
 	if len(buttonReq.Buttons) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'buttons' array cannot be empty"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'buttons' array cannot be empty")
 		return
 	}
 
 	if len(buttonReq.Buttons) > 3 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("maximum 3 buttons allowed"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "maximum 3 buttons allowed")
 		return
 	}
 
@@ -1183,13 +1158,13 @@ func (h *MessageHandler) SendButtonMessage(w http.ResponseWriter, r *http.Reques
 		if button.ID == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("button %d: 'id' field is required", i+1)))
+			h.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("button %d: 'id' field is required", i+1))
 			return
 		}
 		if button.Text == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("button %d: 'text' field is required", i+1)))
+			h.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("button %d: 'text' field is required", i+1))
 			return
 		}
 	}
@@ -1198,7 +1173,7 @@ func (h *MessageHandler) SendButtonMessage(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -1226,19 +1201,17 @@ func (h *MessageHandler) SendButtonMessage(w http.ResponseWriter, r *http.Reques
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send button message"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send button message")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Button message sent successfully"))
+	h.writeSuccessResponse(w, response, "Button message sent successfully")
 }
 
 // @Summary Send list message
@@ -1259,7 +1232,7 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -1267,42 +1240,42 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 	if err := json.NewDecoder(r.Body).Decode(&listReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid list message format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid list message format")
 		return
 	}
 
 	if listReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if listReq.Body == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'body' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'body' field is required")
 		return
 	}
 
 	if listReq.ButtonText == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'buttonText' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'buttonText' field is required")
 		return
 	}
 
 	if len(listReq.Sections) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'sections' array cannot be empty"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'sections' array cannot be empty")
 		return
 	}
 
 	if len(listReq.Sections) > 10 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("maximum 10 sections allowed"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "maximum 10 sections allowed")
 		return
 	}
 
@@ -1311,14 +1284,14 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 		if section.Title == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("section %d: 'title' field is required", i+1)))
+			h.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("section %d: 'title' field is required", i+1))
 			return
 		}
 
 		if len(section.Rows) == 0 {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("section %d: 'rows' array cannot be empty", i+1)))
+			h.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("section %d: 'rows' array cannot be empty", i+1))
 			return
 		}
 
@@ -1326,7 +1299,7 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 		if totalRows > 10 {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("maximum 10 rows allowed across all sections"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "maximum 10 rows allowed across all sections")
 			return
 		}
 
@@ -1334,13 +1307,13 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 			if row.ID == "" {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusBadRequest)
-				json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("section %d, row %d: 'id' field is required", i+1, j+1)))
+				h.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("section %d, row %d: 'id' field is required", i+1, j+1))
 				return
 			}
 			if row.Title == "" {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusBadRequest)
-				json.NewEncoder(w).Encode(common.NewErrorResponse(fmt.Sprintf("section %d, row %d: 'title' field is required", i+1, j+1)))
+				h.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("section %d, row %d: 'title' field is required", i+1, j+1))
 				return
 			}
 		}
@@ -1350,7 +1323,7 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -1386,19 +1359,17 @@ func (h *MessageHandler) SendListMessage(w http.ResponseWriter, r *http.Request)
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send list message"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send list message")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "List message sent successfully"))
+	h.writeSuccessResponse(w, response, "List message sent successfully")
 }
 
 // @Summary Send reaction
@@ -1419,7 +1390,7 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -1427,21 +1398,21 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&reactionReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid reaction format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid reaction format")
 		return
 	}
 
 	if reactionReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if reactionReq.MessageID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'messageId' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'messageId' field is required")
 		return
 	}
 
@@ -1449,7 +1420,7 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -1473,19 +1444,17 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send reaction"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send reaction")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Reaction sent successfully"))
+	h.writeSuccessResponse(w, response, "Reaction sent successfully")
 }
 
 // @Summary Send presence
@@ -1506,7 +1475,7 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -1514,21 +1483,21 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&presenceReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid presence format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid presence format")
 		return
 	}
 
 	if presenceReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if presenceReq.Presence == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'presence' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'presence' field is required")
 		return
 	}
 
@@ -1544,7 +1513,7 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 	if !isValidState {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'presence' must be one of: typing, recording, paused"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'presence' must be one of: typing, recording, paused")
 		return
 	}
 
@@ -1552,7 +1521,7 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -1575,19 +1544,17 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send presence"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send presence")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Presence sent successfully"))
+	h.writeSuccessResponse(w, response, "Presence sent successfully")
 }
 
 // @Summary Edit message
@@ -1608,7 +1575,7 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -1616,28 +1583,28 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&editReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid edit message format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid edit message format")
 		return
 	}
 
 	if editReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if editReq.MessageID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'messageId' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'messageId' field is required")
 		return
 	}
 
 	if editReq.NewBody == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'newBody' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'newBody' field is required")
 		return
 	}
 
@@ -1645,7 +1612,7 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -1669,19 +1636,17 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to edit message"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to edit message")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Message edited successfully"))
+	h.writeSuccessResponse(w, response, "Message edited successfully")
 }
 
 // @Summary Mark message as read
@@ -1702,7 +1667,7 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -1713,21 +1678,21 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&markReadReq); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid mark read format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid mark read format")
 		return
 	}
 
 	if markReadReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return
 	}
 
 	if len(markReadReq.MessageIDs) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'messageIds' array cannot be empty"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'messageIds' array cannot be empty")
 		return
 	}
 
@@ -1735,7 +1700,7 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -1758,19 +1723,17 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to mark message as read"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to mark message as read")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Message marked as read successfully"))
+	h.writeSuccessResponse(w, response, "Message marked as read successfully")
 }
 
 // @Summary Send poll
@@ -1791,7 +1754,7 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -1799,7 +1762,7 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -1811,7 +1774,7 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -1831,28 +1794,28 @@ func (h *MessageHandler) validatePollRequest(w http.ResponseWriter, pollReq *mes
 	if pollReq.RemoteJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'Phone' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'Phone' field is required")
 		return fmt.Errorf("phone required")
 	}
 
 	if pollReq.Name == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("'name' field is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "'name' field is required")
 		return fmt.Errorf("name required")
 	}
 
 	if len(pollReq.Options) < 2 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("poll must have at least 2 options"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "poll must have at least 2 options")
 		return fmt.Errorf("options required")
 	}
 
 	if len(pollReq.Options) > 12 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("poll can have maximum 12 options"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "poll can have maximum 12 options")
 		return fmt.Errorf("too many options")
 	}
 
@@ -1901,13 +1864,13 @@ func (h *MessageHandler) handlePollSendError(w http.ResponseWriter, sessionID st
 	if strings.Contains(err.Error(), "not connected") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusInternalServerError)
-	json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to send poll"))
+	h.writeErrorResponse(w, http.StatusBadRequest, "Failed to send poll")
 }
 
 func (h *MessageHandler) returnPollSuccess(w http.ResponseWriter, sessionID string, pollReq *message.CreatePollRequest) {
@@ -1926,9 +1889,7 @@ func (h *MessageHandler) returnPollSuccess(w http.ResponseWriter, sessionID stri
 		"sentAt":          time.Now(),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Poll sent successfully"))
+	h.writeSuccessResponse(w, response, "Poll sent successfully")
 }
 
 // @Summary Revoke message
@@ -1987,7 +1948,7 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -1995,7 +1956,7 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 	if messageID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Message ID is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Message ID is required")
 		return
 	}
 
@@ -2003,7 +1964,7 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session not found"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session not found")
 		return
 	}
 
@@ -2023,26 +1984,24 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 		if strings.Contains(err.Error(), "not connected") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Session is not connected"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Session is not connected")
 			return
 		}
 
 		if strings.Contains(err.Error(), "not found") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Poll not found"))
+			h.writeErrorResponse(w, http.StatusBadRequest, "Poll not found")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get poll results"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Failed to get poll results")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Poll results retrieved successfully"))
+	h.writeSuccessResponse(w, response, "Poll results retrieved successfully")
 }
 
 func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request) {
@@ -2050,7 +2009,7 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -2062,7 +2021,7 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -2076,21 +2035,21 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	if req.Phone == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Phone is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Phone is required")
 		return
 	}
 
 	if len(req.Contacts) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("At least one contact is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "At least one contact is required")
 		return
 	}
 
@@ -2110,9 +2069,7 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 		"message":      "SendContactList functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Contact list sent successfully"))
+	h.writeSuccessResponse(w, response, "Contact list sent successfully")
 }
 
 func (h *MessageHandler) SendContactListBusiness(w http.ResponseWriter, r *http.Request) {
@@ -2120,7 +2077,7 @@ func (h *MessageHandler) SendContactListBusiness(w http.ResponseWriter, r *http.
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -2132,7 +2089,7 @@ func (h *MessageHandler) SendContactListBusiness(w http.ResponseWriter, r *http.
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -2147,21 +2104,21 @@ func (h *MessageHandler) SendContactListBusiness(w http.ResponseWriter, r *http.
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	if req.Phone == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Phone is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Phone is required")
 		return
 	}
 
 	if len(req.Contacts) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("At least one contact is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "At least one contact is required")
 		return
 	}
 
@@ -2181,9 +2138,7 @@ func (h *MessageHandler) SendContactListBusiness(w http.ResponseWriter, r *http.
 		"message":      "SendContactListBusiness functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Business contact list sent successfully"))
+	h.writeSuccessResponse(w, response, "Business contact list sent successfully")
 }
 
 func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Request) {
@@ -2191,7 +2146,7 @@ func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Reques
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -2203,7 +2158,7 @@ func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Reques
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -2215,14 +2170,14 @@ func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Reques
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	if req.Phone == "" || req.ContactName == "" || req.ContactPhone == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Phone, contactName, and contactPhone are required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Phone, contactName, and contactPhone are required")
 		return
 	}
 
@@ -2244,9 +2199,7 @@ func (h *MessageHandler) SendSingleContact(w http.ResponseWriter, r *http.Reques
 		"message":      "SendSingleContact functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Single contact sent successfully"))
+	h.writeSuccessResponse(w, response, "Single contact sent successfully")
 }
 
 func (h *MessageHandler) SendSingleContactBusiness(w http.ResponseWriter, r *http.Request) {
@@ -2254,7 +2207,7 @@ func (h *MessageHandler) SendSingleContactBusiness(w http.ResponseWriter, r *htt
 	if sessionIdentifier == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Session identifier is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session identifier is required")
 		return
 	}
 
@@ -2266,7 +2219,7 @@ func (h *MessageHandler) SendSingleContactBusiness(w http.ResponseWriter, r *htt
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -2279,14 +2232,14 @@ func (h *MessageHandler) SendSingleContactBusiness(w http.ResponseWriter, r *htt
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
 	if req.Phone == "" || req.ContactName == "" || req.ContactPhone == "" || req.BusinessName == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Phone, contactName, contactPhone, and businessName are required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Phone, contactName, contactPhone, and businessName are required")
 		return
 	}
 
@@ -2310,7 +2263,5 @@ func (h *MessageHandler) SendSingleContactBusiness(w http.ResponseWriter, r *htt
 		"message":      "SendSingleContactBusiness functionality needs to be implemented in use case",
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Single business contact sent successfully"))
+	h.writeSuccessResponse(w, response, "Single business contact sent successfully")
 }

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/media"
 	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
@@ -58,7 +57,15 @@ func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
-			return h.mediaUC.DownloadMedia(ctx, req.(*media.DownloadMediaRequest))
+			downloadReq, ok := req.(*media.DownloadMediaRequest)
+			if !ok {
+				return nil, errors.New("invalid request type")
+			}
+			result, err := h.mediaUC.DownloadMedia(ctx, downloadReq)
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
 		},
 	)
 }
@@ -82,17 +89,13 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
 	messageID := r.URL.Query().Get("messageId")
 	if messageID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Message ID is required"))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Message ID is required")
 		return
 	}
 
@@ -110,16 +113,11 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 	result, err := h.mediaUC.GetMediaInfo(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to get media info: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get media info"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get media info")
 		return
 	}
 
-	response := common.NewSuccessResponse(result, "Media information retrieved successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, result, "Media information retrieved successfully")
 }
 
 // @Summary List cached media files
@@ -143,9 +141,7 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
@@ -191,16 +187,11 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 	result, err := h.mediaUC.ListCachedMedia(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to list cached media: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to list cached media"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list cached media")
 		return
 	}
 
-	response := common.NewSuccessResponse(result, "Cached media files listed successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, result, "Cached media files listed successfully")
 }
 
 // @Summary Clear media cache
@@ -231,7 +222,15 @@ func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
-			return h.mediaUC.ClearCache(ctx, req.(*media.ClearCacheRequest))
+			clearReq, ok := req.(*media.ClearCacheRequest)
+			if !ok {
+				return nil, errors.New("invalid request type")
+			}
+			result, err := h.mediaUC.ClearCache(ctx, clearReq)
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
 		},
 	)
 }
@@ -254,9 +253,7 @@ func (h *MediaHandler) GetMediaStats(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, domainSession.ErrSessionNotFound) {
 			statusCode = 404
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		h.writeErrorResponse(w, statusCode, err.Error())
 		return
 	}
 
@@ -272,14 +269,9 @@ func (h *MediaHandler) GetMediaStats(w http.ResponseWriter, r *http.Request) {
 	result, err := h.mediaUC.GetMediaStats(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to get media statistics: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get media statistics"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get media statistics")
 		return
 	}
 
-	response := common.NewSuccessResponse(result, "Media statistics retrieved successfully")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	h.writeSuccessResponse(w, result, "Media statistics retrieved successfully")
 }

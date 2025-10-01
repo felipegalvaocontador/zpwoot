@@ -43,11 +43,13 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				json.NewEncoder(w).Encode(map[string]interface{}{
+				if err := json.NewEncoder(w).Encode(map[string]interface{}{
 					"error":   "Unauthorized",
 					"message": "API key is required. Provide it via Authorization header or X-API-Key header",
 					"code":    "MISSING_API_KEY",
-				})
+				}); err != nil {
+					logger.Error("Failed to encode unauthorized response: " + err.Error())
+				}
 				return
 			}
 
@@ -61,11 +63,13 @@ func APIKeyAuth(cfg *config.Config, logger *logger.Logger) func(http.Handler) ht
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				json.NewEncoder(w).Encode(map[string]interface{}{
+				if err := json.NewEncoder(w).Encode(map[string]interface{}{
 					"error":   "Unauthorized",
 					"message": "Invalid API key",
 					"code":    "INVALID_API_KEY",
-				})
+				}); err != nil {
+					logger.Error("Failed to encode unauthorized response: " + err.Error())
+				}
 				return
 			}
 

@@ -94,9 +94,7 @@ func (h *NewsletterHandler) handleNewsletterAction(
 	result, err := actionFunc(r.Context(), sess.ID.String(), req)
 	if err != nil {
 		h.logger.Error("Failed to " + actionName + ": " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to " + actionName))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to " + actionName)
 		return
 	}
 
@@ -152,9 +150,7 @@ func (h *NewsletterHandler) GetNewsletterInfo(w http.ResponseWriter, r *http.Req
 	result, err := h.newsletterUC.GetNewsletterInfo(r.Context(), sess.ID.String(), req)
 	if err != nil {
 		h.logger.Error("Failed to get newsletter info: " + err.Error())
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get newsletter info"))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get newsletter info")
 		return
 	}
 

@@ -159,7 +159,7 @@ func (sr *SessionResolver) SuggestValidName(input string) string {
 	multiHyphen := regexp.MustCompile(`-+`)
 	suggested = multiHyphen.ReplaceAllString(suggested, "-")
 
-	if len(suggested) > 0 && !regexp.MustCompile(`^[a-zA-Z]`).MatchString(suggested) {
+	if suggested != "" && !regexp.MustCompile(`^[a-zA-Z]`).MatchString(suggested) {
 		suggested = "session-" + suggested
 	}
 

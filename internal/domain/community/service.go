@@ -48,7 +48,7 @@ func (s *serviceImpl) ValidateCommunityJID(jid string) error {
 	}
 
 	idPart := jid[:len(jid)-5]
-	if len(idPart) == 0 {
+	if idPart == "" {
 		return fmt.Errorf("invalid community JID: empty ID part")
 	}
 
@@ -77,7 +77,7 @@ func (s *serviceImpl) ValidateGroupJID(jid string) error {
 	}
 
 	idPart := jid[:len(jid)-5]
-	if len(idPart) == 0 {
+	if idPart == "" {
 		return fmt.Errorf("invalid group JID: empty ID part")
 	}
 

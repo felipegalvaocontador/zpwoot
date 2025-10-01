@@ -403,7 +403,7 @@ func extractMessageIDFromFilename(filename string) string {
 }
 
 func extractMediaTypeFromFilename(filename string) string {
-	if len(filename) == 0 {
+	if filename == "" {
 		return "unknown"
 	}
 

@@ -107,12 +107,12 @@ const (
 )
 
 func IsValidCommunityJID(jid string) bool {
-	return len(jid) > 0 && (jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix ||
+	return jid != "" && (jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix ||
 		jid[len(jid)-len(NewsletterJIDSuffix):] == NewsletterJIDSuffix)
 }
 
 func IsValidGroupJID(jid string) bool {
-	return len(jid) > 0 && jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix
+	return jid != "" && jid[len(jid)-len(GroupJIDSuffix):] == GroupJIDSuffix
 }
 
 func GetCommunityID(jid string) string {

@@ -535,7 +535,7 @@ func getExistingSessions(ctx context.Context, sessionRepo ports.SessionRepositor
 		Offset: 0,
 	})
 	if err != nil {
-		logger.ErrorWithFields("Failed to get sessions for auto-connect", map[string]interface{}{
+		appLogger.ErrorWithFields("Failed to get sessions for auto-connect", map[string]interface{}{
 			"error": err.Error(),
 		})
 		return nil
@@ -543,7 +543,7 @@ func getExistingSessions(ctx context.Context, sessionRepo ports.SessionRepositor
 	return sessions
 }
 
-func reconnectSessions(ctx context.Context, sessions []*session.Session, sessionUC sessionApp.UseCase, logger *logger.Logger, delay time.Duration) reconnectStats {
+func reconnectSessions(ctx context.Context, sessions []*session.Session, sessionUC sessionApp.UseCase, appLogger *logger.Logger, delay time.Duration) reconnectStats {
 	stats := reconnectStats{}
 
 	for _, sess := range sessions {

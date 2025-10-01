@@ -196,7 +196,11 @@ func (h *NewsletterHandler) GetNewsletterInfoWithInvite(w http.ResponseWriter, r
 		"Getting newsletter info with invite",
 		"Newsletter information retrieved successfully",
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.newsletterUC.GetNewsletterInfoWithInvite(ctx, sessionID, req.(*newsletter.GetNewsletterInfoWithInviteRequest))
+			result, err := h.newsletterUC.GetNewsletterInfoWithInvite(ctx, sessionID, req.(*newsletter.GetNewsletterInfoWithInviteRequest))
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
 		},
 		func() interface{} {
 			return &newsletter.GetNewsletterInfoWithInviteRequest{}

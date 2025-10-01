@@ -508,7 +508,9 @@ func (h *GroupHandler) JoinGroupWithInvite(w http.ResponseWriter, r *http.Reques
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -524,7 +526,9 @@ func (h *GroupHandler) JoinGroupWithInvite(w http.ResponseWriter, r *http.Reques
 	if req.GroupJID == "" || req.Code == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID and code are required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID and code are required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -561,7 +565,9 @@ func (h *GroupHandler) handleGroupActionWithJID(
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -573,7 +579,9 @@ func (h *GroupHandler) handleGroupActionWithJID(
 		})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -581,7 +589,9 @@ func (h *GroupHandler) handleGroupActionWithJID(
 	if groupJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required in request body"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required in request body")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -603,7 +613,9 @@ func (h *GroupHandler) handleGroupActionWithJID(
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if encErr := json.NewEncoder(w).Encode(response); encErr != nil {
+		h.logger.Error("Failed to encode response: " + encErr.Error())
+	}
 }
 
 // @Summary Create a new WhatsApp group
@@ -628,7 +640,9 @@ func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -640,7 +654,9 @@ func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 		})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -684,7 +700,9 @@ func (h *GroupHandler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -692,7 +710,9 @@ func (h *GroupHandler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 	if groupJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required as query parameter: ?groupJid=..."))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required as query parameter: ?groupJid=...")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -739,7 +759,9 @@ func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -782,7 +804,9 @@ func (h *GroupHandler) UpdateGroupParticipants(w http.ResponseWriter, r *http.Re
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -794,14 +818,18 @@ func (h *GroupHandler) UpdateGroupParticipants(w http.ResponseWriter, r *http.Re
 		})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
 	if req.GroupJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 

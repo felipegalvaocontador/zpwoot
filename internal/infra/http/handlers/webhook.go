@@ -97,7 +97,9 @@ func (h *WebhookHandler) handleWebhookAction(
 	response := common.NewSuccessResponse(result, successMessage)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
+		h.logger.Error("Failed to encode success response: " + encodeErr.Error())
+	}
 }
 
 // @Summary Set webhook configuration
@@ -179,7 +181,9 @@ func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encodeErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encodeErr != nil {
+			h.logger.Error("Failed to encode error response: " + encodeErr.Error())
+		}
 		return
 	}
 
@@ -188,7 +192,9 @@ func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("Failed to parse request body: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		if encodeErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); encodeErr != nil {
+			h.logger.Error("Failed to encode error response: " + encodeErr.Error())
+		}
 		return
 	}
 
@@ -203,7 +209,9 @@ func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("Failed to find webhook configuration for testing: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Webhook configuration not found"))
+		if encodeErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Webhook configuration not found")); encodeErr != nil {
+			h.logger.Error("Failed to encode error response: " + encodeErr.Error())
+		}
 		return
 	}
 
@@ -217,7 +225,9 @@ func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 	response := common.NewSuccessResponse(result, "Webhook tested successfully")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
+		h.logger.Error("Failed to encode success response: " + encodeErr.Error())
+	}
 }
 
 // @Summary Get supported webhook events
@@ -241,5 +251,7 @@ func (h *WebhookHandler) GetSupportedEvents(w http.ResponseWriter, r *http.Reque
 	response := common.NewSuccessResponse(result, "Supported events retrieved successfully")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
+		h.logger.Error("Failed to encode success response: " + encodeErr.Error())
+	}
 }

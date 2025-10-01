@@ -225,7 +225,7 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		suggested := h.sessionResolver.SuggestValidName(req.Name)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":         "Invalid session name",
 			"message":       errorMsg,
 			"suggestedName": suggested,
@@ -235,7 +235,9 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 				"Can contain letters, numbers, hyphens, and underscores",
 				"Cannot use reserved names (create, list, info, etc.)",
 			},
-		})
+		}); err != nil {
+			h.logger.Error("Failed to encode error response: " + err.Error())
+		}
 		return
 	}
 
@@ -246,11 +248,13 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "Session already exists") {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{
 				"success": false,
 				"error":   "Session already exists",
 				"message": fmt.Sprintf("A session with the name '%s' already exists. Please choose a different name.", req.Name),
-			})
+			}); err != nil {
+				h.logger.Error("Failed to encode error response: " + err.Error())
+			}
 			return
 		}
 
@@ -261,7 +265,9 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	response := common.NewSuccessResponse(result, "Session created successfully")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode success response: " + err.Error())
+	}
 }
 
 // @Summary List sessions
@@ -330,7 +336,9 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	response := common.NewSuccessResponse(result, "Sessions retrieved successfully")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode success response: " + err.Error())
+	}
 }
 
 // @Summary Get session information
@@ -436,7 +444,9 @@ func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -445,7 +455,9 @@ func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("Failed to parse pair phone request: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		if err := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); err != nil {
+			h.logger.Error("Failed to encode error response: " + err.Error())
+		}
 		return
 	}
 
@@ -460,7 +472,9 @@ func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 	response := common.NewSuccessResponse(nil, "Phone pairing initiated successfully")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode success response: " + err.Error())
+	}
 }
 
 // @Summary Set proxy configuration
@@ -490,7 +504,9 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -504,7 +520,9 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 		h.logger.Error("Failed to parse request body: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		if err := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); err != nil {
+			h.logger.Error("Failed to encode error response: " + err.Error())
+		}
 		return
 	}
 
@@ -522,7 +540,9 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 	response := common.NewSuccessResponse(nil, "Proxy configuration updated successfully")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode success response: " + err.Error())
+	}
 }
 
 // @Summary Get proxy configuration
@@ -549,7 +569,9 @@ func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -572,7 +594,9 @@ func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 	response := common.NewSuccessResponse(result, "Proxy configuration retrieved successfully")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode success response: " + err.Error())
+	}
 }
 
 func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request) {
@@ -584,7 +608,9 @@ func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -615,7 +641,9 @@ func (h *SessionHandler) GetUserJID(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -642,7 +670,9 @@ func (h *SessionHandler) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 

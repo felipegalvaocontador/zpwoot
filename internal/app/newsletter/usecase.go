@@ -72,7 +72,7 @@ func (uc *useCaseImpl) CreateNewsletter(ctx context.Context, sessionID string, r
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	session, err := uc.sessionRepo.GetByID(ctx, sessionID)
+	sess, err := uc.sessionRepo.GetByID(ctx, sessionID)
 	if err != nil {
 		uc.logger.ErrorWithFields("Session not found", map[string]interface{}{
 			"session_id": sessionID,

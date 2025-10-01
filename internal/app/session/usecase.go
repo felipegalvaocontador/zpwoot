@@ -35,13 +35,13 @@ func NewUseCase(
 	sessionRepo ports.SessionRepository,
 	wameowMgr ports.WameowManager,
 	sessionService *session.Service,
-	logger *logger.Logger,
+	appLogger *logger.Logger,
 ) UseCase {
 	return &useCaseImpl{
 		sessionRepo:    sessionRepo,
 		WameowMgr:      wameowMgr,
 		sessionService: sessionService,
-		logger:         logger,
+		logger:         appLogger,
 	}
 }
 

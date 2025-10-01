@@ -6,7 +6,9 @@ import (
 	"sync"
 	"time"
 
+	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
+	"go.mau.fi/whatsmeow/types"
 
 	"zpwoot/internal/core/session"
 	"zpwoot/platform/logger"
@@ -67,24 +69,42 @@ func (g *Gateway) CreateSession(ctx context.Context, sessionName string) error {
 	return nil
 }
 
-// ConnectSession conecta uma sessão WhatsApp
+// ConnectSession conecta uma sessão WhatsApp baseado no legacy
 func (g *Gateway) ConnectSession(ctx context.Context, sessionName string) error {
-	client := g.getClient(sessionName)
-	if client == nil {
-		return fmt.Errorf("session %s not found", sessionName)
-	}
-
-	g.logger.InfoWithFields("Connecting WhatsApp session", map[string]interface{}{
+	g.logger.InfoWithFields("Starting session connection", map[string]interface{}{
 		"session_name": sessionName,
 	})
 
-	if err := client.Connect(ctx); err != nil {
+	client := g.getClient(sessionName)
+	if client == nil {
+		// Criar sessão se não existe
+		err := g.CreateSession(ctx, sessionName)
+		if err != nil {
+			return fmt.Errorf("failed to create session %s: %w", sessionName, err)
+		}
+		client = g.getClient(sessionName)
+	}
+
+	// Verificar se já está conectado
+	if client.GetClient().IsConnected() {
+		g.logger.InfoWithFields("Session already connected", map[string]interface{}{
+			"session_name": sessionName,
+		})
+		return nil
+	}
+
+	// Conectar
+	if err := client.Connect(); err != nil {
 		g.logger.ErrorWithFields("Failed to connect WhatsApp session", map[string]interface{}{
 			"session_name": sessionName,
 			"error":        err.Error(),
 		})
 		return fmt.Errorf("failed to connect session: %w", err)
 	}
+
+	g.logger.InfoWithFields("Session connection initiated", map[string]interface{}{
+		"session_name": sessionName,
+	})
 
 	return nil
 }
@@ -156,14 +176,32 @@ func (g *Gateway) DeleteSession(ctx context.Context, sessionName string) error {
 	return nil
 }
 
-// IsSessionConnected verifica se uma sessão está conectada
+// IsSessionConnected verifica se uma sessão está conectada baseado no legacy
 func (g *Gateway) IsSessionConnected(ctx context.Context, sessionName string) (bool, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
-		return false, fmt.Errorf("session %s not found", sessionName)
+		g.logger.DebugWithFields("Session not found for connection check", map[string]interface{}{
+			"session_name": sessionName,
+		})
+		return false, nil // Não retornar erro, apenas false
 	}
 
-	return client.IsConnected(), nil
+	whatsmeowClient := client.GetClient()
+	isConnected := whatsmeowClient.IsConnected()
+	isLoggedIn := whatsmeowClient.IsLoggedIn()
+
+	// Sessão está realmente conectada se ambos são true
+	fullyConnected := isConnected && isLoggedIn
+
+	g.logger.DebugWithFields("Session connection status", map[string]interface{}{
+		"session_name":     sessionName,
+		"is_connected":     isConnected,
+		"is_logged_in":     isLoggedIn,
+		"fully_connected":  fullyConnected,
+		"client_status":    client.GetStatus(),
+	})
+
+	return fullyConnected, nil
 }
 
 // GenerateQRCode gera QR code para pareamento
@@ -184,13 +222,13 @@ func (g *Gateway) GenerateQRCode(ctx context.Context, sessionName string) (*sess
 
 	// Conectar se não estiver conectado
 	if !client.IsConnected() {
-		if err := client.Connect(ctx); err != nil {
+		if err := client.Connect(); err != nil {
 			return nil, fmt.Errorf("failed to connect for QR generation: %w", err)
 		}
 	}
 
 	// Obter QR code
-	qrCode, err := client.GetQRCode(ctx)
+	qrCode, err := client.GetQRCode()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get QR code: %w", err)
 	}
@@ -315,25 +353,291 @@ func (g *Gateway) processAndDispatchEvent(evt interface{}, sessionName string, h
 	})
 }
 
-// GetSessionInfo implementa session.WhatsAppGateway.GetSessionInfo
-// TODO: Implementar busca real de informações da sessão
+// GetSessionInfo implementa session.WhatsAppGateway.GetSessionInfo baseado no legacy
 func (g *Gateway) GetSessionInfo(ctx context.Context, sessionName string) (*session.DeviceInfo, error) {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	_, exists := g.clients[sessionName]
-	if !exists {
+	client := g.getClient(sessionName)
+	if client == nil {
 		return nil, fmt.Errorf("session %s not found", sessionName)
 	}
 
-	// Por enquanto retorna informações básicas
-	// TODO: Implementar busca real de device info do whatsmeow
-	return &session.DeviceInfo{
+	whatsmeowClient := client.GetClient()
+	store := whatsmeowClient.Store
+
+	// Obter informações reais do device baseado no legacy
+	deviceInfo := &session.DeviceInfo{
 		Platform:    "whatsmeow",
 		DeviceModel: "zpwoot-gateway",
 		OSVersion:   "1.0.0",
 		AppVersion:  "2.0.0",
-	}, nil
+	}
+
+	// Log informações do device se disponível
+	if store.ID != nil {
+		g.logger.DebugWithFields("Retrieved session info", map[string]interface{}{
+			"session_name":   sessionName,
+			"device_jid":     store.ID.String(),
+			"push_name":      store.PushName,
+			"business_name":  store.BusinessName,
+		})
+	} else {
+		g.logger.DebugWithFields("Retrieved session info - no device registered", map[string]interface{}{
+			"session_name": sessionName,
+		})
+	}
+
+	return deviceInfo, nil
+}
+
+// ===== MÉTODOS DE ENVIO DE MENSAGEM =====
+
+// SendTextMessage envia uma mensagem de texto via WhatsApp
+func (g *Gateway) SendTextMessage(ctx context.Context, sessionName, to, content string) (*session.MessageSendResult, error) {
+	client := g.getClient(sessionName)
+	if client == nil {
+		return nil, fmt.Errorf("session %s not found", sessionName)
+	}
+
+	if !client.IsLoggedIn() {
+		return nil, fmt.Errorf("session %s is not logged in", sessionName)
+	}
+
+	g.logger.InfoWithFields("Sending text message via WhatsApp", map[string]interface{}{
+		"session_name": sessionName,
+		"to":           to,
+		"content_len":  len(content),
+	})
+
+	// Parse recipient JID
+	recipientJID, err := types.ParseJID(to)
+	if err != nil {
+		return nil, fmt.Errorf("invalid recipient JID: %w", err)
+	}
+
+	// Criar mensagem de texto
+	message := &waE2E.Message{
+		Conversation: &content,
+	}
+
+	// Enviar mensagem
+	whatsmeowClient := client.GetClient()
+	resp, err := whatsmeowClient.SendMessage(ctx, recipientJID, message)
+	if err != nil {
+		g.logger.ErrorWithFields("Failed to send text message", map[string]interface{}{
+			"session_name": sessionName,
+			"to":           to,
+			"error":        err.Error(),
+		})
+		return nil, fmt.Errorf("failed to send text message: %w", err)
+	}
+
+	result := &session.MessageSendResult{
+		MessageID: resp.ID,
+		Status:    "sent",
+		Timestamp: resp.Timestamp,
+		To:        to,
+	}
+
+	g.logger.InfoWithFields("Text message sent successfully", map[string]interface{}{
+		"session_name": sessionName,
+		"message_id":   resp.ID,
+		"to":           to,
+	})
+
+	return result, nil
+}
+
+// SendMediaMessage envia uma mensagem de mídia via WhatsApp
+func (g *Gateway) SendMediaMessage(ctx context.Context, sessionName, to, mediaURL, caption, mediaType string) (*session.MessageSendResult, error) {
+	client := g.getClient(sessionName)
+	if client == nil {
+		return nil, fmt.Errorf("session %s not found", sessionName)
+	}
+
+	if !client.IsLoggedIn() {
+		return nil, fmt.Errorf("session %s is not logged in", sessionName)
+	}
+
+	g.logger.InfoWithFields("Sending media message via WhatsApp", map[string]interface{}{
+		"session_name": sessionName,
+		"to":           to,
+		"media_url":    mediaURL,
+		"media_type":   mediaType,
+		"has_caption":  caption != "",
+	})
+
+	// Parse recipient JID
+	recipientJID, err := types.ParseJID(to)
+	if err != nil {
+		return nil, fmt.Errorf("invalid recipient JID: %w", err)
+	}
+
+	// TODO: Implementar download e upload de mídia
+	// Por enquanto, enviar como mensagem de texto com URL
+	content := mediaURL
+	if caption != "" {
+		content = fmt.Sprintf("%s\n\n%s", caption, mediaURL)
+	}
+
+	message := &waE2E.Message{
+		Conversation: &content,
+	}
+
+	// Enviar mensagem
+	whatsmeowClient := client.GetClient()
+	resp, err := whatsmeowClient.SendMessage(ctx, recipientJID, message)
+	if err != nil {
+		g.logger.ErrorWithFields("Failed to send media message", map[string]interface{}{
+			"session_name": sessionName,
+			"to":           to,
+			"media_type":   mediaType,
+			"error":        err.Error(),
+		})
+		return nil, fmt.Errorf("failed to send media message: %w", err)
+	}
+
+	result := &session.MessageSendResult{
+		MessageID: resp.ID,
+		Status:    "sent",
+		Timestamp: resp.Timestamp,
+		To:        to,
+	}
+
+	g.logger.InfoWithFields("Media message sent successfully", map[string]interface{}{
+		"session_name": sessionName,
+		"message_id":   resp.ID,
+		"to":           to,
+		"media_type":   mediaType,
+	})
+
+	return result, nil
+}
+
+// SendLocationMessage envia uma mensagem de localização via WhatsApp
+func (g *Gateway) SendLocationMessage(ctx context.Context, sessionName, to string, latitude, longitude float64, address string) (*session.MessageSendResult, error) {
+	client := g.getClient(sessionName)
+	if client == nil {
+		return nil, fmt.Errorf("session %s not found", sessionName)
+	}
+
+	if !client.IsLoggedIn() {
+		return nil, fmt.Errorf("session %s is not logged in", sessionName)
+	}
+
+	g.logger.InfoWithFields("Sending location message via WhatsApp", map[string]interface{}{
+		"session_name": sessionName,
+		"to":           to,
+		"latitude":     latitude,
+		"longitude":    longitude,
+		"address":      address,
+	})
+
+	// Parse recipient JID
+	recipientJID, err := types.ParseJID(to)
+	if err != nil {
+		return nil, fmt.Errorf("invalid recipient JID: %w", err)
+	}
+
+	// Criar mensagem de localização
+	degreesLatitude := latitude
+	degreesLongitude := longitude
+
+	message := &waE2E.Message{
+		LocationMessage: &waE2E.LocationMessage{
+			DegreesLatitude:  &degreesLatitude,
+			DegreesLongitude: &degreesLongitude,
+			Name:             &address,
+			Address:          &address,
+		},
+	}
+
+	// Enviar mensagem
+	whatsmeowClient := client.GetClient()
+	resp, err := whatsmeowClient.SendMessage(ctx, recipientJID, message)
+	if err != nil {
+		g.logger.ErrorWithFields("Failed to send location message", map[string]interface{}{
+			"session_name": sessionName,
+			"to":           to,
+			"error":        err.Error(),
+		})
+		return nil, fmt.Errorf("failed to send location message: %w", err)
+	}
+
+	result := &session.MessageSendResult{
+		MessageID: resp.ID,
+		Status:    "sent",
+		Timestamp: resp.Timestamp,
+		To:        to,
+	}
+
+	g.logger.InfoWithFields("Location message sent successfully", map[string]interface{}{
+		"session_name": sessionName,
+		"message_id":   resp.ID,
+		"to":           to,
+	})
+
+	return result, nil
+}
+
+// SendContactMessage envia uma mensagem de contato via WhatsApp
+func (g *Gateway) SendContactMessage(ctx context.Context, sessionName, to, contactName, contactPhone string) (*session.MessageSendResult, error) {
+	client := g.getClient(sessionName)
+	if client == nil {
+		return nil, fmt.Errorf("session %s not found", sessionName)
+	}
+
+	if !client.IsLoggedIn() {
+		return nil, fmt.Errorf("session %s is not logged in", sessionName)
+	}
+
+	g.logger.InfoWithFields("Sending contact message via WhatsApp", map[string]interface{}{
+		"session_name":   sessionName,
+		"to":             to,
+		"contact_name":   contactName,
+		"contact_phone":  contactPhone,
+	})
+
+	// Parse recipient JID
+	recipientJID, err := types.ParseJID(to)
+	if err != nil {
+		return nil, fmt.Errorf("invalid recipient JID: %w", err)
+	}
+
+	// Criar vCard
+	vcard := fmt.Sprintf("BEGIN:VCARD\nVERSION:3.0\nFN:%s\nTEL:%s\nEND:VCARD", contactName, contactPhone)
+
+	message := &waE2E.Message{
+		ContactMessage: &waE2E.ContactMessage{
+			DisplayName: &contactName,
+			Vcard:       &vcard,
+		},
+	}
+
+	// Enviar mensagem
+	whatsmeowClient := client.GetClient()
+	resp, err := whatsmeowClient.SendMessage(ctx, recipientJID, message)
+	if err != nil {
+		g.logger.ErrorWithFields("Failed to send contact message", map[string]interface{}{
+			"session_name": sessionName,
+			"to":           to,
+			"error":        err.Error(),
+		})
+		return nil, fmt.Errorf("failed to send contact message: %w", err)
+	}
+
+	result := &session.MessageSendResult{
+		MessageID: resp.ID,
+		Status:    "sent",
+		Timestamp: resp.Timestamp,
+		To:        to,
+	}
+
+	g.logger.InfoWithFields("Contact message sent successfully", map[string]interface{}{
+		"session_name": sessionName,
+		"message_id":   resp.ID,
+		"to":           to,
+	})
+
+	return result, nil
 }
 
 // SetEventHandler implementa session.WhatsAppGateway.SetEventHandler

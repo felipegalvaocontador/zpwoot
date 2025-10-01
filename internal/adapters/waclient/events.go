@@ -1,4 +1,443 @@
 package waclient
 
-// Event handling será implementado em fases futuras
-// Este arquivo é um placeholder para manter a estrutura
+import (
+	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
+	"go.mau.fi/whatsmeow/proto/waE2E"
+	"go.mau.fi/whatsmeow/types/events"
+
+	"zpwoot/platform/logger"
+)
+
+// EventHandler processa eventos do WhatsApp baseado no legacy
+type EventHandler struct {
+	gateway     *Gateway
+	sessionName string
+	logger      *logger.Logger
+
+	// Callbacks externos
+	webhookHandler  WebhookEventHandler
+	chatwootManager ChatwootManager
+}
+
+// WebhookEventHandler interface para processar eventos via webhook
+type WebhookEventHandler interface {
+	HandleWhatsmeowEvent(evt interface{}, sessionID string) error
+}
+
+// ChatwootManager interface para integração com Chatwoot
+type ChatwootManager interface {
+	IsEnabled(sessionID string) bool
+	ProcessWhatsAppMessage(sessionID, messageID, from, content, messageType string, timestamp time.Time, fromMe bool) error
+}
+
+// NewEventHandler cria novo event handler
+func NewEventHandler(gateway *Gateway, sessionName string, logger *logger.Logger) *EventHandler {
+	return &EventHandler{
+		gateway:     gateway,
+		sessionName: sessionName,
+		logger:      logger,
+	}
+}
+
+// SetWebhookHandler configura webhook handler
+func (h *EventHandler) SetWebhookHandler(handler WebhookEventHandler) {
+	h.webhookHandler = handler
+}
+
+// SetChatwootManager configura Chatwoot manager
+func (h *EventHandler) SetChatwootManager(manager ChatwootManager) {
+	h.chatwootManager = manager
+}
+
+// HandleEvent processa eventos do WhatsApp
+func (h *EventHandler) HandleEvent(evt interface{}, sessionID string) {
+	// Entregar para webhook primeiro
+	h.deliverToWebhook(evt, sessionID)
+
+	// Processar evento internamente
+	h.handleEventInternal(evt, sessionID)
+}
+
+// handleEventInternal processa eventos internamente
+func (h *EventHandler) handleEventInternal(evt interface{}, sessionID string) {
+	switch v := evt.(type) {
+	case *events.Connected:
+		h.handleConnected(v, sessionID)
+	case *events.Disconnected:
+		h.handleDisconnected(v, sessionID)
+	case *events.LoggedOut:
+		h.handleLoggedOut(v, sessionID)
+	case *events.QR:
+		h.handleQREvent(sessionID)
+	case *events.PairSuccess:
+		h.handlePairSuccess(v, sessionID)
+	case *events.PairError:
+		h.handlePairError(v, sessionID)
+	case *events.Message:
+		h.handleMessage(v, sessionID)
+	case *events.Receipt:
+		h.handleReceipt(v, sessionID)
+	default:
+		h.handleOtherEvents(evt, sessionID)
+	}
+}
+
+// deliverToWebhook entrega evento para webhook se configurado
+func (h *EventHandler) deliverToWebhook(evt interface{}, sessionID string) {
+	if h.webhookHandler == nil {
+		return
+	}
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				h.logger.ErrorWithFields("Webhook handler panic", map[string]interface{}{
+					"session_id": sessionID,
+					"error":      r,
+				})
+			}
+		}()
+
+		if err := h.webhookHandler.HandleWhatsmeowEvent(evt, sessionID); err != nil {
+			h.logger.ErrorWithFields("Failed to deliver event to webhook", map[string]interface{}{
+				"session_id": sessionID,
+				"event_type": fmt.Sprintf("%T", evt),
+				"error":      err.Error(),
+			})
+		}
+	}()
+}
+
+// ===== EVENT HANDLERS =====
+
+// handleConnected processa evento de conexão
+func (h *EventHandler) handleConnected(evt *events.Connected, sessionID string) {
+	h.logger.InfoWithFields("WhatsApp connected", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	// TODO: Atualizar status da sessão no banco de dados
+}
+
+// handleDisconnected processa evento de desconexão
+func (h *EventHandler) handleDisconnected(evt *events.Disconnected, sessionID string) {
+	h.logger.WarnWithFields("WhatsApp disconnected", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	// TODO: Atualizar status da sessão no banco de dados
+}
+
+// handleLoggedOut processa evento de logout
+func (h *EventHandler) handleLoggedOut(evt *events.LoggedOut, sessionID string) {
+	h.logger.WarnWithFields("WhatsApp logged out", map[string]interface{}{
+		"session_id": sessionID,
+		"reason":     evt.Reason,
+	})
+
+	// TODO: Atualizar status da sessão no banco de dados
+}
+
+// handleQREvent processa evento de QR code
+func (h *EventHandler) handleQREvent(sessionID string) {
+	h.logger.InfoWithFields("QR code event received", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	// TODO: Gerar QR code e atualizar no banco de dados
+}
+
+// handlePairSuccess processa evento de pareamento bem-sucedido
+func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID string) {
+	h.logger.InfoWithFields("WhatsApp pairing successful", map[string]interface{}{
+		"session_id": sessionID,
+		"jid":        evt.ID.String(),
+	})
+
+	// TODO: Atualizar status da sessão no banco de dados
+}
+
+// handlePairError processa evento de erro de pareamento
+func (h *EventHandler) handlePairError(evt *events.PairError, sessionID string) {
+	h.logger.ErrorWithFields("WhatsApp pairing failed", map[string]interface{}{
+		"session_id": sessionID,
+		"error":      evt.Error.Error(),
+	})
+
+	// TODO: Atualizar status da sessão no banco de dados
+}
+
+// handleMessage processa evento de mensagem
+func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
+	h.logger.InfoWithFields("Message received", map[string]interface{}{
+		"session_id": sessionID,
+		"message_id": evt.Info.ID,
+		"from":       evt.Info.Sender.String(),
+		"chat":       evt.Info.Chat.String(),
+		"from_me":    evt.Info.IsFromMe,
+		"type":       evt.Info.Type,
+	})
+
+	// Processar para Chatwoot se habilitado
+	if h.chatwootManager != nil && h.chatwootManager.IsEnabled(sessionID) {
+		h.processMessageForChatwoot(evt, sessionID)
+	}
+
+	// TODO: Salvar mensagem no banco de dados
+}
+
+// handleReceipt processa evento de recibo
+func (h *EventHandler) handleReceipt(evt *events.Receipt, sessionID string) {
+	h.logger.DebugWithFields("Receipt received", map[string]interface{}{
+		"session_id": sessionID,
+		"type":       evt.Type,
+		"sender":     evt.Sender.String(),
+		"timestamp":  evt.Timestamp,
+	})
+
+	// TODO: Atualizar status das mensagens
+}
+
+// handleOtherEvents processa outros eventos
+func (h *EventHandler) handleOtherEvents(evt interface{}, sessionID string) {
+	switch v := evt.(type) {
+	case *events.Presence:
+		h.handlePresence(v, sessionID)
+	case *events.ChatPresence:
+		h.handleChatPresence(v, sessionID)
+	case *events.HistorySync:
+		h.handleHistorySync(v, sessionID)
+	case *events.AppState:
+		h.handleAppState(v)
+	case *events.AppStateSyncComplete:
+		h.handleAppStateSyncComplete(v, sessionID)
+	case *events.KeepAliveTimeout:
+		h.handleKeepAliveTimeout(v, sessionID)
+	case *events.KeepAliveRestored:
+		h.handleKeepAliveRestored(v, sessionID)
+	case *events.Contact:
+		h.handleContact(v, sessionID)
+	case *events.GroupInfo:
+		h.handleGroupInfo(v, sessionID)
+	case *events.Picture:
+		h.handlePicture(v, sessionID)
+	case *events.BusinessName:
+		h.handleBusinessName(v, sessionID)
+	default:
+		h.logger.DebugWithFields("Unhandled event", map[string]interface{}{
+			"session_id": sessionID,
+			"event_type": reflect.TypeOf(evt).String(),
+		})
+	}
+}
+
+// processMessageForChatwoot processa mensagem para Chatwoot
+func (h *EventHandler) processMessageForChatwoot(evt *events.Message, sessionID string) {
+	messageID := evt.Info.ID
+	from := evt.Info.Sender.String()
+	timestamp := evt.Info.Timestamp
+	fromMe := evt.Info.IsFromMe
+
+	// Extrair conteúdo e tipo da mensagem
+	content, messageType := h.extractMessageContent(evt.Message)
+
+	// Extrair número de telefone do contato
+	contactNumber := h.extractContactNumber(from)
+
+	h.logger.DebugWithFields("Processing message for Chatwoot", map[string]interface{}{
+		"session_id":     sessionID,
+		"message_id":     messageID,
+		"contact_number": contactNumber,
+		"message_type":   messageType,
+		"from_me":        fromMe,
+	})
+
+	err := h.chatwootManager.ProcessWhatsAppMessage(sessionID, messageID, contactNumber, content, messageType, timestamp, fromMe)
+	if err != nil {
+		h.logger.ErrorWithFields("Failed to process message for Chatwoot", map[string]interface{}{
+			"session_id": sessionID,
+			"message_id": messageID,
+			"error":      err.Error(),
+		})
+	} else {
+		h.logger.DebugWithFields("Message processed for Chatwoot", map[string]interface{}{
+			"session_id":   sessionID,
+			"message_id":   messageID,
+			"message_type": messageType,
+		})
+	}
+}
+
+// extractMessageContent extrai conteúdo e tipo da mensagem
+func (h *EventHandler) extractMessageContent(message *waE2E.Message) (string, string) {
+	if message == nil {
+		return "", "unknown"
+	}
+
+	// Texto simples
+	if message.Conversation != nil {
+		return *message.Conversation, "text"
+	}
+
+	// Texto estendido
+	if message.ExtendedTextMessage != nil && message.ExtendedTextMessage.Text != nil {
+		return *message.ExtendedTextMessage.Text, "text"
+	}
+
+	// Imagem
+	if message.ImageMessage != nil {
+		caption := ""
+		if message.ImageMessage.Caption != nil {
+			caption = *message.ImageMessage.Caption
+		}
+		return caption, "image"
+	}
+
+	// Áudio
+	if message.AudioMessage != nil {
+		return "[Audio]", "audio"
+	}
+
+	// Vídeo
+	if message.VideoMessage != nil {
+		caption := ""
+		if message.VideoMessage.Caption != nil {
+			caption = *message.VideoMessage.Caption
+		}
+		return caption, "video"
+	}
+
+	// Documento
+	if message.DocumentMessage != nil {
+		filename := ""
+		if message.DocumentMessage.FileName != nil {
+			filename = *message.DocumentMessage.FileName
+		}
+		return fmt.Sprintf("[Document: %s]", filename), "document"
+	}
+
+	// Sticker
+	if message.StickerMessage != nil {
+		return "[Sticker]", "sticker"
+	}
+
+	// Localização
+	if message.LocationMessage != nil {
+		return "[Location]", "location"
+	}
+
+	// Contato
+	if message.ContactMessage != nil {
+		name := ""
+		if message.ContactMessage.DisplayName != nil {
+			name = *message.ContactMessage.DisplayName
+		}
+		return fmt.Sprintf("[Contact: %s]", name), "contact"
+	}
+
+	return "[Unknown message type]", "unknown"
+}
+
+// extractContactNumber extrai número de telefone do JID
+func (h *EventHandler) extractContactNumber(jid string) string {
+	// JID format: number@s.whatsapp.net
+	parts := strings.Split(jid, "@")
+	if len(parts) > 0 {
+		return parts[0]
+	}
+	return jid
+}
+
+// ===== OTHER EVENT HANDLERS =====
+
+// handlePresence processa evento de presença
+func (h *EventHandler) handlePresence(evt *events.Presence, sessionID string) {
+	h.logger.DebugWithFields("Presence update", map[string]interface{}{
+		"session_id": sessionID,
+		"from":       evt.From.String(),
+		"presence":   evt.Unavailable,
+	})
+}
+
+// handleChatPresence processa evento de presença em chat
+func (h *EventHandler) handleChatPresence(evt *events.ChatPresence, sessionID string) {
+	h.logger.DebugWithFields("Chat presence update", map[string]interface{}{
+		"session_id": sessionID,
+		"chat":       evt.Chat.String(),
+		"state":      evt.State,
+	})
+}
+
+// handleHistorySync processa evento de sincronização de histórico
+func (h *EventHandler) handleHistorySync(evt *events.HistorySync, sessionID string) {
+	h.logger.InfoWithFields("History sync", map[string]interface{}{
+		"session_id": sessionID,
+		"type":       evt.Data.SyncType,
+		"progress":   evt.Data.Progress,
+	})
+}
+
+// handleAppState processa evento de estado da aplicação
+func (h *EventHandler) handleAppState(evt *events.AppState) {
+	h.logger.DebugWithFields("App state update", map[string]interface{}{
+		"name": "app_state",
+	})
+}
+
+// handleAppStateSyncComplete processa evento de sincronização completa
+func (h *EventHandler) handleAppStateSyncComplete(evt *events.AppStateSyncComplete, sessionID string) {
+	h.logger.InfoWithFields("App state sync complete", map[string]interface{}{
+		"session_id": sessionID,
+		"name":       evt.Name,
+	})
+}
+
+// handleKeepAliveTimeout processa evento de timeout de keep alive
+func (h *EventHandler) handleKeepAliveTimeout(evt *events.KeepAliveTimeout, sessionID string) {
+	h.logger.WarnWithFields("Keep alive timeout", map[string]interface{}{
+		"session_id": sessionID,
+	})
+}
+
+// handleKeepAliveRestored processa evento de keep alive restaurado
+func (h *EventHandler) handleKeepAliveRestored(evt *events.KeepAliveRestored, sessionID string) {
+	h.logger.InfoWithFields("Keep alive restored", map[string]interface{}{
+		"session_id": sessionID,
+	})
+}
+
+// handleContact processa evento de contato
+func (h *EventHandler) handleContact(evt *events.Contact, sessionID string) {
+	h.logger.DebugWithFields("Contact update", map[string]interface{}{
+		"session_id": sessionID,
+		"jid":        evt.JID.String(),
+	})
+}
+
+// handleGroupInfo processa evento de informações de grupo
+func (h *EventHandler) handleGroupInfo(evt *events.GroupInfo, sessionID string) {
+	h.logger.DebugWithFields("Group info update", map[string]interface{}{
+		"session_id": sessionID,
+		"jid":        evt.JID.String(),
+	})
+}
+
+// handlePicture processa evento de foto
+func (h *EventHandler) handlePicture(evt *events.Picture, sessionID string) {
+	h.logger.DebugWithFields("Picture update", map[string]interface{}{
+		"session_id": sessionID,
+		"jid":        evt.JID.String(),
+	})
+}
+
+// handleBusinessName processa evento de nome comercial
+func (h *EventHandler) handleBusinessName(evt *events.BusinessName, sessionID string) {
+	h.logger.DebugWithFields("Business name update", map[string]interface{}{
+		"session_id": sessionID,
+		"jid":        evt.JID.String(),
+	})
+}

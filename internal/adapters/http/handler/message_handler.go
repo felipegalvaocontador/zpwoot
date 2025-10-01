@@ -353,28 +353,23 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Verificar se sessão existe
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	// Enviar mensagem via MessageService
+	response, err := h.messageService.SendTextMessage(r.Context(), sessionID, req.To, req.Content)
 	if err != nil {
-		h.GetWriter().WriteNotFound(w, "Session not found")
+		h.GetLogger().ErrorWithFields("Failed to send text message", map[string]interface{}{
+			"session_id": sessionID,
+			"to":         req.To,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to send text message")
 		return
 	}
 
-	// TODO: Implementar envio via WhatsApp Gateway
-	// Por enquanto, simular resposta de sucesso
-	response := map[string]interface{}{
-		"message_id": uuid.New().String(),
-		"to":         req.To,
-		"content":    req.Content,
-		"status":     "sent",
-		"timestamp":  "2024-01-01T00:00:00Z",
-	}
-
 	h.LogSuccess("send text message", map[string]interface{}{
-		"session_id":   sessionID,
-		"session_name": session.Session.Name,
-		"to":           req.To,
-		"content_len":  len(req.Content),
+		"session_id":  sessionID,
+		"message_id":  response.MessageID,
+		"to":          req.To,
+		"content_len": len(req.Content),
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Text message sent successfully")
@@ -416,31 +411,25 @@ func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Verificar se sessão existe
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	// Enviar mensagem via MessageService
+	response, err := h.messageService.SendMediaMessage(r.Context(), sessionID, req.To, req.MediaURL, req.Caption, req.Type)
 	if err != nil {
-		h.GetWriter().WriteNotFound(w, "Session not found")
+		h.GetLogger().ErrorWithFields("Failed to send media message", map[string]interface{}{
+			"session_id": sessionID,
+			"to":         req.To,
+			"media_type": req.Type,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to send media message")
 		return
 	}
 
-	// TODO: Implementar envio via WhatsApp Gateway
-	// Por enquanto, simular resposta de sucesso
-	response := map[string]interface{}{
-		"message_id": uuid.New().String(),
-		"to":         req.To,
-		"media_url":  req.MediaURL,
-		"type":       req.Type,
-		"caption":    req.Caption,
-		"status":     "sent",
-		"timestamp":  "2024-01-01T00:00:00Z",
-	}
-
 	h.LogSuccess("send media message", map[string]interface{}{
-		"session_id":   sessionID,
-		"session_name": session.Session.Name,
-		"to":           req.To,
-		"type":         req.Type,
-		"media_url":    req.MediaURL,
+		"session_id": sessionID,
+		"message_id": response.MessageID,
+		"to":         req.To,
+		"media_type": req.Type,
+		"media_url":  req.MediaURL,
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Media message sent successfully")
@@ -482,28 +471,24 @@ func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar se sessão existe
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	// Enviar mensagem via MessageService
+	response, err := h.messageService.SendImageMessage(r.Context(), sessionID, req.To, req.File, req.Caption, req.Filename)
 	if err != nil {
-		h.GetWriter().WriteNotFound(w, "Session not found")
+		h.GetLogger().ErrorWithFields("Failed to send image message", map[string]interface{}{
+			"session_id": sessionID,
+			"to":         req.To,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to send image message")
 		return
 	}
 
-	// TODO: Implementar envio via WhatsApp Gateway
-	// Por enquanto, simular resposta de sucesso
-	response := &dto.SendMessageResponse{
-		MessageID: uuid.New().String(),
-		To:        req.To,
-		Status:    "sent",
-		Timestamp: time.Now(),
-	}
-
 	h.LogSuccess("send image message", map[string]interface{}{
-		"session_id":   sessionID,
-		"session_name": session.Session.Name,
-		"to":           req.To,
-		"has_caption":  req.Caption != "",
-		"filename":     req.Filename,
+		"session_id":  sessionID,
+		"message_id":  response.MessageID,
+		"to":          req.To,
+		"has_caption": req.Caption != "",
+		"filename":    req.Filename,
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Image message sent successfully")
@@ -545,27 +530,24 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar se sessão existe
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	// Enviar mensagem via MessageService
+	response, err := h.messageService.SendAudioMessage(r.Context(), sessionID, req.To, req.File, req.Caption)
 	if err != nil {
-		h.GetWriter().WriteNotFound(w, "Session not found")
+		h.GetLogger().ErrorWithFields("Failed to send audio message", map[string]interface{}{
+			"session_id": sessionID,
+			"to":         req.To,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to send audio message")
 		return
 	}
 
-	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
-		MessageID: uuid.New().String(),
-		To:        req.To,
-		Status:    "sent",
-		Timestamp: time.Now(),
-	}
-
 	h.LogSuccess("send audio message", map[string]interface{}{
-		"session_id":   sessionID,
-		"session_name": session.Session.Name,
-		"to":           req.To,
-		"has_caption":  req.Caption != "",
-		"mime_type":    req.MimeType,
+		"session_id":  sessionID,
+		"message_id":  response.MessageID,
+		"to":          req.To,
+		"has_caption": req.Caption != "",
+		"mime_type":   req.MimeType,
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Audio message sent successfully")
@@ -605,26 +587,24 @@ func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	// Enviar mensagem via MessageService
+	response, err := h.messageService.SendVideoMessage(r.Context(), sessionID, req.To, req.File, req.Caption, req.Filename)
 	if err != nil {
-		h.GetWriter().WriteNotFound(w, "Session not found")
+		h.GetLogger().ErrorWithFields("Failed to send video message", map[string]interface{}{
+			"session_id": sessionID,
+			"to":         req.To,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to send video message")
 		return
 	}
 
-	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
-		MessageID: uuid.New().String(),
-		To:        req.To,
-		Status:    "sent",
-		Timestamp: time.Now(),
-	}
-
 	h.LogSuccess("send video message", map[string]interface{}{
-		"session_id":   sessionID,
-		"session_name": session.Session.Name,
-		"to":           req.To,
-		"has_caption":  req.Caption != "",
-		"filename":     req.Filename,
+		"session_id":  sessionID,
+		"message_id":  response.MessageID,
+		"to":          req.To,
+		"has_caption": req.Caption != "",
+		"filename":    req.Filename,
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Video message sent successfully")
@@ -664,26 +644,24 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	// Enviar mensagem via MessageService
+	response, err := h.messageService.SendDocumentMessage(r.Context(), sessionID, req.To, req.File, req.Caption, req.Filename)
 	if err != nil {
-		h.GetWriter().WriteNotFound(w, "Session not found")
+		h.GetLogger().ErrorWithFields("Failed to send document message", map[string]interface{}{
+			"session_id": sessionID,
+			"to":         req.To,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to send document message")
 		return
 	}
 
-	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
-		MessageID: uuid.New().String(),
-		To:        req.To,
-		Status:    "sent",
-		Timestamp: time.Now(),
-	}
-
 	h.LogSuccess("send document message", map[string]interface{}{
-		"session_id":   sessionID,
-		"session_name": session.Session.Name,
-		"to":           req.To,
-		"filename":     req.Filename,
-		"has_caption":  req.Caption != "",
+		"session_id":  sessionID,
+		"message_id":  response.MessageID,
+		"to":          req.To,
+		"filename":    req.Filename,
+		"has_caption": req.Caption != "",
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Document message sent successfully")
@@ -723,25 +701,23 @@ func (h *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	// Enviar mensagem via MessageService
+	response, err := h.messageService.SendStickerMessage(r.Context(), sessionID, req.To, req.File)
 	if err != nil {
-		h.GetWriter().WriteNotFound(w, "Session not found")
+		h.GetLogger().ErrorWithFields("Failed to send sticker message", map[string]interface{}{
+			"session_id": sessionID,
+			"to":         req.To,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to send sticker message")
 		return
 	}
 
-	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
-		MessageID: uuid.New().String(),
-		To:        req.To,
-		Status:    "sent",
-		Timestamp: time.Now(),
-	}
-
 	h.LogSuccess("send sticker message", map[string]interface{}{
-		"session_id":   sessionID,
-		"session_name": session.Session.Name,
-		"to":           req.To,
-		"mime_type":    req.MimeType,
+		"session_id": sessionID,
+		"message_id": response.MessageID,
+		"to":         req.To,
+		"mime_type":  req.MimeType,
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Sticker message sent successfully")
@@ -781,27 +757,25 @@ func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	// Enviar mensagem via MessageService
+	response, err := h.messageService.SendLocationMessage(r.Context(), sessionID, req.To, req.Latitude, req.Longitude, req.Address)
 	if err != nil {
-		h.GetWriter().WriteNotFound(w, "Session not found")
+		h.GetLogger().ErrorWithFields("Failed to send location message", map[string]interface{}{
+			"session_id": sessionID,
+			"to":         req.To,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to send location message")
 		return
 	}
 
-	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
-		MessageID: uuid.New().String(),
-		To:        req.To,
-		Status:    "sent",
-		Timestamp: time.Now(),
-	}
-
 	h.LogSuccess("send location message", map[string]interface{}{
-		"session_id":   sessionID,
-		"session_name": session.Session.Name,
-		"to":           req.To,
-		"latitude":     req.Latitude,
-		"longitude":    req.Longitude,
-		"address":      req.Address,
+		"session_id": sessionID,
+		"message_id": response.MessageID,
+		"to":         req.To,
+		"latitude":   req.Latitude,
+		"longitude":  req.Longitude,
+		"address":    req.Address,
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Location message sent successfully")
@@ -841,23 +815,21 @@ func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	// Enviar mensagem via MessageService
+	response, err := h.messageService.SendContactMessage(r.Context(), sessionID, req.To, req.ContactName, req.ContactPhone)
 	if err != nil {
-		h.GetWriter().WriteNotFound(w, "Session not found")
+		h.GetLogger().ErrorWithFields("Failed to send contact message", map[string]interface{}{
+			"session_id": sessionID,
+			"to":         req.To,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to send contact message")
 		return
-	}
-
-	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
-		MessageID: uuid.New().String(),
-		To:        req.To,
-		Status:    "sent",
-		Timestamp: time.Now(),
 	}
 
 	h.LogSuccess("send contact message", map[string]interface{}{
 		"session_id":    sessionID,
-		"session_name":  session.Session.Name,
+		"message_id":    response.MessageID,
 		"to":            req.To,
 		"contact_name":  req.ContactName,
 		"contact_phone": req.ContactPhone,

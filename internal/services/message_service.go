@@ -24,6 +24,7 @@ type MessageService struct {
 	// External dependencies (injected via interfaces)
 	messageRepo messaging.Repository
 	sessionRepo session.Repository
+	whatsappGW  session.WhatsAppGateway
 
 	// Platform dependencies
 	logger    *logger.Logger
@@ -36,6 +37,7 @@ func NewMessageService(
 	sessionCore *session.Service,
 	messageRepo messaging.Repository,
 	sessionRepo session.Repository,
+	whatsappGW session.WhatsAppGateway,
 	logger *logger.Logger,
 	validator *validation.Validator,
 ) *MessageService {
@@ -44,6 +46,7 @@ func NewMessageService(
 		sessionCore:   sessionCore,
 		messageRepo:   messageRepo,
 		sessionRepo:   sessionRepo,
+		whatsappGW:    whatsappGW,
 		logger:        logger,
 		validator:     validator,
 	}
@@ -276,6 +279,247 @@ func (s *MessageService) GetMessageStats(ctx context.Context, sessionID *string)
 	}
 
 	return s.messagingCore.GetStats(ctx)
+}
+
+// ===== WHATSAPP MESSAGE SENDING METHODS =====
+
+// SendTextMessage envia uma mensagem de texto via WhatsApp
+func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, content string) (*dto.SendMessageResponse, error) {
+	// Validar parâmetros
+	if sessionID == "" || to == "" || content == "" {
+		return nil, fmt.Errorf("sessionID, to, and content are required")
+	}
+
+	// Parse session ID
+	sessionUUID, err := uuid.Parse(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid session ID: %w", err)
+	}
+
+	// Verificar se sessão existe e está conectada
+	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
+	if err != nil {
+		return nil, fmt.Errorf("session not found: %w", err)
+	}
+
+	if !sessionInfo.IsConnected {
+		return nil, fmt.Errorf("session %s is not connected", sessionID)
+	}
+
+	s.logger.InfoWithFields("Sending text message via WhatsApp", map[string]interface{}{
+		"session_id": sessionID,
+		"to":         to,
+		"content_len": len(content),
+	})
+
+	// Enviar mensagem via WhatsApp Gateway
+	result, err := s.whatsappGW.SendTextMessage(ctx, sessionID, to, content)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send text message via WhatsApp Gateway: %w", err)
+	}
+
+	// Criar resposta
+	response := &dto.SendMessageResponse{
+		MessageID: result.MessageID,
+		To:        result.To,
+		Status:    result.Status,
+		Timestamp: result.Timestamp,
+	}
+
+	s.logger.InfoWithFields("Text message sent successfully", map[string]interface{}{
+		"session_id": sessionID,
+		"message_id": result.MessageID,
+		"to":         result.To,
+	})
+
+	return response, nil
+}
+
+// SendMediaMessage envia uma mensagem de mídia via WhatsApp
+func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, mediaURL, caption, mediaType string) (*dto.SendMessageResponse, error) {
+	// Validar parâmetros
+	if sessionID == "" || to == "" || mediaURL == "" {
+		return nil, fmt.Errorf("sessionID, to, and mediaURL are required")
+	}
+
+	// Parse session ID
+	sessionUUID, err := uuid.Parse(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid session ID: %w", err)
+	}
+
+	// Verificar se sessão existe e está conectada
+	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
+	if err != nil {
+		return nil, fmt.Errorf("session not found: %w", err)
+	}
+
+	if !sessionInfo.IsConnected {
+		return nil, fmt.Errorf("session %s is not connected", sessionID)
+	}
+
+	s.logger.InfoWithFields("Sending media message via WhatsApp", map[string]interface{}{
+		"session_id": sessionID,
+		"to":         to,
+		"media_url":  mediaURL,
+		"media_type": mediaType,
+		"has_caption": caption != "",
+	})
+
+	// Enviar mensagem via WhatsApp Gateway
+	result, err := s.whatsappGW.SendMediaMessage(ctx, sessionID, to, mediaURL, caption, mediaType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send media message via WhatsApp Gateway: %w", err)
+	}
+
+	// Criar resposta
+	response := &dto.SendMessageResponse{
+		MessageID: result.MessageID,
+		To:        result.To,
+		Status:    result.Status,
+		Timestamp: result.Timestamp,
+	}
+
+	s.logger.InfoWithFields("Media message sent successfully", map[string]interface{}{
+		"session_id": sessionID,
+		"message_id": result.MessageID,
+		"to":         result.To,
+		"media_type": mediaType,
+	})
+
+	return response, nil
+}
+
+// SendImageMessage envia uma mensagem de imagem via WhatsApp
+func (s *MessageService) SendImageMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*dto.SendMessageResponse, error) {
+	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "image")
+}
+
+// SendAudioMessage envia uma mensagem de áudio via WhatsApp
+func (s *MessageService) SendAudioMessage(ctx context.Context, sessionID, to, file, caption string) (*dto.SendMessageResponse, error) {
+	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "audio")
+}
+
+// SendVideoMessage envia uma mensagem de vídeo via WhatsApp
+func (s *MessageService) SendVideoMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*dto.SendMessageResponse, error) {
+	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "video")
+}
+
+// SendDocumentMessage envia uma mensagem de documento via WhatsApp
+func (s *MessageService) SendDocumentMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*dto.SendMessageResponse, error) {
+	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "document")
+}
+
+// SendStickerMessage envia uma mensagem de sticker via WhatsApp
+func (s *MessageService) SendStickerMessage(ctx context.Context, sessionID, to, file string) (*dto.SendMessageResponse, error) {
+	return s.SendMediaMessage(ctx, sessionID, to, file, "", "sticker")
+}
+
+// SendLocationMessage envia uma mensagem de localização via WhatsApp
+func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to string, latitude, longitude float64, address string) (*dto.SendMessageResponse, error) {
+	// Validar parâmetros
+	if sessionID == "" || to == "" {
+		return nil, fmt.Errorf("sessionID and to are required")
+	}
+
+	// Parse session ID
+	sessionUUID, err := uuid.Parse(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid session ID: %w", err)
+	}
+
+	// Verificar se sessão existe e está conectada
+	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
+	if err != nil {
+		return nil, fmt.Errorf("session not found: %w", err)
+	}
+
+	if !sessionInfo.IsConnected {
+		return nil, fmt.Errorf("session %s is not connected", sessionID)
+	}
+
+	s.logger.InfoWithFields("Sending location message via WhatsApp", map[string]interface{}{
+		"session_id": sessionID,
+		"to":         to,
+		"latitude":   latitude,
+		"longitude":  longitude,
+		"address":    address,
+	})
+
+	// Enviar mensagem via WhatsApp Gateway
+	result, err := s.whatsappGW.SendLocationMessage(ctx, sessionID, to, latitude, longitude, address)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send location message via WhatsApp Gateway: %w", err)
+	}
+
+	// Criar resposta
+	response := &dto.SendMessageResponse{
+		MessageID: result.MessageID,
+		To:        result.To,
+		Status:    result.Status,
+		Timestamp: result.Timestamp,
+	}
+
+	s.logger.InfoWithFields("Location message sent successfully", map[string]interface{}{
+		"session_id": sessionID,
+		"message_id": result.MessageID,
+		"to":         result.To,
+	})
+
+	return response, nil
+}
+
+// SendContactMessage envia uma mensagem de contato via WhatsApp
+func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, contactName, contactPhone string) (*dto.SendMessageResponse, error) {
+	// Validar parâmetros
+	if sessionID == "" || to == "" || contactName == "" || contactPhone == "" {
+		return nil, fmt.Errorf("sessionID, to, contactName, and contactPhone are required")
+	}
+
+	// Parse session ID
+	sessionUUID, err := uuid.Parse(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid session ID: %w", err)
+	}
+
+	// Verificar se sessão existe e está conectada
+	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
+	if err != nil {
+		return nil, fmt.Errorf("session not found: %w", err)
+	}
+
+	if !sessionInfo.IsConnected {
+		return nil, fmt.Errorf("session %s is not connected", sessionID)
+	}
+
+	s.logger.InfoWithFields("Sending contact message via WhatsApp", map[string]interface{}{
+		"session_id":    sessionID,
+		"to":            to,
+		"contact_name":  contactName,
+		"contact_phone": contactPhone,
+	})
+
+	// Enviar mensagem via WhatsApp Gateway
+	result, err := s.whatsappGW.SendContactMessage(ctx, sessionID, to, contactName, contactPhone)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send contact message via WhatsApp Gateway: %w", err)
+	}
+
+	// Criar resposta
+	response := &dto.SendMessageResponse{
+		MessageID: result.MessageID,
+		To:        result.To,
+		Status:    result.Status,
+		Timestamp: result.Timestamp,
+	}
+
+	s.logger.InfoWithFields("Contact message sent successfully", map[string]interface{}{
+		"session_id": sessionID,
+		"message_id": result.MessageID,
+		"to":         result.To,
+	})
+
+	return response, nil
 }
 
 // messageToDTO converte uma mensagem do domínio para DTO

@@ -116,6 +116,7 @@ func (c *Container) initialize() error {
 		c.sessionCore,
 		c.messageRepo,
 		c.sessionRepo,
+		c.whatsappGateway,
 		c.logger,
 		validator,
 	)

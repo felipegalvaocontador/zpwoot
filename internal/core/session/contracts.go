@@ -54,6 +54,12 @@ type WhatsAppGateway interface {
 
 	// Eventos e callbacks
 	SetEventHandler(handler EventHandler)
+
+	// Envio de mensagens
+	SendTextMessage(ctx context.Context, sessionName, to, content string) (*MessageSendResult, error)
+	SendMediaMessage(ctx context.Context, sessionName, to, mediaURL, caption, mediaType string) (*MessageSendResult, error)
+	SendLocationMessage(ctx context.Context, sessionName, to string, latitude, longitude float64, address string) (*MessageSendResult, error)
+	SendContactMessage(ctx context.Context, sessionName, to, contactName, contactPhone string) (*MessageSendResult, error)
 }
 
 // EventHandler interface para eventos do WhatsApp
@@ -78,6 +84,14 @@ type WhatsAppMessage struct {
 	Timestamp time.Time              `json:"timestamp"`
 	FromMe    bool                   `json:"from_me"`
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// MessageSendResult representa o resultado do envio de uma mensagem
+type MessageSendResult struct {
+	MessageID string    `json:"message_id"`
+	Status    string    `json:"status"`
+	Timestamp time.Time `json:"timestamp"`
+	To        string    `json:"to"`
 }
 
 // QRCodeGenerator interface para geração de QR codes

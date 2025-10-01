@@ -880,14 +880,21 @@ func (h *GroupHandler) SetGroupName(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			result, err := h.groupUC.SetGroupName(ctx, sessionID, req.(*group.SetGroupNameRequest))
+			groupReq, ok := req.(*group.SetGroupNameRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.groupUC.SetGroupName(ctx, sessionID, groupReq)
 			if err != nil {
 				return nil, err
 			}
 			return result, nil
 		},
 		func(req interface{}) string {
-			return req.(*group.SetGroupNameRequest).GroupJID
+			if groupReq, ok := req.(*group.SetGroupNameRequest); ok {
+				return groupReq.GroupJID
+			}
+			return ""
 		},
 	)
 }
@@ -918,7 +925,11 @@ func (h *GroupHandler) SetGroupDescription(w http.ResponseWriter, r *http.Reques
 			return &req, nil
 		},
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			result, err := h.groupUC.SetGroupDescription(ctx, sessionID, req.(*group.SetGroupDescriptionRequest))
+			groupReq, ok := req.(*group.SetGroupDescriptionRequest)
+			if !ok {
+				return nil, fmt.Errorf("invalid request type")
+			}
+			result, err := h.groupUC.SetGroupDescription(ctx, sessionID, groupReq)
 			if err != nil {
 				return nil, err
 			}

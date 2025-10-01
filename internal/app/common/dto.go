@@ -70,10 +70,10 @@ func NewSuccessResponse(data interface{}, message ...string) *SuccessResponse {
 	return response
 }
 
-func NewErrorResponse(error string, details ...interface{}) *ErrorResponse {
+func NewErrorResponse(message string, details ...interface{}) *ErrorResponse {
 	response := &ErrorResponse{
 		Success: false,
-		Error:   error,
+		Error:   message,
 	}
 
 	if len(details) > 0 {

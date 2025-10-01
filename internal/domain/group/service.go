@@ -174,7 +174,7 @@ func (s *Service) CanPerformAction(userJID, groupJID, action string, groupInfo *
 
 	if action == "remove" {
 		for _, participant := range groupInfo.Participants {
-			if participant.JID == userJID && participant.JID == groupInfo.Owner {
+			if participant.JID == userJID && userJID == groupInfo.Owner {
 				return ErrCannotRemoveOwner
 			}
 		}

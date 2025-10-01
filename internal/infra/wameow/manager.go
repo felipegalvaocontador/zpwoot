@@ -83,9 +83,7 @@ func (m *Manager) CreateSession(sessionID string, config *session.ProxyConfig) e
 		return fmt.Errorf("failed to create WameowClient for session %s: %w", sessionID, err)
 	}
 
-	if err := m.configureSession(client, sessionID, config); err != nil {
-		return fmt.Errorf("failed to configure session %s: %w", sessionID, err)
-	}
+	m.configureSession(client, sessionID, config)
 
 	m.clients[sessionID] = client
 	m.initSessionStats(sessionID)
@@ -97,7 +95,7 @@ func (m *Manager) createWameowClient(sessionID string) (*WameowClient, error) {
 	return NewWameowClient(sessionID, m.container, m.sessionMgr.GetSessionRepo(), m.logger)
 }
 
-func (m *Manager) configureSession(client *WameowClient, sessionID string, config *session.ProxyConfig) error {
+func (m *Manager) configureSession(client *WameowClient, sessionID string, config *session.ProxyConfig) {
 	m.setupEventHandlers(client.GetClient(), sessionID)
 
 	eventHandler := NewEventHandler(m, m.sessionMgr, m.qrGenerator, m.logger)
@@ -117,8 +115,6 @@ func (m *Manager) configureSession(client *WameowClient, sessionID string, confi
 			})
 		}
 	}
-
-	return nil
 }
 
 func (m *Manager) ConnectSession(sessionID string) error {

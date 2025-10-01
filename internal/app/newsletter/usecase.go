@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"zpwoot/internal/domain/newsletter"
-	"zpwoot/internal/domain/session"
 	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 )

@@ -140,10 +140,7 @@ func (s *WebhookDeliveryService) DeliverEvent(ctx context.Context, event *webhoo
 		}
 	}
 
-	webhooks, err := s.getWebhooksForEvent(ctx, event)
-	if err != nil {
-		return fmt.Errorf("failed to get webhooks for event: %w", err)
-	}
+	webhooks := s.getWebhooksForEvent(ctx, event)
 
 	if len(webhooks) == 0 {
 		s.logger.DebugWithFields("No webhooks configured for event", map[string]interface{}{

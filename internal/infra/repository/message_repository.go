@@ -99,11 +99,7 @@ func (r *MessageRepository) GetMessageByZpID(ctx context.Context, sessionID, zpM
 		return nil, fmt.Errorf("failed to get zpMessage: %w", err)
 	}
 
-	message, err := r.messageFromModel(&model)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert model to domain: %w", err)
-	}
-
+	message := r.messageFromModel(&model)
 	return message, nil
 }
 
@@ -127,11 +123,7 @@ func (r *MessageRepository) GetMessageByCwID(ctx context.Context, cwMessageID in
 		return nil, fmt.Errorf("failed to get zpMessage: %w", err)
 	}
 
-	message, err := r.messageFromModel(&model)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert model to domain: %w", err)
-	}
-
+	message := r.messageFromModel(&model)
 	return message, nil
 }
 
@@ -216,14 +208,7 @@ func (r *MessageRepository) GetMessagesBySession(ctx context.Context, sessionID 
 
 	messages := make([]*ports.ZpMessage, 0, len(models))
 	for _, model := range models {
-		message, err := r.messageFromModel(&model)
-		if err != nil {
-			r.logger.WarnWithFields("Failed to convert model to domain", map[string]interface{}{
-				"id":    model.ID,
-				"error": err.Error(),
-			})
-			continue
-		}
+		message := r.messageFromModel(&model)
 		messages = append(messages, message)
 	}
 
@@ -258,14 +243,7 @@ func (r *MessageRepository) GetMessagesByChat(ctx context.Context, sessionID, ch
 
 	messages := make([]*ports.ZpMessage, 0, len(models))
 	for _, model := range models {
-		message, err := r.messageFromModel(&model)
-		if err != nil {
-			r.logger.WarnWithFields("Failed to convert model to domain", map[string]interface{}{
-				"id":    model.ID,
-				"error": err.Error(),
-			})
-			continue
-		}
+		message := r.messageFromModel(&model)
 		messages = append(messages, message)
 	}
 
@@ -297,14 +275,7 @@ func (r *MessageRepository) GetPendingSyncMessages(ctx context.Context, sessionI
 
 	messages := make([]*ports.ZpMessage, 0, len(models))
 	for _, model := range models {
-		message, err := r.messageFromModel(&model)
-		if err != nil {
-			r.logger.WarnWithFields("Failed to convert model to domain", map[string]interface{}{
-				"id":    model.ID,
-				"error": err.Error(),
-			})
-			continue
-		}
+		message := r.messageFromModel(&model)
 		messages = append(messages, message)
 	}
 
@@ -370,7 +341,7 @@ func (r *MessageRepository) messageToModel(message *ports.ZpMessage) *zpMessageM
 	return model
 }
 
-func (r *MessageRepository) messageFromModel(model *zpMessageModel) (*ports.ZpMessage, error) {
+func (r *MessageRepository) messageFromModel(model *zpMessageModel) *ports.ZpMessage {
 	message := &ports.ZpMessage{
 		ID:          model.ID,
 		SessionID:   model.SessionID,
@@ -400,5 +371,5 @@ func (r *MessageRepository) messageFromModel(model *zpMessageModel) (*ports.ZpMe
 		message.SyncedAt = &model.SyncedAt.Time
 	}
 
-	return message, nil
+	return message
 }

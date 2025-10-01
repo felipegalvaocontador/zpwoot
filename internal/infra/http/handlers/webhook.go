@@ -131,7 +131,11 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 			return &req, nil
 		},
 		func(ctx context.Context, req interface{}) (interface{}, error) {
-			return h.webhookUC.SetConfig(ctx, req.(*webhook.SetConfigRequest))
+			result, err := h.webhookUC.SetConfig(ctx, req.(*webhook.SetConfigRequest))
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
 		},
 	)
 }

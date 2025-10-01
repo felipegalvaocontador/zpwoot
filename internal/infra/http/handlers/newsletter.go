@@ -228,7 +228,11 @@ func (h *NewsletterHandler) FollowNewsletter(w http.ResponseWriter, r *http.Requ
 		"Following newsletter",
 		"Newsletter followed successfully",
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.newsletterUC.FollowNewsletter(ctx, sessionID, req.(*newsletter.FollowNewsletterRequest))
+			result, err := h.newsletterUC.FollowNewsletter(ctx, sessionID, req.(*newsletter.FollowNewsletterRequest))
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
 		},
 		func() interface{} {
 			return &newsletter.FollowNewsletterRequest{}
@@ -256,7 +260,11 @@ func (h *NewsletterHandler) UnfollowNewsletter(w http.ResponseWriter, r *http.Re
 		"Unfollowing newsletter",
 		"Newsletter unfollowed successfully",
 		func(ctx context.Context, sessionID string, req interface{}) (interface{}, error) {
-			return h.newsletterUC.UnfollowNewsletter(ctx, sessionID, req.(*newsletter.UnfollowNewsletterRequest))
+			result, err := h.newsletterUC.UnfollowNewsletter(ctx, sessionID, req.(*newsletter.UnfollowNewsletterRequest))
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
 		},
 		func() interface{} {
 			return &newsletter.UnfollowNewsletterRequest{}

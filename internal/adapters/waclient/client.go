@@ -111,14 +111,8 @@ func NewClient(sessionName string, container *sqlstore.Container, logger *logger
 		return nil, fmt.Errorf("sqlstore container cannot be nil")
 	}
 
-	// Buscar device store específico para esta sessão
-	ctx := context.Background()
-	deviceStore, err := container.GetDevice(ctx, types.JID{User: sessionName, Server: types.DefaultUserServer})
-	if err != nil {
-		// Se não existe, criar novo device
-		deviceStore = container.NewDevice()
-	}
-
+	// Criar novo device store para esta sessão (baseado no legacy)
+	deviceStore := container.NewDevice()
 	if deviceStore == nil {
 		return nil, fmt.Errorf("failed to create device store")
 	}

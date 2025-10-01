@@ -437,19 +437,25 @@ func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Reque
 		if err.Error() == "business not found" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(common.NewErrorResponse("Business profile not found"))
+			if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Business profile not found")); encErr != nil {
+				h.logger.Error("Failed to encode error response: " + encErr.Error())
+			}
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get business profile"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Failed to get business profile")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
 	response := common.NewSuccessResponse(result, "Business profile retrieved successfully")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if encErr := json.NewEncoder(w).Encode(response); encErr != nil {
+		h.logger.Error("Failed to encode response: " + encErr.Error())
+	}
 }
 
 func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
@@ -461,7 +467,9 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -471,21 +479,27 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request format")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
 	if len(req.PhoneNumbers) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Phone numbers are required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Phone numbers are required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
 	if len(req.PhoneNumbers) > 50 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Maximum 50 phone numbers allowed"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Maximum 50 phone numbers allowed")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -511,7 +525,9 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Numbers checked successfully"))
+	if encErr := json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Numbers checked successfully")); encErr != nil {
+		h.logger.Error("Failed to encode success response: " + encErr.Error())
+	}
 }
 
 func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) {
@@ -523,7 +539,9 @@ func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) 
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -540,7 +558,9 @@ func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "All contacts retrieved successfully"))
+	if encErr := json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "All contacts retrieved successfully")); encErr != nil {
+		h.logger.Error("Failed to encode success response: " + encErr.Error())
+	}
 }
 
 func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Request) {
@@ -552,7 +572,9 @@ func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Re
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 

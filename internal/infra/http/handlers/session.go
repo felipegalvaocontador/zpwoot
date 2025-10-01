@@ -98,7 +98,9 @@ func (h *SessionHandler) handleSessionAction(
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -112,7 +114,9 @@ func (h *SessionHandler) handleSessionAction(
 	response := common.NewSuccessResponse(result, fmt.Sprintf("%s retrieved successfully", titleCase(actionName)))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode success response: " + err.Error())
+	}
 }
 
 func (h *SessionHandler) handleSessionActionNoReturn(

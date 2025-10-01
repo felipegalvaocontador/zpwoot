@@ -648,7 +648,9 @@ func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Requ
 	if len(req.JIDs) > 20 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Maximum 20 JIDs allowed"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Maximum 20 JIDs allowed")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -676,5 +678,7 @@ func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Detailed user info retrieved successfully"))
+	if encErr := json.NewEncoder(w).Encode(common.NewSuccessResponse(response, "Detailed user info retrieved successfully")); encErr != nil {
+		h.logger.Error("Failed to encode success response: " + encErr.Error())
+	}
 }

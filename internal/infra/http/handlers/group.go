@@ -128,7 +128,9 @@ func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -136,7 +138,9 @@ func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request
 	if groupJid == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -200,7 +204,9 @@ func (h *GroupHandler) UpdateGroupSettings(w http.ResponseWriter, r *http.Reques
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -217,7 +223,9 @@ func (h *GroupHandler) UpdateGroupSettings(w http.ResponseWriter, r *http.Reques
 	if req.GroupJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -249,7 +257,9 @@ func (h *GroupHandler) GetGroupRequestParticipants(w http.ResponseWriter, r *htt
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -257,7 +267,9 @@ func (h *GroupHandler) GetGroupRequestParticipants(w http.ResponseWriter, r *htt
 	if groupJid == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -285,7 +297,9 @@ func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -302,21 +316,27 @@ func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *
 	if req.GroupJID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Group JID is required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
 	if req.Action == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Action is required (approve or reject)"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Action is required (approve or reject)")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
 	if len(req.Participants) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("At least one participant is required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("At least one participant is required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -390,7 +410,9 @@ func (h *GroupHandler) GetGroupInfoFromLink(w http.ResponseWriter, r *http.Reque
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 

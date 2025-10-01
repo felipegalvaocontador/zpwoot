@@ -9,7 +9,8 @@ import (
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/webhook"
-	domainSession "zpwoot/internal/domain/session"
+	"zpwoot/internal/domain/session"
+	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 )
 
@@ -18,7 +19,7 @@ type WebhookHandler struct {
 	webhookUC webhook.UseCase
 }
 
-func NewWebhookHandler(appLogger *logger.Logger, webhookUC webhook.UseCase, sessionRepo helpers.SessionRepository) *WebhookHandler {
+func NewWebhookHandler(appLogger *logger.Logger, webhookUC webhook.UseCase, sessionRepo ports.SessionRepository) *WebhookHandler {
 	return &WebhookHandler{
 		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		webhookUC:   webhookUC,
@@ -32,13 +33,13 @@ func (h *WebhookHandler) handleWebhookAction(
 	r *http.Request,
 	actionName string,
 	successMessage string,
-	parseFunc func(*http.Request, *domainSession.Session) (interface{}, error),
+	parseFunc func(*http.Request, *session.Session) (interface{}, error),
 	actionFunc func(context.Context, interface{}) (interface{}, error),
 ) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -99,7 +100,7 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 		r,
 		"Setting webhook configuration",
 		"Webhook configuration set successfully",
-		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
+		func(r *http.Request, sess *session.Session) (interface{}, error) {
 			var req webhook.SetConfigRequest
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				return nil, err
@@ -134,15 +135,29 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/webhook/find [get]
 func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
-	h.handleSimpleGetRequest(
-		w,
-		r,
-		"Finding webhook configuration",
-		"Webhook configuration retrieved successfully",
-		func(ctx context.Context, sessionID string) (interface{}, error) {
-			return h.webhookUC.FindConfig(ctx, sessionID)
-		},
-	)
+	sess, err := h.GetSessionFromURL(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if err == session.ErrSessionNotFound {
+			statusCode = http.StatusNotFound
+		}
+		h.writeErrorResponse(w, statusCode, err.Error())
+		return
+	}
+
+	h.logger.InfoWithFields("Finding webhook configuration", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	result, err := h.webhookUC.FindConfig(r.Context(), sess.ID.String())
+	if err != nil {
+		h.logger.Error("Failed to find webhook configuration: " + err.Error())
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to find webhook configuration")
+		return
+	}
+
+	h.writeSuccessResponse(w, result, "Webhook configuration retrieved successfully")
 }
 
 // @Summary Test webhook
@@ -162,7 +177,7 @@ func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")

@@ -10,7 +10,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"zpwoot/internal/app/chatwoot"
-	domainSession "zpwoot/internal/domain/session"
+	"zpwoot/internal/domain/session"
+	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 )
 
@@ -21,7 +22,7 @@ type ChatwootHandler struct {
 
 func NewChatwootHandler(
 	chatwootUC chatwoot.UseCase,
-	sessionRepo helpers.SessionRepository,
+	sessionRepo ports.SessionRepository,
 	logger *logger.Logger,
 ) *ChatwootHandler {
 	return &ChatwootHandler{
@@ -40,7 +41,7 @@ func (h *ChatwootHandler) handleChatwootAction(
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -83,7 +84,7 @@ func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -166,7 +167,7 @@ func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -213,7 +214,7 @@ func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -291,7 +292,7 @@ func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -357,7 +358,7 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 	sess, err := h.ResolveSession(r.Context(), sessionIdentifier)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())

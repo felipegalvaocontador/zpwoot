@@ -1,14 +1,14 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 
 	"zpwoot/internal/app/media"
-	domainSession "zpwoot/internal/domain/session"
+	"zpwoot/internal/domain/session"
+	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 )
 
@@ -17,7 +17,7 @@ type MediaHandler struct {
 	mediaUC media.UseCase
 }
 
-func NewMediaHandler(appLogger *logger.Logger, mediaUC media.UseCase, sessionRepo helpers.SessionRepository) *MediaHandler {
+func NewMediaHandler(appLogger *logger.Logger, mediaUC media.UseCase, sessionRepo ports.SessionRepository) *MediaHandler {
 	return &MediaHandler{
 		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		mediaUC:     mediaUC,
@@ -41,7 +41,7 @@ func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
-		if err == domainSession.ErrSessionNotFound {
+		if err == session.ErrSessionNotFound {
 			statusCode = http.StatusNotFound
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -86,7 +86,7 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -138,7 +138,7 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -211,7 +211,7 @@ func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
-		if err == domainSession.ErrSessionNotFound {
+		if err == session.ErrSessionNotFound {
 			statusCode = http.StatusNotFound
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -255,7 +255,7 @@ func (h *MediaHandler) GetMediaStats(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())

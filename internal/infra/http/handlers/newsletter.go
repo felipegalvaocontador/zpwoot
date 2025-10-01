@@ -9,7 +9,8 @@ import (
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/newsletter"
-	domainSession "zpwoot/internal/domain/session"
+	"zpwoot/internal/domain/session"
+	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 )
 
@@ -18,7 +19,7 @@ type NewsletterHandler struct {
 	newsletterUC newsletter.UseCase
 }
 
-func NewNewsletterHandler(appLogger *logger.Logger, newsletterUC newsletter.UseCase, sessionRepo helpers.SessionRepository) *NewsletterHandler {
+func NewNewsletterHandler(appLogger *logger.Logger, newsletterUC newsletter.UseCase, sessionRepo ports.SessionRepository) *NewsletterHandler {
 	return &NewsletterHandler{
 		BaseHandler:  NewBaseHandler(appLogger, sessionRepo),
 		newsletterUC: newsletterUC,
@@ -72,7 +73,7 @@ func (h *NewsletterHandler) handleNewsletterAction(
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -130,7 +131,7 @@ func (h *NewsletterHandler) GetNewsletterInfo(w http.ResponseWriter, r *http.Req
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -296,13 +297,27 @@ func (h *NewsletterHandler) UnfollowNewsletter(w http.ResponseWriter, r *http.Re
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/newsletters [get]
 func (h *NewsletterHandler) GetSubscribedNewsletters(w http.ResponseWriter, r *http.Request) {
-	h.handleSimpleGetRequest(
-		w,
-		r,
-		"Getting subscribed newsletters",
-		"Subscribed newsletters retrieved successfully",
-		func(ctx context.Context, sessionID string) (interface{}, error) {
-			return h.newsletterUC.GetSubscribedNewsletters(ctx, sessionID)
-		},
-	)
+	sess, err := h.GetSessionFromURL(r)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if err == session.ErrSessionNotFound {
+			statusCode = http.StatusNotFound
+		}
+		h.writeErrorResponse(w, statusCode, err.Error())
+		return
+	}
+
+	h.logger.InfoWithFields("Getting subscribed newsletters", map[string]interface{}{
+		"session_id":   sess.ID.String(),
+		"session_name": sess.Name,
+	})
+
+	result, err := h.newsletterUC.GetSubscribedNewsletters(r.Context(), sess.ID.String())
+	if err != nil {
+		h.logger.Error("Failed to get subscribed newsletters: " + err.Error())
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get subscribed newsletters")
+		return
+	}
+
+	h.writeSuccessResponse(w, result, "Subscribed newsletters retrieved successfully")
 }

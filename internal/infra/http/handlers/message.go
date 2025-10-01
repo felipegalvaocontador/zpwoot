@@ -13,6 +13,7 @@ import (
 	"zpwoot/internal/app/message"
 
 	"zpwoot/internal/infra/wameow"
+	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 )
 
@@ -25,7 +26,7 @@ type MessageHandler struct {
 func NewMessageHandler(
 	messageUC message.UseCase,
 	wameowManager *wameow.Manager,
-	sessionRepo helpers.SessionRepository,
+	sessionRepo ports.SessionRepository,
 	logger *logger.Logger,
 ) *MessageHandler {
 	return &MessageHandler{

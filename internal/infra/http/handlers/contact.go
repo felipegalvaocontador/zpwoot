@@ -10,8 +10,9 @@ import (
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/contact"
-	domainSession "zpwoot/internal/domain/session"
+	"zpwoot/internal/domain/session"
 
+	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 )
 
@@ -20,7 +21,7 @@ type ContactHandler struct {
 	contactUC contact.UseCase
 }
 
-func NewContactHandler(appLogger *logger.Logger, contactUC contact.UseCase, sessionRepo helpers.SessionRepository) *ContactHandler {
+func NewContactHandler(appLogger *logger.Logger, contactUC contact.UseCase, sessionRepo ports.SessionRepository) *ContactHandler {
 	return &ContactHandler{
 		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		contactUC:   contactUC,
@@ -34,14 +35,14 @@ func (h *ContactHandler) handleActionRequest(
 	r *http.Request,
 	actionName string,
 	successMessage string,
-	parseFunc func(*http.Request, *domainSession.Session) (interface{}, error),
+	parseFunc func(*http.Request, *session.Session) (interface{}, error),
 	actionFunc func(context.Context, interface{}) (interface{}, error),
 ) {
 	// Resolve sessão da URL
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if err == domainSession.ErrSessionNotFound {
+		if err == session.ErrSessionNotFound {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -91,13 +92,13 @@ func (h *ContactHandler) handleListRequest(
 	r *http.Request,
 	actionName string,
 	successMessage string,
-	listFunc func(context.Context, *domainSession.Session, int, int, string) (interface{}, error),
+	listFunc func(context.Context, *session.Session, int, int, string) (interface{}, error),
 ) {
 	// Resolve sessão da URL
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if err == domainSession.ErrSessionNotFound {
+		if err == session.ErrSessionNotFound {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -176,7 +177,7 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 		r,
 		"Checking WhatsApp numbers",
 		"Phone numbers checked successfully",
-		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
+		func(r *http.Request, sess *session.Session) (interface{}, error) {
 			var req contact.CheckWhatsAppRequest
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				return nil, err
@@ -211,7 +212,7 @@ func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Reques
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -293,7 +294,7 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 		r,
 		"Getting user info",
 		"User information retrieved successfully",
-		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
+		func(r *http.Request, sess *session.Session) (interface{}, error) {
 			var req contact.GetUserInfoRequest
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				return nil, err
@@ -331,7 +332,7 @@ func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 		r,
 		"Listing contacts",
 		"Contacts retrieved successfully",
-		func(ctx context.Context, sess *domainSession.Session, limit, offset int, search string) (interface{}, error) {
+		func(ctx context.Context, sess *session.Session, limit, offset int, search string) (interface{}, error) {
 			req := &contact.ListContactsRequest{
 				SessionID: sess.ID.String(),
 				Limit:     limit,
@@ -360,7 +361,7 @@ func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 		r,
 		"Syncing contacts",
 		"Contacts synchronized successfully",
-		func(r *http.Request, sess *domainSession.Session) (interface{}, error) {
+		func(r *http.Request, sess *session.Session) (interface{}, error) {
 			return &contact.SyncContactsRequest{
 				SessionID: sess.ID.String(),
 			}, nil
@@ -391,7 +392,7 @@ func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Reque
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -454,7 +455,7 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -526,7 +527,7 @@ func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) 
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -559,7 +560,7 @@ func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Re
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -605,7 +606,7 @@ func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Requ
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")

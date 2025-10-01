@@ -10,26 +10,27 @@ import (
 	"strings"
 
 	"zpwoot/internal/app/common"
-	"zpwoot/internal/app/session"
-	domainSession "zpwoot/internal/domain/session"
+	sessionApp "zpwoot/internal/app/session"
+	"zpwoot/internal/domain/session"
 
 	pkgErrors "zpwoot/pkg/errors"
+	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 )
 
 type SessionHandler struct {
 	*BaseHandler
-	sessionUC session.UseCase
+	sessionUC sessionApp.UseCase
 }
 
-func NewSessionHandler(appLogger *logger.Logger, sessionUC session.UseCase, sessionRepo helpers.SessionRepository) *SessionHandler {
+func NewSessionHandler(appLogger *logger.Logger, sessionUC sessionApp.UseCase, sessionRepo ports.SessionRepository) *SessionHandler {
 	return &SessionHandler{
 		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		sessionUC:   sessionUC,
 	}
 }
 
-func NewSessionHandlerWithoutUseCase(appLogger *logger.Logger, sessionRepo helpers.SessionRepository) *SessionHandler {
+func NewSessionHandlerWithoutUseCase(appLogger *logger.Logger, sessionRepo ports.SessionRepository) *SessionHandler {
 	return &SessionHandler{
 		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		sessionUC:   nil,
@@ -53,7 +54,7 @@ func (h *SessionHandler) handleSessionAction(
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
-		if err == domainSession.ErrSessionNotFound {
+		if err == session.ErrSessionNotFound {
 			statusCode = http.StatusNotFound
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -143,8 +144,8 @@ func (h *SessionHandler) handleSessionActionNoReturn(
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param request body session.CreateSessionRequest true "Session creation request with optional qrCode flag"
-// @Success 201 {object} session.CreateSessionResponse "Session created successfully. If qrCode was true, includes QR code data."
+// @Param request body sessionApp.CreateSessionRequest true "Session creation request with optional qrCode flag"
+// @Success 201 {object} sessionApp.CreateSessionResponse "Session created successfully. If qrCode was true, includes QR code data."
 // @Failure 400 {object} object "Bad Request"
 // @Failure 409 {object} object "Session already exists"
 // @Failure 500 {object} object "Internal Server Error"
@@ -165,7 +166,7 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req session.CreateSessionRequest
+	var req sessionApp.CreateSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("Failed to parse request body: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
@@ -176,30 +177,12 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Criar um sessionResolver temporário para validação
-	tempResolver := helpers.NewSessionResolver(h.logger, nil)
-	if isValid, errorMsg := tempResolver.ValidateSessionName(req.Name); !isValid {
-		h.logger.WarnWithFields("Invalid session name provided", map[string]interface{}{
-			"name":  req.Name,
-			"error": errorMsg,
+	// Validação básica do nome da sessão
+	if req.Name == "" {
+		h.logger.WarnWithFields("Empty session name provided", map[string]interface{}{
+			"name": req.Name,
 		})
-
-		suggested := tempResolver.SuggestValidName(req.Name)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":         "Invalid session name",
-			"message":       errorMsg,
-			"suggestedName": suggested,
-			"namingRules": []string{
-				"Must be 3-50 characters long",
-				"Must start with a letter",
-				"Can contain letters, numbers, hyphens, and underscores",
-				"Cannot use reserved names (create, list, info, etc.)",
-			},
-		}); err != nil {
-			h.logger.Error("Failed to encode error response: " + err.Error())
-		}
+		h.writeErrorResponse(w, http.StatusBadRequest, "Session name cannot be empty")
 		return
 	}
 
@@ -243,7 +226,7 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 // @Param deviceJid query string false "Filter by device JID"
 // @Param limit query int false "Number of sessions to return (default: 20)"
 // @Param offset query int false "Number of sessions to skip (default: 0)"
-// @Success 200 {object} session.ListSessionsResponse "Sessions retrieved successfully"
+// @Success 200 {object} sessionApp.ListSessionsResponse "Sessions retrieved successfully"
 // @Failure 400 {object} object "Bad Request"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/list [get]
@@ -255,7 +238,7 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req session.ListSessionsRequest
+	var req sessionApp.ListSessionsRequest
 
 	if isConnectedStr := r.URL.Query().Get("isConnected"); isConnectedStr != "" {
 		switch isConnectedStr {
@@ -309,7 +292,7 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} session.SessionInfoResponse "Session information retrieved successfully"
+// @Success 200 {object} sessionApp.SessionInfoResponse "Session information retrieved successfully"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/info [get]
@@ -339,7 +322,7 @@ func (h *SessionHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} session.ConnectSessionResponse "Session connection initiated successfully with QR code if needed, or confirmation if already connected"
+// @Success 200 {object} sessionApp.ConnectSessionResponse "Session connection initiated successfully with QR code if needed, or confirmation if already connected"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/connect [post]
@@ -369,7 +352,7 @@ func (h *SessionHandler) LogoutSession(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} session.QRCodeResponse "QR code generated successfully with base64 image"
+// @Success 200 {object} sessionApp.QRCodeResponse "QR code generated successfully with base64 image"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/qr [get]
@@ -386,7 +369,7 @@ func (h *SessionHandler) GetQRCode(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body session.PairPhoneRequest true "Phone pairing request"
+// @Param request body sessionApp.PairPhoneRequest true "Phone pairing request"
 // @Success 200 {object} common.SuccessResponse "Phone pairing initiated successfully"
 // @Failure 400 {object} object "Bad Request"
 // @Failure 404 {object} object "Session not found"
@@ -412,7 +395,7 @@ func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req session.PairPhoneRequest
+	var req sessionApp.PairPhoneRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("Failed to parse pair phone request: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
@@ -446,8 +429,8 @@ func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body session.SetProxyRequest true "Proxy configuration request"
-// @Success 200 {object} session.ProxyResponse "Proxy configuration set successfully"
+// @Param request body sessionApp.SetProxyRequest true "Proxy configuration request"
+// @Success 200 {object} sessionApp.ProxyResponse "Proxy configuration set successfully"
 // @Failure 400 {object} object "Bad Request"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
@@ -477,7 +460,7 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 		"session_name": sess.Name,
 	})
 
-	var req session.SetProxyRequest
+	var req sessionApp.SetProxyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("Failed to parse request body: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
@@ -513,7 +496,7 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} session.ProxyResponse "Proxy configuration retrieved successfully"
+// @Success 200 {object} sessionApp.ProxyResponse "Proxy configuration retrieved successfully"
 // @Failure 404 {object} object "Session not found"
 // @Failure 500 {object} object "Internal Server Error"
 // @Router /sessions/{sessionId}/proxy/find [get]

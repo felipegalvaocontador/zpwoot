@@ -9,8 +9,9 @@ import (
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/group"
-	domainSession "zpwoot/internal/domain/session"
+	"zpwoot/internal/domain/session"
 
+	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 )
 
@@ -19,7 +20,7 @@ type GroupHandler struct {
 	groupUC group.UseCase
 }
 
-func NewGroupHandler(appLogger *logger.Logger, groupUC group.UseCase, sessionRepo helpers.SessionRepository) *GroupHandler {
+func NewGroupHandler(appLogger *logger.Logger, groupUC group.UseCase, sessionRepo ports.SessionRepository) *GroupHandler {
 	return &GroupHandler{
 		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		groupUC:     groupUC,
@@ -38,7 +39,7 @@ func (h *GroupHandler) handleGroupActionWithValidation(
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -79,7 +80,7 @@ func (h *GroupHandler) handleGroupActionWithTwoFields(
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		h.writeErrorResponse(w, statusCode, err.Error())
@@ -119,7 +120,7 @@ func (h *GroupHandler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -196,7 +197,7 @@ func (h *GroupHandler) UpdateGroupSettings(w http.ResponseWriter, r *http.Reques
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if err == domainSession.ErrSessionNotFound {
+		if err == session.ErrSessionNotFound {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -249,7 +250,7 @@ func (h *GroupHandler) GetGroupRequestParticipants(w http.ResponseWriter, r *htt
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -289,7 +290,7 @@ func (h *GroupHandler) UpdateGroupRequestParticipants(w http.ResponseWriter, r *
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -402,7 +403,7 @@ func (h *GroupHandler) GetGroupInfoFromLink(w http.ResponseWriter, r *http.Reque
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -446,7 +447,7 @@ func (h *GroupHandler) GetGroupInfoFromInvite(w http.ResponseWriter, r *http.Req
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -500,7 +501,7 @@ func (h *GroupHandler) JoinGroupWithInvite(w http.ResponseWriter, r *http.Reques
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -557,7 +558,7 @@ func (h *GroupHandler) handleGroupActionWithJID(
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -632,7 +633,7 @@ func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -692,7 +693,7 @@ func (h *GroupHandler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -751,7 +752,7 @@ func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -796,7 +797,7 @@ func (h *GroupHandler) UpdateGroupParticipants(w http.ResponseWriter, r *http.Re
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")

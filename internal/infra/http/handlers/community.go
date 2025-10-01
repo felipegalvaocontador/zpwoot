@@ -9,7 +9,8 @@ import (
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/community"
-	domainSession "zpwoot/internal/domain/session"
+	"zpwoot/internal/domain/session"
+	"zpwoot/internal/ports"
 	"zpwoot/platform/logger"
 )
 
@@ -26,7 +27,7 @@ type CommunityHandler struct {
 	communityUC community.UseCase
 }
 
-func NewCommunityHandler(appLogger *logger.Logger, communityUC community.UseCase, sessionRepo helpers.SessionRepository) *CommunityHandler {
+func NewCommunityHandler(appLogger *logger.Logger, communityUC community.UseCase, sessionRepo ports.SessionRepository) *CommunityHandler {
 	return &CommunityHandler{
 		BaseHandler: NewBaseHandler(appLogger, sessionRepo),
 		communityUC: communityUC,
@@ -45,7 +46,7 @@ func (h *CommunityHandler) handleGroupLinkAction(
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -115,7 +116,7 @@ func (h *CommunityHandler) handleCommunityQueryAction(
 	sess, err := h.GetSessionFromURL(r)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, domainSession.ErrSessionNotFound) {
+		if errors.Is(err, session.ErrSessionNotFound) {
 			statusCode = 404
 		}
 		w.Header().Set("Content-Type", "application/json")

@@ -231,7 +231,7 @@ func (s *serviceImpl) ProcessGroupLinkResult(result *GroupLinkInfo) error {
 	return nil
 }
 
-func (s *serviceImpl) CanLinkGroup(communityJID, groupJID string, userJID string, isOwner, isAdmin bool) error {
+func (s *serviceImpl) CanLinkGroup(communityJID, groupJID, userJID string, isOwner, isAdmin bool) error {
 	if err := s.ValidateLinkRequest(communityJID, groupJID); err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func (s *serviceImpl) CanLinkGroup(communityJID, groupJID string, userJID string
 	return nil
 }
 
-func (s *serviceImpl) CanUnlinkGroup(communityJID, groupJID string, userJID string, isOwner, isAdmin bool) error {
+func (s *serviceImpl) CanUnlinkGroup(communityJID, groupJID, userJID string, isOwner, isAdmin bool) error {
 	if err := s.ValidateLinkRequest(communityJID, groupJID); err != nil {
 		return err
 	}
@@ -255,7 +255,7 @@ func (s *serviceImpl) CanUnlinkGroup(communityJID, groupJID string, userJID stri
 	return nil
 }
 
-func (s *serviceImpl) CanViewCommunity(communityJID string, userJID string) error {
+func (s *serviceImpl) CanViewCommunity(communityJID, userJID string) error {
 	if err := s.ValidateCommunityJID(communityJID); err != nil {
 		return err
 	}

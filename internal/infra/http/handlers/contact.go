@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
-
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/contact"
 	domainSession "zpwoot/internal/domain/session"
@@ -18,26 +16,22 @@ import (
 )
 
 type ContactHandler struct {
-	logger          *logger.Logger
-	contactUC       contact.UseCase
-	sessionResolver *helpers.SessionResolver
+	*BaseHandler
+	contactUC contact.UseCase
 }
 
 func NewContactHandler(appLogger *logger.Logger, contactUC contact.UseCase, sessionRepo helpers.SessionRepository) *ContactHandler {
+	sessionResolver := &SessionResolver{
+		logger:      appLogger,
+		sessionRepo: sessionRepo,
+	}
 	return &ContactHandler{
-		logger:          appLogger,
-		contactUC:       contactUC,
-		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
+		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		contactUC:   contactUC,
 	}
 }
 
-func (h *ContactHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
-	sessionIdentifier := chi.URLParam(r, "sessionId")
-	if sessionIdentifier == "" {
-		return nil, domainSession.ErrSessionNotFound
-	}
-	return h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
-}
+// resolveSession removido - usar h.sessionUtils.QuickResolveFromURL(r)
 
 func (h *ContactHandler) handleActionRequest(
 	w http.ResponseWriter,

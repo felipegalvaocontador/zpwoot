@@ -530,7 +530,7 @@ func (s *Service) GetStats(ctx context.Context) (*ChatwootStats, error) {
 	}, nil
 }
 
-func (s *Service) ValidateImportRequest(sessionID string, daysLimit int, inboxID int) error {
+func (s *Service) ValidateImportRequest(sessionID string, daysLimit, inboxID int) error {
 	if sessionID == "" {
 		return fmt.Errorf("session_id is required")
 	}

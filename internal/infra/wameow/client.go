@@ -2554,7 +2554,7 @@ func (c *WameowClient) SetGroupPhoto(ctx context.Context, groupJID, photoPath st
 	return nil
 }
 
-func (c *WameowClient) DownloadMedia(ctx context.Context, messageID string, mediaType string) ([]byte, error) {
+func (c *WameowClient) DownloadMedia(ctx context.Context, messageID, mediaType string) ([]byte, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
 	}
@@ -2760,7 +2760,7 @@ func (c *WameowClient) SetGroupJoinApprovalMode(ctx context.Context, groupJID st
 	return nil
 }
 
-func (c *WameowClient) SetGroupMemberAddMode(ctx context.Context, groupJID string, mode string) error {
+func (c *WameowClient) SetGroupMemberAddMode(ctx context.Context, groupJID, mode string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
 	}
@@ -3466,7 +3466,7 @@ func (c *WameowClient) NewsletterToggleMute(ctx context.Context, jid string, mut
 	return nil
 }
 
-func (c *WameowClient) AcceptTOSNotice(ctx context.Context, noticeID string, stage string) error {
+func (c *WameowClient) AcceptTOSNotice(ctx context.Context, noticeID, stage string) error {
 	if !c.client.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
 	}
@@ -3505,7 +3505,7 @@ func (c *WameowClient) AcceptTOSNotice(ctx context.Context, noticeID string, sta
 	return nil
 }
 
-func (c *WameowClient) UploadNewsletter(ctx context.Context, data []byte, mimeType string, mediaType string) (*whatsmeow.UploadResponse, error) {
+func (c *WameowClient) UploadNewsletter(ctx context.Context, data []byte, mimeType, mediaType string) (*whatsmeow.UploadResponse, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
 	}
@@ -3556,7 +3556,7 @@ func (c *WameowClient) UploadNewsletter(ctx context.Context, data []byte, mimeTy
 	return &uploaded, nil
 }
 
-func (c *WameowClient) UploadNewsletterReader(ctx context.Context, data []byte, mimeType string, mediaType string) (*whatsmeow.UploadResponse, error) {
+func (c *WameowClient) UploadNewsletterReader(ctx context.Context, data []byte, mimeType, mediaType string) (*whatsmeow.UploadResponse, error) {
 	if !c.client.IsLoggedIn() {
 		return nil, fmt.Errorf("client is not logged in")
 	}

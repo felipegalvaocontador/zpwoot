@@ -677,7 +677,7 @@ func (h *EventHandler) deliverToWebhook(evt interface{}, sessionID string) {
 	}
 }
 
-func (h *EventHandler) HandleQRCode(sessionID string, qrCode string) {
+func (h *EventHandler) HandleQRCode(sessionID, qrCode string) {
 	h.logger.InfoWithFields("QR code received from client channel", map[string]interface{}{
 		"session_id": sessionID,
 	})

@@ -359,7 +359,12 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
+	sess, err := h.sessionUtils.ResolveSession(r, helpers.SessionResolutionOptions{
+		Strategy:    helpers.FromAny,
+		ParamName:   "sessionId",
+		Required:    true,
+		LogFailures: true,
+	})
 	if err != nil {
 		statusCode := 500
 		if errors.Is(err, domainSession.ErrSessionNotFound) {

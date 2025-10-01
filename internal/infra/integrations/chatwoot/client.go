@@ -250,7 +250,7 @@ func (c *Client) SendMessage(conversationID int, content string) (*ports.Chatwoo
 	return c.SendMessageWithType(conversationID, content, "incoming")
 }
 
-func (c *Client) SendMessageWithType(conversationID int, content string, messageType string) (*ports.ChatwootMessage, error) {
+func (c *Client) SendMessageWithType(conversationID int, content, messageType string) (*ports.ChatwootMessage, error) {
 	payload := map[string]interface{}{
 		"content":      content,
 		"message_type": messageType,
@@ -269,7 +269,7 @@ func (c *Client) SendMediaMessage(conversationID int, content string, attachment
 	return c.SendMessage(conversationID, content)
 }
 
-func (c *Client) GetMessages(conversationID int, before int) ([]ports.ChatwootMessage, error) {
+func (c *Client) GetMessages(conversationID, before int) ([]ports.ChatwootMessage, error) {
 	var response struct {
 		Payload []ports.ChatwootMessage `json:"payload"`
 	}
@@ -306,7 +306,7 @@ func (c *Client) UpdateAccount(updates map[string]interface{}) error {
 	return nil
 }
 
-func (c *Client) makeRequest(method, endpoint string, payload interface{}, result interface{}) error {
+func (c *Client) makeRequest(method, endpoint string, payload, result interface{}) error {
 	url := fmt.Sprintf("%s/api/v1/accounts/%s%s", c.baseURL, c.accountID, endpoint)
 
 	var body io.Reader

@@ -279,7 +279,7 @@ func (uc *useCaseImpl) isUserAdmin(group *ports.GroupInfo, sessionID string) boo
 	return false
 }
 
-func (uc *useCaseImpl) GetGroupRequestParticipants(ctx context.Context, sessionID string, groupJID string) ([]interface{}, error) {
+func (uc *useCaseImpl) GetGroupRequestParticipants(ctx context.Context, sessionID, groupJID string) ([]interface{}, error) {
 	participants, err := uc.wameowMgr.GetGroupRequestParticipants(sessionID, groupJID)
 	if err != nil {
 		return nil, err
@@ -296,15 +296,15 @@ func (uc *useCaseImpl) GetGroupRequestParticipants(ctx context.Context, sessionI
 	return result, nil
 }
 
-func (uc *useCaseImpl) UpdateGroupRequestParticipants(ctx context.Context, sessionID string, groupJID string, participants []string, action string) ([]string, []string, error) {
+func (uc *useCaseImpl) UpdateGroupRequestParticipants(ctx context.Context, sessionID, groupJID string, participants []string, action string) ([]string, []string, error) {
 	return uc.wameowMgr.UpdateGroupRequestParticipants(sessionID, groupJID, participants, action)
 }
 
-func (uc *useCaseImpl) SetGroupJoinApprovalMode(ctx context.Context, sessionID string, groupJID string, requireApproval bool) error {
+func (uc *useCaseImpl) SetGroupJoinApprovalMode(ctx context.Context, sessionID, groupJID string, requireApproval bool) error {
 	return uc.wameowMgr.SetGroupJoinApprovalMode(sessionID, groupJID, requireApproval)
 }
 
-func (uc *useCaseImpl) SetGroupMemberAddMode(ctx context.Context, sessionID string, groupJID string, mode string) error {
+func (uc *useCaseImpl) SetGroupMemberAddMode(ctx context.Context, sessionID, groupJID, mode string) error {
 	return uc.wameowMgr.SetGroupMemberAddMode(sessionID, groupJID, mode)
 }
 

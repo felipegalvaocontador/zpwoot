@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/webhook"
 	domainSession "zpwoot/internal/domain/session"
@@ -32,22 +30,7 @@ func NewWebhookHandler(appLogger *logger.Logger, webhookUC webhook.UseCase, sess
 	}
 }
 
-func (h *WebhookHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
-	idOrName := chi.URLParam(r, "sessionId")
-
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), idOrName)
-	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": idOrName,
-			"error":      err.Error(),
-			"path":       r.URL.Path,
-		})
-
-		return nil, err
-	}
-
-	return sess, nil
-}
+// resolveSession removido - usar h.resolveSessionFromURL(r) do BaseHandler
 
 func (h *WebhookHandler) handleWebhookAction(
 	w http.ResponseWriter,

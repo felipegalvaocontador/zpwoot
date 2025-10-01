@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -11,9 +10,9 @@ import (
 
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/domain/session"
+	"zpwoot/internal/infra/http/helpers"
 	"zpwoot/platform/logger"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -41,7 +40,7 @@ func NewSessionResolver(logger *logger.Logger, sessionRepo SessionRepository) *S
 	}
 }
 
-func (sr *SessionResolver) ResolveSessionIdentifier(idOrName string) (identifierType string, value string, isValid bool) {
+func (sr *SessionResolver) ResolveSessionIdentifier(idOrName string) (identifierType, value string, isValid bool) {
 	idOrName = strings.TrimSpace(idOrName)
 
 	if idOrName == "" {
@@ -220,55 +219,26 @@ func (sr *SessionResolver) ResolveSession(ctx context.Context, idOrName string) 
 }
 
 type BaseHandler struct {
-	logger          *logger.Logger
-	sessionResolver *SessionResolver
+	logger       *logger.Logger
+	sessionUtils *helpers.SessionUtils
 }
 
 func NewBaseHandler(logger *logger.Logger, sessionResolver *SessionResolver) *BaseHandler {
+	// Converte SessionResolver local para helpers.SessionResolver
+	helpersResolver := helpers.NewSessionResolver(logger, sessionResolver.sessionRepo)
 	return &BaseHandler{
-		logger:          logger,
-		sessionResolver: sessionResolver,
+		logger:       logger,
+		sessionUtils: helpers.NewSessionUtils(helpersResolver, logger),
 	}
+}
+
+// Métodos de conveniência para compatibilidade
+func (h *BaseHandler) resolveSessionFromURL(r *http.Request) (*session.Session, error) {
+	return h.sessionUtils.QuickResolveFromURL(r)
 }
 
 func (h *BaseHandler) resolveSession(r *http.Request) (*session.Session, error) {
-	if sess, ok := r.Context().Value("session").(*session.Session); ok {
-		return sess, nil
-	}
-
-	sessionIdentifier := r.URL.Query().Get("sessionId")
-	if sessionIdentifier == "" {
-		if urlParam := r.Context().Value("sessionId"); urlParam != nil {
-			if sessionID, ok := urlParam.(string); ok {
-				sessionIdentifier = sessionID
-			}
-		}
-	}
-
-	if sessionIdentifier == "" {
-		return nil, session.ErrSessionNotFound
-	}
-
-	return h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
-}
-
-func (h *BaseHandler) resolveSessionFromURL(r *http.Request) (*session.Session, error) {
-	sessionIdentifier := chi.URLParam(r, "sessionId")
-	if sessionIdentifier == "" {
-		return nil, session.ErrSessionNotFound
-	}
-
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), sessionIdentifier)
-	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": sessionIdentifier,
-			"error":      err.Error(),
-			"path":       r.URL.Path,
-		})
-		return nil, err
-	}
-
-	return sess, nil
+	return h.sessionUtils.QuickResolveAny(r)
 }
 
 func (h *BaseHandler) handleActionRequest(
@@ -279,36 +249,34 @@ func (h *BaseHandler) handleActionRequest(
 	parseFunc func(*http.Request, *session.Session) (interface{}, error),
 	actionFunc func(context.Context, interface{}) (interface{}, error),
 ) {
-	sess, err := h.resolveSessionFromURL(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, session.ErrSessionNotFound) {
-			statusCode = 404
+	h.sessionUtils.WithSessionHandler(w, r, helpers.SessionResolutionOptions{
+		Strategy:    helpers.FromURL,
+		ParamName:   "sessionId",
+		Required:    true,
+		LogFailures: true,
+	}, func(sess *session.Session, w http.ResponseWriter, r *http.Request) {
+
+		req, err := parseFunc(r, sess)
+		if err != nil {
+			h.logger.Error("Failed to parse request body: " + err.Error())
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+			return
 		}
-		h.writeErrorResponse(w, statusCode, err.Error())
-		return
-	}
 
-	req, err := parseFunc(r, sess)
-	if err != nil {
-		h.logger.Error("Failed to parse request body: " + err.Error())
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
+		h.logger.InfoWithFields(actionName, map[string]interface{}{
+			"session_id":   sess.ID.String(),
+			"session_name": sess.Name,
+		})
 
-	h.logger.InfoWithFields(actionName, map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
+		result, err := actionFunc(r.Context(), req)
+		if err != nil {
+			h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
+			h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to %s", actionName))
+			return
+		}
+
+		h.writeSuccessResponse(w, result, successMessage)
 	})
-
-	result, err := actionFunc(r.Context(), req)
-	if err != nil {
-		h.logger.Error(fmt.Sprintf("Failed to %s: %s", actionName, err.Error()))
-		h.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to %s", actionName))
-		return
-	}
-
-	h.writeSuccessResponse(w, result, successMessage)
 }
 
 func (h *BaseHandler) handleSimpleGetRequest(
@@ -318,29 +286,27 @@ func (h *BaseHandler) handleSimpleGetRequest(
 	successMessage string,
 	actionFunc func(context.Context, string) (interface{}, error),
 ) {
-	sess, err := h.resolveSessionFromURL(r)
-	if err != nil {
-		statusCode := 500
-		if errors.Is(err, session.ErrSessionNotFound) {
-			statusCode = 404
+	h.sessionUtils.WithSessionHandler(w, r, helpers.SessionResolutionOptions{
+		Strategy:    helpers.FromURL,
+		ParamName:   "sessionId",
+		Required:    true,
+		LogFailures: true,
+	}, func(sess *session.Session, w http.ResponseWriter, r *http.Request) {
+
+		h.logger.InfoWithFields(actionName, map[string]interface{}{
+			"session_id":   sess.ID.String(),
+			"session_name": sess.Name,
+		})
+
+		result, err := actionFunc(r.Context(), sess.ID.String())
+		if err != nil {
+			h.logger.Error("Failed to " + actionName + ": " + err.Error())
+			h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to "+actionName)
+			return
 		}
-		h.writeErrorResponse(w, statusCode, err.Error())
-		return
-	}
 
-	h.logger.InfoWithFields(actionName, map[string]interface{}{
-		"session_id":   sess.ID.String(),
-		"session_name": sess.Name,
+		h.writeSuccessResponse(w, result, successMessage)
 	})
-
-	result, err := actionFunc(r.Context(), sess.ID.String())
-	if err != nil {
-		h.logger.Error("Failed to " + actionName + ": " + err.Error())
-		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to "+actionName)
-		return
-	}
-
-	h.writeSuccessResponse(w, result, successMessage)
 }
 
 func (h *BaseHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {

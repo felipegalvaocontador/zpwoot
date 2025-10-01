@@ -127,7 +127,7 @@ func (r *MessageRepository) GetMessageByCwID(ctx context.Context, cwMessageID in
 	return message, nil
 }
 
-func (r *MessageRepository) UpdateSyncStatus(ctx context.Context, id string, status string, cwMessageID, cwConversationID *int) error {
+func (r *MessageRepository) UpdateSyncStatus(ctx context.Context, id, status string, cwMessageID, cwConversationID *int) error {
 	r.logger.InfoWithFields("Updating zpMessage sync status", map[string]interface{}{
 		"id":                 id,
 		"status":             status,

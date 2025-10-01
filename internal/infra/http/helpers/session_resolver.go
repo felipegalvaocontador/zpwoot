@@ -28,7 +28,7 @@ func NewSessionResolver(logger *logger.Logger, sessionRepo SessionRepository) *S
 	}
 }
 
-func (sr *SessionResolver) ResolveSessionIdentifier(idOrName string) (identifierType string, value string, isValid bool) {
+func (sr *SessionResolver) ResolveSessionIdentifier(idOrName string) (identifierType, value string, isValid bool) {
 	idOrName = strings.TrimSpace(idOrName)
 
 	if idOrName == "" {

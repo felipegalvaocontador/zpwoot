@@ -9,75 +9,43 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
-
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/session"
-	domainSession "zpwoot/internal/domain/session"
 	"zpwoot/internal/infra/http/helpers"
 	pkgErrors "zpwoot/pkg/errors"
 	"zpwoot/platform/logger"
 )
 
 type SessionHandler struct {
-	logger          *logger.Logger
-	sessionUC       session.UseCase
-	sessionResolver *helpers.SessionResolver
+	*BaseHandler
+	sessionUC session.UseCase
 }
 
 func NewSessionHandler(appLogger *logger.Logger, sessionUC session.UseCase, sessionRepo helpers.SessionRepository) *SessionHandler {
+	sessionResolver := &SessionResolver{
+		logger:      appLogger,
+		sessionRepo: sessionRepo,
+	}
 	return &SessionHandler{
-		logger:          appLogger,
-		sessionUC:       sessionUC,
-		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
+		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		sessionUC:   sessionUC,
 	}
 }
 
 func NewSessionHandlerWithoutUseCase(appLogger *logger.Logger, sessionRepo helpers.SessionRepository) *SessionHandler {
+	sessionResolver := &SessionResolver{
+		logger:      appLogger,
+		sessionRepo: sessionRepo,
+	}
 	return &SessionHandler{
-		logger:          appLogger,
-		sessionUC:       nil,
-		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
+		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		sessionUC:   nil,
 	}
 }
 
-func (h *SessionHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(common.NewErrorResponse(message)); err != nil {
-		h.logger.Error("Failed to encode error response: " + err.Error())
-	}
-}
+// writeErrorResponse e writeSuccessResponse removidos - usar h.writeErrorResponse() e h.writeSuccessResponse() do BaseHandler
 
-func (h *SessionHandler) writeSuccessResponse(w http.ResponseWriter, data interface{}, message string) {
-	response := common.NewSuccessResponse(data, message)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		h.logger.Error("Failed to encode success response: " + err.Error())
-	}
-}
-
-func (h *SessionHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
-	idOrName := chi.URLParam(r, "sessionId")
-
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), idOrName)
-	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": idOrName,
-			"error":      err.Error(),
-			"path":       r.URL.Path,
-		})
-
-		if err.Error() == "session not found" || errors.Is(err, domainSession.ErrSessionNotFound) {
-			return nil, fmt.Errorf("session not found")
-		}
-
-		return nil, fmt.Errorf("failed to resolve session")
-	}
-
-	return sess, nil
-}
+// resolveSession removido - usar h.resolveSessionFromURL(r) do BaseHandler
 
 func (h *SessionHandler) handleSessionAction(
 	w http.ResponseWriter,
@@ -216,13 +184,15 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isValid, errorMsg := h.sessionResolver.ValidateSessionName(req.Name); !isValid {
+	// Criar um sessionResolver temporário para validação
+	tempResolver := helpers.NewSessionResolver(h.logger, nil)
+	if isValid, errorMsg := tempResolver.ValidateSessionName(req.Name); !isValid {
 		h.logger.WarnWithFields("Invalid session name provided", map[string]interface{}{
 			"name":  req.Name,
 			"error": errorMsg,
 		})
 
-		suggested := h.sessionResolver.SuggestValidName(req.Name)
+		suggested := tempResolver.SuggestValidName(req.Name)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		if err := json.NewEncoder(w).Encode(map[string]interface{}{

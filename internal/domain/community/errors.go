@@ -110,7 +110,7 @@ func NewNotFoundError(communityJID string) *CommunityError {
 	).WithContext("communityJID", communityJID)
 }
 
-func NewInvalidJIDError(jid string, reason string) *CommunityError {
+func NewInvalidJIDError(jid, reason string) *CommunityError {
 	return NewCommunityError(
 		ErrCodeInvalidJID,
 		"Invalid JID format",

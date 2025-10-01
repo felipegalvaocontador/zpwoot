@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"zpwoot/internal/app/common"
 	"zpwoot/internal/app/community"
 	domainSession "zpwoot/internal/domain/session"
@@ -25,35 +23,22 @@ const (
 )
 
 type CommunityHandler struct {
-	logger          *logger.Logger
-	communityUC     community.UseCase
-	sessionResolver *helpers.SessionResolver
+	*BaseHandler
+	communityUC community.UseCase
 }
 
 func NewCommunityHandler(appLogger *logger.Logger, communityUC community.UseCase, sessionRepo helpers.SessionRepository) *CommunityHandler {
+	sessionResolver := &SessionResolver{
+		logger:      appLogger,
+		sessionRepo: sessionRepo,
+	}
 	return &CommunityHandler{
-		logger:          appLogger,
-		communityUC:     communityUC,
-		sessionResolver: helpers.NewSessionResolver(appLogger, sessionRepo),
+		BaseHandler: NewBaseHandler(appLogger, sessionResolver),
+		communityUC: communityUC,
 	}
 }
 
-func (h *CommunityHandler) resolveSession(r *http.Request) (*domainSession.Session, error) {
-	idOrName := chi.URLParam(r, "sessionId")
-
-	sess, err := h.sessionResolver.ResolveSession(r.Context(), idOrName)
-	if err != nil {
-		h.logger.WarnWithFields("Failed to resolve session", map[string]interface{}{
-			"identifier": idOrName,
-			"error":      err.Error(),
-			"path":       r.URL.Path,
-		})
-
-		return nil, err
-	}
-
-	return sess, nil
-}
+// resolveSession removido - usar h.resolveSessionFromURL(r) do BaseHandler
 
 func (h *CommunityHandler) handleGroupLinkAction(
 	w http.ResponseWriter,

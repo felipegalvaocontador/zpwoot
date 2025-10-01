@@ -81,7 +81,7 @@ func (uc *useCaseImpl) CreateNewsletter(ctx context.Context, sessionID string, r
 		return nil, fmt.Errorf("session not found: %w", err)
 	}
 
-	if !session.IsConnected {
+	if !sess.IsConnected {
 		return nil, fmt.Errorf("session is not connected")
 	}
 

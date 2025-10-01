@@ -55,8 +55,8 @@ func (h *ContactHandler) handleActionRequest(
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
-			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		if err := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); err != nil {
+			h.logger.Error("Failed to encode error response: " + err.Error())
 		}
 		return
 	}

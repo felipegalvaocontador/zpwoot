@@ -76,7 +76,7 @@ func setupSessionRoutes(r *chi.Mux, appLogger *logger.Logger, sessionService *se
 		setupSessionManagementRoutes(r, sessionService, appLogger)
 		setupMessageRoutes(r, messageService, sessionService, appLogger)
 		setupGroupRoutes(r, appLogger)
-		setupContactRoutes(r, appLogger)
+		setupContactRoutes(r, sessionService, appLogger)
 		setupWebhookRoutes(r, appLogger)
 		setupMediaRoutes(r, appLogger)
 		setupChatwootRoutes(r, appLogger)
@@ -126,23 +126,38 @@ func setupMessageRoutes(r chi.Router, messageService *services.MessageService, s
 		// Messaging operations (seguindo padrão legacy)
 		r.Post("/send/text", messageHandler.SendTextMessage)
 		r.Post("/send/media", messageHandler.SendMediaMessage)
-		r.Post("/send/image", messageHandler.SendMediaMessage)
-		r.Post("/send/audio", messageHandler.SendMediaMessage)
-		r.Post("/send/video", messageHandler.SendMediaMessage)
-		r.Post("/send/document", messageHandler.SendMediaMessage)
-		r.Post("/send/sticker", messageHandler.SendMediaMessage)
-		r.Post("/send/location", messageHandler.SendTextMessage) // TODO: Implementar location
-		r.Post("/send/contact", messageHandler.SendTextMessage)  // TODO: Implementar contact
-		r.Post("/send/contact-list", messageHandler.SendTextMessage) // TODO: Implementar contact list
-		r.Post("/send/button", messageHandler.SendTextMessage)   // TODO: Implementar button
-		r.Post("/send/list", messageHandler.SendTextMessage)     // TODO: Implementar list
-		r.Post("/send/reaction", messageHandler.SendTextMessage) // TODO: Implementar reaction
-		r.Post("/send/presence", messageHandler.SendTextMessage) // TODO: Implementar presence
-		r.Post("/send/poll", messageHandler.SendTextMessage)     // TODO: Implementar poll
-		r.Post("/edit", messageHandler.SendTextMessage)          // TODO: Implementar edit
+
+		// Specific media endpoints
+		r.Post("/send/image", messageHandler.SendImage)
+		r.Post("/send/audio", messageHandler.SendAudio)
+		r.Post("/send/video", messageHandler.SendVideo)
+		r.Post("/send/document", messageHandler.SendDocument)
+		r.Post("/send/sticker", messageHandler.SendSticker)
+
+		// Location and contact endpoints
+		r.Post("/send/location", messageHandler.SendLocation)
+		r.Post("/send/contact", messageHandler.SendContact)
+		r.Post("/send/contact-list", messageHandler.SendContactList)
+
+		// Interactive message endpoints
+		r.Post("/send/button", messageHandler.SendButton)
+		r.Post("/send/list", messageHandler.SendList)
+		r.Post("/send/poll", messageHandler.SendPoll)
+
+		// Action endpoints
+		r.Post("/send/reaction", messageHandler.SendReaction)
+		r.Post("/send/presence", messageHandler.SendPresence)
+
+		// Business profile endpoint
+		r.Post("/send/profile/business", messageHandler.SendBusinessProfile)
+
+		// Message management endpoints
+		r.Post("/edit", messageHandler.EditMessage)
+		r.Post("/revoke", messageHandler.RevokeMessage)
 		r.Post("/mark-read", messageHandler.MarkAsRead)
-		r.Post("/revoke", messageHandler.SendTextMessage)        // TODO: Implementar revoke
-		r.Get("/poll/{messageId}/results", messageHandler.SendTextMessage) // TODO: Implementar poll results
+
+		// Poll results endpoint
+		r.Get("/poll/{messageId}/results", messageHandler.GetPollResults)
 	})
 }
 
@@ -157,14 +172,30 @@ func setupGroupRoutes(r chi.Router, appLogger *logger.Logger) {
 	})
 }
 
-func setupContactRoutes(r chi.Router, appLogger *logger.Logger) {
-	// TODO: Implementar ContactHandler
+func setupContactRoutes(r chi.Router, sessionService *services.SessionService, appLogger *logger.Logger) {
+	// TODO: Criar ContactService quando necessário
+	contactHandler := handler.NewContactHandler(nil, sessionService, appLogger)
+
 	r.Route("/{sessionId}/contacts", func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, req *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"message":"Contact routes - Ready for implementation"}`))
-		})
+		// Contact verification
+		r.Post("/check", contactHandler.CheckWhatsApp)
+		r.Post("/is-on-whatsapp", contactHandler.IsOnWhatsApp)
+
+		// Profile and info
+		r.Get("/avatar", contactHandler.GetProfilePicture)
+		r.Post("/info", contactHandler.GetUserInfo)
+		r.Get("/profile-picture-info", contactHandler.GetProfilePictureInfo)
+		r.Post("/detailed-info", contactHandler.GetDetailedUserInfo)
+
+		// Contact listing
+		r.Get("/", contactHandler.ListContacts)
+		r.Get("/all", contactHandler.GetAllContacts)
+
+		// Contact sync
+		r.Post("/sync", contactHandler.SyncContacts)
+
+		// Business profiles
+		r.Get("/business", contactHandler.GetBusinessProfile)
 	})
 }
 

@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
 	"zpwoot/internal/adapters/http/shared"
 	"zpwoot/internal/services"
+	"zpwoot/internal/services/shared/dto"
 	"zpwoot/platform/logger"
 )
 
@@ -33,46 +35,11 @@ func NewMessageHandler(
 	}
 }
 
-// CreateMessageRequest representa request para criação de mensagem
-type CreateMessageRequest struct {
-	ZpMessageID string `json:"zp_message_id" validate:"required"`
-	ZpSender    string `json:"zp_sender" validate:"required"`
-	ZpChat      string `json:"zp_chat" validate:"required"`
-	ZpTimestamp string `json:"zp_timestamp" validate:"required"`
-	ZpFromMe    bool   `json:"zp_from_me"`
-	ZpType      string `json:"zp_type" validate:"required"`
-	Content     string `json:"content,omitempty"`
-}
+// Todos os DTOs agora estão centralizados em internal/services/shared/dto/message_dto.go
 
-// SendTextMessageRequest representa request para envio de mensagem de texto
-type SendTextMessageRequest struct {
-	To      string `json:"to" validate:"required"`
-	Content string `json:"content" validate:"required"`
-	ReplyTo string `json:"reply_to,omitempty"`
-}
+// DTOs removidos - agora usando os centralizados de internal/services/shared/dto/message_dto.go
 
-// SendMediaMessageRequest representa request para envio de mídia
-type SendMediaMessageRequest struct {
-	To       string `json:"to" validate:"required"`
-	MediaURL string `json:"media_url" validate:"required,url"`
-	Caption  string `json:"caption,omitempty"`
-	Type     string `json:"type" validate:"required,oneof=image video audio document"`
-	ReplyTo  string `json:"reply_to,omitempty"`
-}
-
-// ListMessagesRequest representa request para listagem de mensagens
-type ListMessagesRequest struct {
-	ChatJID string `json:"chat_jid,omitempty"`
-	Limit   int    `json:"limit" validate:"min=1,max=100"`
-	Offset  int    `json:"offset" validate:"min=0"`
-}
-
-// UpdateSyncStatusRequest representa request para atualização de sync
-type UpdateSyncStatusRequest struct {
-	SyncStatus       string `json:"sync_status" validate:"required,oneof=pending synced failed"`
-	CwMessageID      *int   `json:"cw_message_id,omitempty"`
-	CwConversationID *int   `json:"cw_conversation_id,omitempty"`
-}
+// Todos os DTOs foram movidos para internal/services/shared/dto/message_dto.go
 
 // ===== CRUD OPERATIONS =====
 
@@ -84,7 +51,7 @@ type UpdateSyncStatusRequest struct {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body CreateMessageRequest true "Message creation request"
+// @Param request body dto.CreateMessageRequest true "Message creation request"
 // @Success 201 {object} shared.APIResponse{data=services.CreateMessageResponse}
 // @Failure 400 {object} shared.APIResponse
 // @Failure 404 {object} shared.APIResponse
@@ -101,7 +68,7 @@ func (h *MessageHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request body
-	var req CreateMessageRequest
+	var req dto.CreateMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -282,7 +249,7 @@ func (h *MessageHandler) ListMessages(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param messageId path string true "Message ID"
-// @Param request body UpdateSyncStatusRequest true "Sync status update request"
+// @Param request body dto.UpdateSyncStatusRequest true "Sync status update request"
 // @Success 200 {object} shared.APIResponse
 // @Failure 400 {object} shared.APIResponse
 // @Failure 404 {object} shared.APIResponse
@@ -300,7 +267,7 @@ func (h *MessageHandler) UpdateSyncStatus(w http.ResponseWriter, r *http.Request
 	}
 
 	// Parse request body
-	var req UpdateSyncStatusRequest
+	var req dto.UpdateSyncStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -358,7 +325,7 @@ func (h *MessageHandler) UpdateSyncStatus(w http.ResponseWriter, r *http.Request
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body SendTextMessageRequest true "Text message request"
+// @Param request body dto.SendTextMessageRequest true "Text message request"
 // @Success 200 {object} shared.APIResponse
 // @Failure 400 {object} shared.APIResponse
 // @Failure 404 {object} shared.APIResponse
@@ -374,7 +341,7 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Parse request body
-	var req SendTextMessageRequest
+	var req dto.SendTextMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -421,7 +388,7 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body SendMediaMessageRequest true "Media message request"
+// @Param request body dto.SendMediaMessageRequest true "Media message request"
 // @Success 200 {object} shared.APIResponse
 // @Failure 400 {object} shared.APIResponse
 // @Failure 404 {object} shared.APIResponse
@@ -437,7 +404,7 @@ func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request
 	}
 
 	// Parse request body
-	var req SendMediaMessageRequest
+	var req dto.SendMediaMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -477,6 +444,1033 @@ func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Media message sent successfully")
+}
+
+// SendImage envia uma mensagem de imagem
+// @Summary Send image message
+// @Description Send an image message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendImageMessageRequest true "Image message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/image [post]
+func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send image message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	// Parse request body
+	var req dto.SendImageMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	// Validar request
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	// Verificar se sessão existe
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	// Por enquanto, simular resposta de sucesso
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send image message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"has_caption":  req.Caption != "",
+		"filename":     req.Filename,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Image message sent successfully")
+}
+
+// SendAudio envia uma mensagem de áudio
+// @Summary Send audio message
+// @Description Send an audio message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendAudioMessageRequest true "Audio message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/audio [post]
+func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send audio message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	// Parse request body
+	var req dto.SendAudioMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	// Validar request
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	// Verificar se sessão existe
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send audio message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"has_caption":  req.Caption != "",
+		"mime_type":    req.MimeType,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Audio message sent successfully")
+}
+
+// SendVideo envia uma mensagem de vídeo
+// @Summary Send video message
+// @Description Send a video message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendVideoMessageRequest true "Video message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/video [post]
+func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send video message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendVideoMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send video message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"has_caption":  req.Caption != "",
+		"filename":     req.Filename,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Video message sent successfully")
+}
+
+// SendDocument envia uma mensagem de documento
+// @Summary Send document message
+// @Description Send a document message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendDocumentMessageRequest true "Document message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/document [post]
+func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send document message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendDocumentMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send document message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"filename":     req.Filename,
+		"has_caption":  req.Caption != "",
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Document message sent successfully")
+}
+
+// SendSticker envia uma mensagem de sticker
+// @Summary Send sticker message
+// @Description Send a sticker message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendStickerMessageRequest true "Sticker message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/sticker [post]
+func (h *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send sticker message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendStickerMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send sticker message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"mime_type":    req.MimeType,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Sticker message sent successfully")
+}
+
+// SendLocation envia uma mensagem de localização
+// @Summary Send location message
+// @Description Send a location message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendLocationMessageRequest true "Location message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/location [post]
+func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send location message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendLocationMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send location message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"latitude":     req.Latitude,
+		"longitude":    req.Longitude,
+		"address":      req.Address,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Location message sent successfully")
+}
+
+// SendContact envia uma mensagem de contato
+// @Summary Send contact message
+// @Description Send a contact message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendContactMessageRequest true "Contact message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/contact [post]
+func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send contact message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendContactMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send contact message", map[string]interface{}{
+		"session_id":    sessionID,
+		"session_name":  session.Session.Name,
+		"to":            req.To,
+		"contact_name":  req.ContactName,
+		"contact_phone": req.ContactPhone,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Contact message sent successfully")
+}
+
+// SendContactList envia uma lista de contatos
+// @Summary Send contact list message
+// @Description Send a contact list message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendContactListMessageRequest true "Contact list message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendContactListResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/contact-list [post]
+func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send contact list message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendContactListMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	contactResults := make([]dto.ContactResult, len(req.Contacts))
+	for i, contact := range req.Contacts {
+		contactResults[i] = dto.ContactResult{
+			ContactName: contact.Name,
+			MessageID:   uuid.New().String(),
+			Status:      "sent",
+		}
+	}
+
+	response := &dto.SendContactListResponse{
+		SessionID:      sessionID,
+		RemoteJID:      req.To,
+		ContactCount:   len(req.Contacts),
+		ContactResults: contactResults,
+		SentAt:         time.Now(),
+	}
+
+	h.LogSuccess("send contact list message", map[string]interface{}{
+		"session_id":    sessionID,
+		"session_name":  session.Session.Name,
+		"to":            req.To,
+		"contact_count": len(req.Contacts),
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Contact list sent successfully")
+}
+
+// SendBusinessProfile envia um perfil de negócio
+// @Summary Send business profile message
+// @Description Send a business profile message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendBusinessProfileMessageRequest true "Business profile message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/profile/business [post]
+func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send business profile message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendBusinessProfileMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send business profile message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"business_jid": req.BusinessJID,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Business profile sent successfully")
+}
+
+// SendButton envia uma mensagem com botões
+// @Summary Send button message
+// @Description Send a button message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendButtonMessageRequest true "Button message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/button [post]
+func (h *MessageHandler) SendButton(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send button message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendButtonMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send button message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"button_count": len(req.Buttons),
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Button message sent successfully")
+}
+
+// SendList envia uma mensagem com lista
+// @Summary Send list message
+// @Description Send a list message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendListMessageRequest true "List message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/list [post]
+func (h *MessageHandler) SendList(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send list message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendListMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// Contar total de rows
+	totalRows := 0
+	for _, section := range req.Sections {
+		totalRows += len(section.Rows)
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send list message", map[string]interface{}{
+		"session_id":    sessionID,
+		"session_name":  session.Session.Name,
+		"to":            req.To,
+		"section_count": len(req.Sections),
+		"total_rows":    totalRows,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "List message sent successfully")
+}
+
+// SendPoll envia uma mensagem de poll
+// @Summary Send poll message
+// @Description Send a poll message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendPollMessageRequest true "Poll message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/poll [post]
+func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send poll message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendPollMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send poll message", map[string]interface{}{
+		"session_id":         sessionID,
+		"session_name":       session.Session.Name,
+		"to":                 req.To,
+		"poll_name":          req.Name,
+		"option_count":       len(req.Options),
+		"selectable_count":   req.SelectableCount,
+		"allow_multiple":     req.AllowMultipleVote,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Poll message sent successfully")
+}
+
+// SendReaction envia uma reação a uma mensagem
+// @Summary Send reaction message
+// @Description Send a reaction to a message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendReactionMessageRequest true "Reaction message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/reaction [post]
+func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send reaction message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendReactionMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send reaction message", map[string]interface{}{
+		"session_id":        sessionID,
+		"session_name":      session.Session.Name,
+		"to":                req.To,
+		"target_message_id": req.MessageID,
+		"reaction":          req.Reaction,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Reaction sent successfully")
+}
+
+// SendPresence envia status de presença
+// @Summary Send presence status
+// @Description Send presence status (typing, recording, etc.) via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.SendPresenceMessageRequest true "Presence message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/send/presence [post]
+func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "send presence message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.SendPresenceMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar envio via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: uuid.New().String(),
+		To:        req.To,
+		Status:    "sent",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("send presence message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"presence":     req.Presence,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Presence sent successfully")
+}
+
+// EditMessage edita uma mensagem enviada
+// @Summary Edit message
+// @Description Edit a previously sent message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.EditMessageRequest true "Edit message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/edit [post]
+func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "edit message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.EditMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar edição via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: req.MessageID,
+		To:        req.To,
+		Status:    "edited",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("edit message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"message_id":   req.MessageID,
+		"new_body_len": len(req.NewBody),
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Message edited successfully")
+}
+
+// RevokeMessage revoga uma mensagem enviada
+// @Summary Revoke message
+// @Description Revoke a previously sent message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.RevokeMessageRequest true "Revoke message request"
+// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/revoke [post]
+func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "revoke message")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	var req dto.RevokeMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request body")
+		return
+	}
+
+	if err := h.GetValidator().ValidateStruct(&req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar revogação via WhatsApp Gateway
+	response := &dto.SendMessageResponse{
+		MessageID: req.MessageID,
+		To:        req.To,
+		Status:    "revoked",
+		Timestamp: time.Now(),
+	}
+
+	h.LogSuccess("revoke message", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"to":           req.To,
+		"message_id":   req.MessageID,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Message revoked successfully")
+}
+
+// GetPollResults obtém resultados de um poll
+// @Summary Get poll results
+// @Description Get results of a poll message via WhatsApp
+// @Tags Messages
+// @Security ApiKeyAuth
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param messageId path string true "Message ID"
+// @Success 200 {object} shared.APIResponse{data=dto.GetPollResultsResponse}
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/messages/poll/{messageId}/results [get]
+func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "get poll results")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	messageID := chi.URLParam(r, "messageId")
+
+	if sessionID == "" || messageID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID and Message ID are required")
+		return
+	}
+
+	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar busca de resultados via WhatsApp Gateway
+	// Por enquanto, simular resposta de sucesso
+	voteResults := []dto.PollVoteInfo{
+		{
+			OptionName: "Option 1",
+			Voters:     []string{"5511888888888@s.whatsapp.net", "5511777777777@s.whatsapp.net"},
+			VoteCount:  2,
+		},
+		{
+			OptionName: "Option 2",
+			Voters:     []string{"5511666666666@s.whatsapp.net"},
+			VoteCount:  1,
+		},
+	}
+
+	response := &dto.GetPollResultsResponse{
+		MessageID:   messageID,
+		PollName:    "Sample Poll",
+		TotalVotes:  3,
+		VoteResults: voteResults,
+		CreatedAt:   time.Now().Add(-24 * time.Hour), // Simular poll criado há 1 dia
+	}
+
+	h.LogSuccess("get poll results", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": session.Session.Name,
+		"message_id":   messageID,
+		"total_votes":  response.TotalVotes,
+	})
+
+	h.GetWriter().WriteSuccess(w, response, "Poll results retrieved successfully")
 }
 
 // ===== STATISTICS AND SPECIAL OPERATIONS =====
@@ -633,7 +1627,7 @@ func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body object{chat_jid=string,message_ids=[]string} true "Mark as read request"
+// @Param request body dto.MarkAsReadRequest true "Mark as read request"
 // @Success 200 {object} shared.APIResponse
 // @Failure 400 {object} shared.APIResponse
 // @Failure 404 {object} shared.APIResponse
@@ -649,10 +1643,7 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request body
-	var req struct {
-		ChatJID    string   `json:"chat_jid" validate:"required"`
-		MessageIDs []string `json:"message_ids" validate:"required,min=1"`
-	}
+	var req dto.MarkAsReadRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -679,10 +1670,10 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 		"message_count":   len(req.MessageIDs),
 	})
 
-	response := map[string]interface{}{
-		"chat_jid":        req.ChatJID,
-		"marked_count":    len(req.MessageIDs),
-		"status":          "success",
+	response := &dto.MarkAsReadResponse{
+		ChatJID:     req.ChatJID,
+		MarkedCount: len(req.MessageIDs),
+		Status:      "success",
 	}
 
 	h.GetWriter().WriteSuccess(w, response, "Messages marked as read successfully")

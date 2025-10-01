@@ -73,7 +73,9 @@ func (h *NewsletterHandler) handleNewsletterAction(
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -82,7 +84,9 @@ func (h *NewsletterHandler) handleNewsletterAction(
 		h.logger.Error("Failed to parse request body: " + err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Invalid request body")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -101,7 +105,9 @@ func (h *NewsletterHandler) handleNewsletterAction(
 	response := common.NewSuccessResponse(result, successMessage)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if encErr := json.NewEncoder(w).Encode(response); encErr != nil {
+		h.logger.Error("Failed to encode success response: " + encErr.Error())
+	}
 }
 
 // @Summary Get newsletter information
@@ -125,7 +131,9 @@ func (h *NewsletterHandler) GetNewsletterInfo(w http.ResponseWriter, r *http.Req
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error()))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse(err.Error())); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 
@@ -133,7 +141,9 @@ func (h *NewsletterHandler) GetNewsletterInfo(w http.ResponseWriter, r *http.Req
 	if jid == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(common.NewErrorResponse("Newsletter JID is required"))
+		if encErr := json.NewEncoder(w).Encode(common.NewErrorResponse("Newsletter JID is required")); encErr != nil {
+			h.logger.Error("Failed to encode error response: " + encErr.Error())
+		}
 		return
 	}
 

@@ -37,7 +37,9 @@ func (h *HealthHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		h.logger.Error("Failed to encode health response: " + err.Error())
+	}
 }
 
 // @Summary WhatsApp manager health check
@@ -52,11 +54,13 @@ func (h *HealthHandler) GetWameowHealth(w http.ResponseWriter, r *http.Request) 
 	if h.wameowManager == nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
 			"service": "wameow",
 			"message": "WhatsApp manager not initialized",
-		})
+		}); err != nil {
+			h.logger.Error("Failed to encode wameow error response: " + err.Error())
+		}
 		return
 	}
 
@@ -66,5 +70,7 @@ func (h *HealthHandler) GetWameowHealth(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(healthData)
+	if err := json.NewEncoder(w).Encode(healthData); err != nil {
+		h.logger.Error("Failed to encode wameow health response: " + err.Error())
+	}
 }

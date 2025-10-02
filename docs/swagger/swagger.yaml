@@ -1,11 +1,15 @@
+basePath: /
 definitions:
   ButtonInfo:
     properties:
       id:
-        example: btn_1
+        example: btn-1
         type: string
       text:
-        example: Click Me
+        example: Option 1
+        type: string
+      type:
+        example: reply
         type: string
     required:
     - id
@@ -41,14 +45,27 @@ definitions:
   ContactResult:
     properties:
       contact_name:
+        description: Alias para Name
         example: John Doe
+        type: string
+      error:
+        example: ""
         type: string
       message_id:
         example: 3EB0C767D71D
         type: string
+      name:
+        example: John Doe
+        type: string
+      phone:
+        example: "+5511888888888"
+        type: string
       status:
         example: sent
         type: string
+      success:
+        example: true
+        type: boolean
     type: object
   CreateMessageRequest:
     properties:
@@ -139,14 +156,18 @@ definitions:
         example: 3EB0C767D71D
         type: string
       new_body:
-        example: Updated message text
+        description: Alias para NewText
+        example: Updated message
+        type: string
+      new_text:
+        example: Updated message
         type: string
       to:
         example: 5511999999999@s.whatsapp.net
         type: string
     required:
     - message_id
-    - new_body
+    - new_text
     - to
     type: object
   ErrorResponse:
@@ -167,16 +188,40 @@ definitions:
       created_at:
         example: "2024-01-01T12:00:00Z"
         type: string
+      data: {}
+      message:
+        example: Operation completed successfully
+        type: string
       message_id:
         example: 3EB0C767D71D
         type: string
+      poll_id:
+        example: 3EB0C767D71D
+        type: string
       poll_name:
+        example: Favorite Color Poll
+        type: string
+      question:
         example: What's your favorite color?
         type: string
+      request_id:
+        example: req-123
+        type: string
+      success:
+        example: true
+        type: boolean
+      timestamp:
+        example: "2024-01-01T12:00:00Z"
+        type: string
       total_votes:
-        example: 10
+        example: 15
         type: integer
       vote_results:
+        description: Alias para Votes
+        items:
+          $ref: '#/definitions/PollVoteInfo'
+        type: array
+      votes:
         items:
           $ref: '#/definitions/PollVoteInfo'
         type: array
@@ -184,10 +229,10 @@ definitions:
   ListRowInfo:
     properties:
       description:
-        example: Description for option 1
+        example: Description of option 1
         type: string
       id:
-        example: row_1
+        example: row-1
         type: string
       title:
         example: Option 1
@@ -201,6 +246,7 @@ definitions:
       rows:
         items:
           $ref: '#/definitions/ListRowInfo'
+        maxItems: 10
         minItems: 1
         type: array
       title:
@@ -335,10 +381,13 @@ definitions:
   SendAudioMessageRequest:
     properties:
       caption:
-        example: Voice message
+        example: Audio message
         type: string
       file:
-        example: https://example.com/audio.mp3
+        example: base64_audio_data
+        type: string
+      filename:
+        example: audio.mp3
         type: string
       mime_type:
         example: audio/mpeg
@@ -356,7 +405,7 @@ definitions:
   SendBusinessProfileMessageRequest:
     properties:
       business_jid:
-        example: 5511777777777@s.whatsapp.net
+        example: 5511888888888@s.whatsapp.net
         type: string
       reply_to:
         example: 3EB0C767D71D
@@ -365,29 +414,31 @@ definitions:
         example: 5511999999999@s.whatsapp.net
         type: string
     required:
-    - business_jid
     - to
     type: object
   SendButtonMessageRequest:
     properties:
-      body:
-        example: 'Choose an option:'
-        type: string
       buttons:
         items:
           $ref: '#/definitions/ButtonInfo'
         maxItems: 3
         minItems: 1
         type: array
+      footer:
+        example: Powered by ZPWoot
+        type: string
       reply_to:
         example: 3EB0C767D71D
+        type: string
+      text:
+        example: 'Choose an option:'
         type: string
       to:
         example: 5511999999999@s.whatsapp.net
         type: string
     required:
-    - body
     - buttons
+    - text
     - to
     type: object
   SendContactListMessageRequest:
@@ -395,7 +446,6 @@ definitions:
       contacts:
         items:
           $ref: '#/definitions/ContactInfo'
-        maxItems: 5
         minItems: 1
         type: array
       reply_to:
@@ -417,22 +467,48 @@ definitions:
         items:
           $ref: '#/definitions/ContactResult'
         type: array
+      data: {}
+      message:
+        example: Operation completed successfully
+        type: string
       remote_jid:
         example: 5511999999999@s.whatsapp.net
         type: string
+      request_id:
+        example: req-123
+        type: string
+      results:
+        description: Alias para ContactResults
+        items:
+          $ref: '#/definitions/ContactResult'
+        type: array
       sent_at:
         example: "2024-01-01T12:00:00Z"
         type: string
       session_id:
-        example: 1b2e424c-a2a0-41a4-b992-15b7ec06b9bc
+        example: session-123
+        type: string
+      success:
+        example: true
+        type: boolean
+      timestamp:
+        example: "2024-01-01T12:00:00Z"
         type: string
     type: object
   SendContactMessageRequest:
     properties:
       contact_name:
+        description: Alias para Name
         example: John Doe
         type: string
       contact_phone:
+        description: Alias para Phone
+        example: "+5511888888888"
+        type: string
+      name:
+        example: John Doe
+        type: string
+      phone:
         example: "+5511888888888"
         type: string
       reply_to:
@@ -442,23 +518,20 @@ definitions:
         example: 5511999999999@s.whatsapp.net
         type: string
     required:
-    - contact_name
-    - contact_phone
+    - name
+    - phone
     - to
     type: object
   SendDocumentMessageRequest:
     properties:
       caption:
-        example: Important document
+        example: Document
         type: string
       file:
-        example: https://example.com/document.pdf
+        example: base64_document_data
         type: string
       filename:
         example: document.pdf
-        type: string
-      mime_type:
-        example: application/pdf
         type: string
       reply_to:
         example: 3EB0C767D71D
@@ -474,16 +547,13 @@ definitions:
   SendImageMessageRequest:
     properties:
       caption:
-        example: Beautiful image
+        example: Check this image!
         type: string
       file:
-        example: https://example.com/image.jpg
+        example: base64_image_data
         type: string
       filename:
         example: image.jpg
-        type: string
-      mime_type:
-        example: image/jpeg
         type: string
       reply_to:
         example: 3EB0C767D71D
@@ -524,7 +594,7 @@ definitions:
   SendLocationMessageRequest:
     properties:
       address:
-        example: São Paulo, SP, Brasil
+        example: São Paulo, SP, Brazil
         type: string
       latitude:
         example: -23.5505
@@ -532,6 +602,9 @@ definitions:
       longitude:
         example: -46.6333
         type: number
+      name:
+        example: São Paulo
+        type: string
       reply_to:
         example: 3EB0C767D71D
         type: string
@@ -546,10 +619,13 @@ definitions:
   SendMediaMessageRequest:
     properties:
       caption:
-        example: Media caption
+        example: Check this out!
+        type: string
+      filename:
+        example: image.jpg
         type: string
       media_url:
-        example: https://example.com/media.jpg
+        example: https://example.com/image.jpg
         type: string
       reply_to:
         example: 3EB0C767D71D
@@ -560,8 +636,8 @@ definitions:
       type:
         enum:
         - image
-        - video
         - audio
+        - video
         - document
         example: image
         type: string
@@ -572,12 +648,28 @@ definitions:
     type: object
   SendMessageResponse:
     properties:
+      data: {}
+      delivered_at:
+        example: "2024-01-01T12:00:05Z"
+        type: string
+      message:
+        example: Operation completed successfully
+        type: string
       message_id:
         example: 3EB0C767D71D
+        type: string
+      read_at:
+        example: "2024-01-01T12:00:10Z"
+        type: string
+      request_id:
+        example: req-123
         type: string
       status:
         example: sent
         type: string
+      success:
+        example: true
+        type: boolean
       timestamp:
         example: "2024-01-01T12:00:00Z"
         type: string
@@ -591,7 +683,7 @@ definitions:
         example: false
         type: boolean
       name:
-        example: What's your favorite color?
+        example: Favorite Color Poll
         type: string
       options:
         items:
@@ -599,11 +691,15 @@ definitions:
         maxItems: 12
         minItems: 2
         type: array
+      question:
+        example: What's your favorite color?
+        type: string
       reply_to:
         example: 3EB0C767D71D
         type: string
       selectable_count:
         example: 1
+        minimum: 1
         type: integer
       to:
         example: 5511999999999@s.whatsapp.net
@@ -611,6 +707,7 @@ definitions:
     required:
     - name
     - options
+    - question
     - to
     type: object
   SendPresenceMessageRequest:
@@ -650,7 +747,7 @@ definitions:
   SendStickerMessageRequest:
     properties:
       file:
-        example: https://example.com/sticker.webp
+        example: base64_sticker_data
         type: string
       mime_type:
         example: image/webp
@@ -668,31 +765,41 @@ definitions:
   SendTextMessageRequest:
     properties:
       content:
-        example: Hello World
+        description: Alias para Text (compatibilidade)
+        example: Hello, World!
         type: string
+      link_preview:
+        example: true
+        type: boolean
+      mentioned_jid:
+        example:
+        - '["5511888888888@s.whatsapp.net"]'
+        items:
+          type: string
+        type: array
       reply_to:
         example: 3EB0C767D71D
+        type: string
+      text:
+        example: Hello, World!
         type: string
       to:
         example: 5511999999999@s.whatsapp.net
         type: string
     required:
-    - content
+    - text
     - to
     type: object
   SendVideoMessageRequest:
     properties:
       caption:
-        example: Amazing video
+        example: Check this video!
         type: string
       file:
-        example: https://example.com/video.mp4
+        example: base64_video_data
         type: string
       filename:
         example: video.mp4
-        type: string
-      mime_type:
-        example: video/mp4
         type: string
       reply_to:
         example: 3EB0C767D71D
@@ -986,6 +1093,234 @@ definitions:
       status:
         type: string
     type: object
+  zpwoot_internal_adapters_server_contracts.CreateGroupRequest:
+    properties:
+      description:
+        maxLength: 512
+        type: string
+      name:
+        maxLength: 25
+        minLength: 1
+        type: string
+      participants:
+        items:
+          type: string
+        maxItems: 256
+        minItems: 1
+        type: array
+    required:
+    - name
+    - participants
+    type: object
+  zpwoot_internal_adapters_server_contracts.CreateGroupResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      group_jid:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      participants:
+        items:
+          type: string
+        type: array
+      success:
+        type: boolean
+    type: object
+  zpwoot_internal_adapters_server_contracts.GetGroupInfoResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      group_jid:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      owner:
+        type: string
+      participants:
+        items:
+          $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.ParticipantInfo'
+        type: array
+      settings:
+        $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.GroupSettings'
+      success:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
+  zpwoot_internal_adapters_server_contracts.GroupInfo:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      group_jid:
+        type: string
+      name:
+        type: string
+      owner:
+        type: string
+      participants:
+        type: integer
+    type: object
+  zpwoot_internal_adapters_server_contracts.GroupSettings:
+    properties:
+      announce:
+        type: boolean
+      join_approval_mode:
+        type: string
+      locked:
+        type: boolean
+      member_add_mode:
+        type: string
+      restrict:
+        type: boolean
+    type: object
+  zpwoot_internal_adapters_server_contracts.ListGroupsResponse:
+    properties:
+      count:
+        type: integer
+      groups:
+        items:
+          $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.GroupInfo'
+        type: array
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  zpwoot_internal_adapters_server_contracts.MessageDTO:
+    properties:
+      content:
+        example: Hello World
+        type: string
+      created_at:
+        example: "2024-01-01T12:00:00Z"
+        type: string
+      cw_conversation_id:
+        example: 456
+        type: integer
+      cw_message_id:
+        example: 123
+        type: integer
+      id:
+        example: 1b2e424c-a2a0-41a4-b992-15b7ec06b9bc
+        type: string
+      media_type:
+        example: image
+        type: string
+      media_url:
+        example: https://example.com/image.jpg
+        type: string
+      session_id:
+        example: session-123
+        type: string
+      sync_status:
+        example: synced
+        type: string
+      synced_at:
+        example: "2024-01-01T12:00:05Z"
+        type: string
+      updated_at:
+        example: "2024-01-01T12:00:00Z"
+        type: string
+      zp_chat:
+        example: 5511999999999@s.whatsapp.net
+        type: string
+      zp_from_me:
+        example: false
+        type: boolean
+      zp_message_id:
+        example: 3EB0C767D71D
+        type: string
+      zp_sender:
+        example: 5511999999999@s.whatsapp.net
+        type: string
+      zp_timestamp:
+        example: "2024-01-01T12:00:00Z"
+        type: string
+      zp_type:
+        example: text
+        type: string
+    type: object
+  zpwoot_internal_adapters_server_contracts.ParticipantInfo:
+    properties:
+      jid:
+        type: string
+      joined_at:
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+    type: object
+  zpwoot_internal_adapters_server_contracts.SetGroupNameRequest:
+    properties:
+      group_jid:
+        type: string
+      name:
+        maxLength: 25
+        minLength: 1
+        type: string
+    required:
+    - group_jid
+    - name
+    type: object
+  zpwoot_internal_adapters_server_contracts.SetGroupNameResponse:
+    properties:
+      group_jid:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      success:
+        type: boolean
+    type: object
+  zpwoot_internal_adapters_server_contracts.UpdateParticipantsRequest:
+    properties:
+      action:
+        enum:
+        - add
+        - remove
+        - promote
+        - demote
+        type: string
+      group_jid:
+        type: string
+      participants:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - action
+    - group_jid
+    - participants
+    type: object
+  zpwoot_internal_adapters_server_contracts.UpdateParticipantsResponse:
+    properties:
+      action:
+        type: string
+      group_jid:
+        type: string
+      message:
+        type: string
+      participants:
+        items:
+          type: string
+        type: array
+      success:
+        type: boolean
+    type: object
   zpwoot_internal_core_messaging.MessageStats:
     properties:
       failed_messages:
@@ -1032,227 +1367,28 @@ definitions:
         type: integer
       messages:
         items:
-          $ref: '#/definitions/zpwoot_internal_services_shared_dto.MessageDTO'
+          $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.MessageDTO'
         type: array
       offset:
         type: integer
       total:
         type: integer
     type: object
-  zpwoot_internal_services_shared_dto.CreateGroupRequest:
-    properties:
-      description:
-        maxLength: 512
-        type: string
-      name:
-        maxLength: 25
-        minLength: 1
-        type: string
-      participants:
-        items:
-          type: string
-        maxItems: 256
-        minItems: 1
-        type: array
-    required:
-    - name
-    - participants
-    type: object
-  zpwoot_internal_services_shared_dto.CreateGroupResponse:
-    properties:
-      created_at:
-        type: string
-      description:
-        type: string
-      group_jid:
-        type: string
-      message:
-        type: string
-      name:
-        type: string
-      participants:
-        items:
-          type: string
-        type: array
-      success:
-        type: boolean
-    type: object
-  zpwoot_internal_services_shared_dto.GetGroupInfoResponse:
-    properties:
-      created_at:
-        type: string
-      description:
-        type: string
-      group_jid:
-        type: string
-      message:
-        type: string
-      name:
-        type: string
-      owner:
-        type: string
-      participants:
-        items:
-          $ref: '#/definitions/zpwoot_internal_services_shared_dto.ParticipantInfo'
-        type: array
-      settings:
-        $ref: '#/definitions/zpwoot_internal_services_shared_dto.GroupSettings'
-      success:
-        type: boolean
-      updated_at:
-        type: string
-    type: object
-  zpwoot_internal_services_shared_dto.GroupInfo:
-    properties:
-      created_at:
-        type: string
-      description:
-        type: string
-      group_jid:
-        type: string
-      name:
-        type: string
-      owner:
-        type: string
-      participants:
-        type: integer
-    type: object
-  zpwoot_internal_services_shared_dto.GroupSettings:
-    properties:
-      announce:
-        type: boolean
-      join_approval_mode:
-        type: string
-      locked:
-        type: boolean
-      member_add_mode:
-        type: string
-      restrict:
-        type: boolean
-    type: object
-  zpwoot_internal_services_shared_dto.ListGroupsResponse:
-    properties:
-      count:
-        type: integer
-      groups:
-        items:
-          $ref: '#/definitions/zpwoot_internal_services_shared_dto.GroupInfo'
-        type: array
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
-  zpwoot_internal_services_shared_dto.MessageDTO:
-    properties:
-      content:
-        type: string
-      created_at:
-        description: Timestamps
-        type: string
-      cw_conversation_id:
-        type: integer
-      cw_message_id:
-        description: Chatwoot Message Identifiers
-        type: integer
-      id:
-        description: Identificadores únicos
-        type: string
-      session_id:
-        type: string
-      sync_status:
-        description: Sync Status
-        type: string
-      synced_at:
-        type: string
-      updated_at:
-        type: string
-      zp_chat:
-        type: string
-      zp_from_me:
-        type: boolean
-      zp_message_id:
-        description: WhatsApp Message Identifiers
-        type: string
-      zp_sender:
-        type: string
-      zp_timestamp:
-        type: string
-      zp_type:
-        type: string
-    type: object
-  zpwoot_internal_services_shared_dto.ParticipantInfo:
-    properties:
-      jid:
-        type: string
-      joined_at:
-        type: string
-      role:
-        type: string
-      status:
-        type: string
-    type: object
-  zpwoot_internal_services_shared_dto.SetGroupNameRequest:
-    properties:
-      group_jid:
-        type: string
-      name:
-        maxLength: 25
-        minLength: 1
-        type: string
-    required:
-    - group_jid
-    - name
-    type: object
-  zpwoot_internal_services_shared_dto.SetGroupNameResponse:
-    properties:
-      group_jid:
-        type: string
-      message:
-        type: string
-      name:
-        type: string
-      success:
-        type: boolean
-    type: object
-  zpwoot_internal_services_shared_dto.UpdateParticipantsRequest:
-    properties:
-      action:
-        enum:
-        - add
-        - remove
-        - promote
-        - demote
-        type: string
-      group_jid:
-        type: string
-      participants:
-        items:
-          type: string
-        minItems: 1
-        type: array
-    required:
-    - action
-    - group_jid
-    - participants
-    type: object
-  zpwoot_internal_services_shared_dto.UpdateParticipantsResponse:
-    properties:
-      action:
-        type: string
-      group_jid:
-        type: string
-      message:
-        type: string
-      participants:
-        items:
-          type: string
-        type: array
-      success:
-        type: boolean
-    type: object
+host: localhost:8080
 info:
-  contact: {}
+  contact:
+    email: support@zpwoot.com
+    name: ZPWoot API Support
+    url: https://github.com/zpwoot/zpwoot
+  description: A comprehensive WhatsApp Business API built with Go. Provides endpoints
+    for session management, messaging, contacts, groups, media handling, and integrations
+    with Chatwoot.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://github.com/zpwoot/zpwoot/blob/main/LICENSE
+  title: ZPWoot WhatsApp API
+  version: 2.0.0
 paths:
   /chatwoot/webhook/{sessionId}:
     post:
@@ -2053,7 +2189,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/zpwoot_internal_services_shared_dto.ListGroupsResponse'
+                  $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.ListGroupsResponse'
               type: object
         "404":
           description: Not Found
@@ -2083,7 +2219,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/zpwoot_internal_services_shared_dto.CreateGroupRequest'
+          $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.CreateGroupRequest'
       produces:
       - application/json
       responses:
@@ -2094,7 +2230,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/zpwoot_internal_services_shared_dto.CreateGroupResponse'
+                  $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.CreateGroupResponse'
               type: object
         "400":
           description: Bad Request
@@ -2137,7 +2273,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/zpwoot_internal_services_shared_dto.GetGroupInfoResponse'
+                  $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.GetGroupInfoResponse'
               type: object
         "400":
           description: Bad Request
@@ -2172,7 +2308,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/zpwoot_internal_services_shared_dto.SetGroupNameRequest'
+          $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.SetGroupNameRequest'
       produces:
       - application/json
       responses:
@@ -2183,7 +2319,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/zpwoot_internal_services_shared_dto.SetGroupNameResponse'
+                  $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.SetGroupNameResponse'
               type: object
         "400":
           description: Bad Request
@@ -2218,7 +2354,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/zpwoot_internal_services_shared_dto.UpdateParticipantsRequest'
+          $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.UpdateParticipantsRequest'
       produces:
       - application/json
       responses:
@@ -2229,7 +2365,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/zpwoot_internal_services_shared_dto.UpdateParticipantsResponse'
+                  $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.UpdateParticipantsResponse'
               type: object
         "400":
           description: Bad Request
@@ -2606,7 +2742,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/zpwoot_internal_services_shared_dto.MessageDTO'
+                  $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.MessageDTO'
               type: object
         "404":
           description: Not Found
@@ -2778,7 +2914,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/zpwoot_internal_services_shared_dto.MessageDTO'
+                    $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.MessageDTO'
                   type: array
               type: object
         "404":
@@ -4031,4 +4167,10 @@ paths:
       summary: Get session statistics
       tags:
       - Sessions
+securityDefinitions:
+  ApiKeyAuth:
+    description: 'API Key authentication. Use: YOUR_API_KEY'
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

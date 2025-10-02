@@ -1,3 +1,23 @@
+// @title ZPWoot WhatsApp API
+// @version 2.0.0
+// @description A comprehensive WhatsApp Business API built with Go. Provides endpoints for session management, messaging, contacts, groups, media handling, and integrations with Chatwoot.
+// @termsOfService https://github.com/zpwoot/zpwoot/blob/main/LICENSE
+
+// @contact.name ZPWoot API Support
+// @contact.url https://github.com/zpwoot/zpwoot
+// @contact.email support@zpwoot.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
+// @description API Key authentication. Use: YOUR_API_KEY
+
 package main
 
 import (
@@ -13,6 +33,8 @@ import (
 	"zpwoot/platform/container"
 	"zpwoot/platform/database"
 	"zpwoot/platform/logger"
+
+	_ "zpwoot/docs/swagger" // Import docs for swagger
 )
 
 const (

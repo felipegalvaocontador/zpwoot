@@ -169,20 +169,21 @@ func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration created successfully")
 }
 
-// GetConfig obtém a configuração do Chatwoot
-// @Summary Get Chatwoot configuration
-// @Description Get the current Chatwoot configuration for the session
+// FindConfig obtém a configuração do Chatwoot
+// @Summary Find Chatwoot configuration
+// @Description Find the current Chatwoot configuration for the session
 // @Tags Chatwoot
+// @Security ApiKeyAuth
 // @Produce json
-// @Param sessionId path string true "Session ID"
+// @Param sessionId query string true "Session ID"
 // @Success 200 {object} shared.SuccessResponse
 // @Failure 404 {object} shared.SuccessResponse
 // @Failure 500 {object} shared.SuccessResponse
-// @Router /sessions/{sessionId}/chatwoot [get]
-func (h *ChatwootHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
-	h.LogRequest(r, "get chatwoot config")
+// @Router /chatwoot/find [get]
+func (h *ChatwootHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "find chatwoot config")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := r.URL.Query().Get("sessionId")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return

@@ -219,13 +219,14 @@ type SendContactListResponse struct {
 	ContactCount    int             `json:"contact_count" example:"3"`
 	ContactResults  []ContactResult `json:"contact_results"`
 	Results         []ContactResult `json:"results"` // Alias para ContactResults
-	SentAt          string          `json:"sent_at,omitempty" example:"2024-01-01T12:00:00Z"`
+	SentAt          time.Time       `json:"sent_at,omitempty" example:"2024-01-01T12:00:00Z"`
 } // @name SendContactListResponse
 
 // SendBusinessProfileMessageRequest DTO para envio de perfil business
 type SendBusinessProfileMessageRequest struct {
-	To      string `json:"to" validate:"required" example:"5511999999999@s.whatsapp.net"`
-	ReplyTo string `json:"reply_to,omitempty" example:"3EB0C767D71D"`
+	To          string `json:"to" validate:"required" example:"5511999999999@s.whatsapp.net"`
+	BusinessJID string `json:"business_jid,omitempty" example:"5511888888888@s.whatsapp.net"`
+	ReplyTo     string `json:"reply_to,omitempty" example:"3EB0C767D71D"`
 } // @name SendBusinessProfileMessageRequest
 
 // SendButtonMessageRequest DTO para envio de mensagem com botões
@@ -248,11 +249,13 @@ type SendListMessageRequest struct {
 
 // SendPollMessageRequest DTO para envio de enquete
 type SendPollMessageRequest struct {
-	To              string           `json:"to" validate:"required" example:"5511999999999@s.whatsapp.net"`
-	Question        string           `json:"question" validate:"required" example:"What's your favorite color?"`
-	Options         []PollOptionInfo `json:"options" validate:"required,min=2,max=12"`
-	SelectableCount int              `json:"selectable_count" validate:"min=1" example:"1"`
-	ReplyTo         string           `json:"reply_to,omitempty" example:"3EB0C767D71D"`
+	To                string           `json:"to" validate:"required" example:"5511999999999@s.whatsapp.net"`
+	Name              string           `json:"name" validate:"required" example:"Favorite Color Poll"`
+	Question          string           `json:"question" validate:"required" example:"What's your favorite color?"`
+	Options           []PollOptionInfo `json:"options" validate:"required,min=2,max=12"`
+	SelectableCount   int              `json:"selectable_count" validate:"min=1" example:"1"`
+	AllowMultipleVote bool             `json:"allow_multiple_vote" example:"false"`
+	ReplyTo           string           `json:"reply_to,omitempty" example:"3EB0C767D71D"`
 } // @name SendPollMessageRequest
 
 // SendReactionMessageRequest DTO para envio de reação
@@ -294,3 +297,53 @@ type ListRowInfo struct {
 type PollOptionInfo struct {
 	Name string `json:"name" validate:"required" example:"Option 1"`
 } // @name PollOptionInfo
+
+// EditMessageRequest DTO para edição de mensagem
+type EditMessageRequest struct {
+	To        string `json:"to" validate:"required" example:"5511999999999@s.whatsapp.net"`
+	MessageID string `json:"message_id" validate:"required" example:"3EB0C767D71D"`
+	NewText   string `json:"new_text" validate:"required" example:"Updated message"`
+	NewBody   string `json:"new_body,omitempty" example:"Updated message"` // Alias para NewText
+} // @name EditMessageRequest
+
+// RevokeMessageRequest DTO para revogação de mensagem
+type RevokeMessageRequest struct {
+	To        string `json:"to" validate:"required" example:"5511999999999@s.whatsapp.net"`
+	MessageID string `json:"message_id" validate:"required" example:"3EB0C767D71D"`
+} // @name RevokeMessageRequest
+
+// MarkAsReadRequest DTO para marcar mensagens como lidas
+type MarkAsReadRequest struct {
+	ChatJID    string   `json:"chat_jid" validate:"required" example:"5511999999999@s.whatsapp.net"`
+	MessageIDs []string `json:"message_ids" validate:"required,min=1" example:"[\"3EB0C767D71D\"]"`
+} // @name MarkAsReadRequest
+
+// PollVoteInfo informações de voto em enquete
+type PollVoteInfo struct {
+	OptionName string   `json:"option_name" example:"Option 1"`
+	Voters     []string `json:"voters" example:"[\"5511888888888@s.whatsapp.net\"]"`
+	VoteCount  int      `json:"vote_count" example:"5"`
+} // @name PollVoteInfo
+
+// GetPollResultsResponse resposta para resultados de enquete
+type GetPollResultsResponse struct {
+	BaseResponse
+	MessageID    string         `json:"message_id" example:"3EB0C767D71D"`
+	PollID       string         `json:"poll_id" example:"3EB0C767D71D"`
+	PollName     string         `json:"poll_name" example:"Favorite Color Poll"`
+	Question     string         `json:"question" example:"What's your favorite color?"`
+	Votes        []PollVoteInfo `json:"votes"`
+	VoteResults  []PollVoteInfo `json:"vote_results"` // Alias para Votes
+	TotalVotes   int            `json:"total_votes" example:"15"`
+	CreatedAt    time.Time      `json:"created_at" example:"2024-01-01T12:00:00Z"`
+} // @name GetPollResultsResponse
+
+// MarkAsReadResponse resposta para marcar como lida
+type MarkAsReadResponse struct {
+	BaseResponse
+	ChatJID      string    `json:"chat_jid" example:"5511999999999@s.whatsapp.net"`
+	MessagesRead int       `json:"messages_read" example:"3"`
+	MarkedCount  int       `json:"marked_count" example:"3"` // Alias para MessagesRead
+	Status       string    `json:"status" example:"success"`
+	LastReadAt   time.Time `json:"last_read_at" example:"2024-01-01T12:00:00Z"`
+} // @name MarkAsReadResponse

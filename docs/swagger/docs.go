@@ -9,7 +9,16 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "termsOfService": "https://github.com/zpwoot/zpwoot/blob/main/LICENSE",
+        "contact": {
+            "name": "ZPWoot API Support",
+            "url": "https://github.com/zpwoot/zpwoot",
+            "email": "support@zpwoot.com"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -1490,7 +1499,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/zpwoot_internal_services_shared_dto.ListGroupsResponse"
+                                            "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.ListGroupsResponse"
                                         }
                                     }
                                 }
@@ -1542,7 +1551,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/zpwoot_internal_services_shared_dto.CreateGroupRequest"
+                            "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.CreateGroupRequest"
                         }
                     }
                 ],
@@ -1558,7 +1567,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/zpwoot_internal_services_shared_dto.CreateGroupResponse"
+                                            "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.CreateGroupResponse"
                                         }
                                     }
                                 }
@@ -1629,7 +1638,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/zpwoot_internal_services_shared_dto.GetGroupInfoResponse"
+                                            "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.GetGroupInfoResponse"
                                         }
                                     }
                                 }
@@ -1689,7 +1698,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/zpwoot_internal_services_shared_dto.SetGroupNameRequest"
+                            "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.SetGroupNameRequest"
                         }
                     }
                 ],
@@ -1705,7 +1714,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/zpwoot_internal_services_shared_dto.SetGroupNameResponse"
+                                            "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.SetGroupNameResponse"
                                         }
                                     }
                                 }
@@ -1765,7 +1774,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/zpwoot_internal_services_shared_dto.UpdateParticipantsRequest"
+                            "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.UpdateParticipantsRequest"
                         }
                     }
                 ],
@@ -1781,7 +1790,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/zpwoot_internal_services_shared_dto.UpdateParticipantsResponse"
+                                            "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.UpdateParticipantsResponse"
                                         }
                                     }
                                 }
@@ -2470,7 +2479,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/zpwoot_internal_services_shared_dto.MessageDTO"
+                                                "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.MessageDTO"
                                             }
                                         }
                                     }
@@ -3933,7 +3942,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/zpwoot_internal_services_shared_dto.MessageDTO"
+                                            "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.MessageDTO"
                                         }
                                     }
                                 }
@@ -4525,11 +4534,15 @@ const docTemplate = `{
             "properties": {
                 "id": {
                     "type": "string",
-                    "example": "btn_1"
+                    "example": "btn-1"
                 },
                 "text": {
                     "type": "string",
-                    "example": "Click Me"
+                    "example": "Option 1"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "reply"
                 }
             }
         },
@@ -4575,16 +4588,33 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "contact_name": {
+                    "description": "Alias para Name",
                     "type": "string",
                     "example": "John Doe"
+                },
+                "error": {
+                    "type": "string",
+                    "example": ""
                 },
                 "message_id": {
                     "type": "string",
                     "example": "3EB0C767D71D"
                 },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+5511888888888"
+                },
                 "status": {
                     "type": "string",
                     "example": "sent"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -4706,7 +4736,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "message_id",
-                "new_body",
+                "new_text",
                 "to"
             ],
             "properties": {
@@ -4715,8 +4745,13 @@ const docTemplate = `{
                     "example": "3EB0C767D71D"
                 },
                 "new_body": {
+                    "description": "Alias para NewText",
                     "type": "string",
-                    "example": "Updated message text"
+                    "example": "Updated message"
+                },
+                "new_text": {
+                    "type": "string",
+                    "example": "Updated message"
                 },
                 "to": {
                     "type": "string",
@@ -4749,19 +4784,51 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2024-01-01T12:00:00Z"
                 },
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "Operation completed successfully"
+                },
                 "message_id": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "poll_id": {
                     "type": "string",
                     "example": "3EB0C767D71D"
                 },
                 "poll_name": {
                     "type": "string",
+                    "example": "Favorite Color Poll"
+                },
+                "question": {
+                    "type": "string",
                     "example": "What's your favorite color?"
+                },
+                "request_id": {
+                    "type": "string",
+                    "example": "req-123"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
                 },
                 "total_votes": {
                     "type": "integer",
-                    "example": 10
+                    "example": 15
                 },
                 "vote_results": {
+                    "description": "Alias para Votes",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/PollVoteInfo"
+                    }
+                },
+                "votes": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/PollVoteInfo"
@@ -4778,11 +4845,11 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string",
-                    "example": "Description for option 1"
+                    "example": "Description of option 1"
                 },
                 "id": {
                     "type": "string",
-                    "example": "row_1"
+                    "example": "row-1"
                 },
                 "title": {
                     "type": "string",
@@ -4799,6 +4866,7 @@ const docTemplate = `{
             "properties": {
                 "rows": {
                     "type": "array",
+                    "maxItems": 10,
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/ListRowInfo"
@@ -4993,11 +5061,15 @@ const docTemplate = `{
             "properties": {
                 "caption": {
                     "type": "string",
-                    "example": "Voice message"
+                    "example": "Audio message"
                 },
                 "file": {
                     "type": "string",
-                    "example": "https://example.com/audio.mp3"
+                    "example": "base64_audio_data"
+                },
+                "filename": {
+                    "type": "string",
+                    "example": "audio.mp3"
                 },
                 "mime_type": {
                     "type": "string",
@@ -5016,13 +5088,12 @@ const docTemplate = `{
         "SendBusinessProfileMessageRequest": {
             "type": "object",
             "required": [
-                "business_jid",
                 "to"
             ],
             "properties": {
                 "business_jid": {
                     "type": "string",
-                    "example": "5511777777777@s.whatsapp.net"
+                    "example": "5511888888888@s.whatsapp.net"
                 },
                 "reply_to": {
                     "type": "string",
@@ -5037,15 +5108,11 @@ const docTemplate = `{
         "SendButtonMessageRequest": {
             "type": "object",
             "required": [
-                "body",
                 "buttons",
+                "text",
                 "to"
             ],
             "properties": {
-                "body": {
-                    "type": "string",
-                    "example": "Choose an option:"
-                },
                 "buttons": {
                     "type": "array",
                     "maxItems": 3,
@@ -5054,9 +5121,17 @@ const docTemplate = `{
                         "$ref": "#/definitions/ButtonInfo"
                     }
                 },
+                "footer": {
+                    "type": "string",
+                    "example": "Powered by ZPWoot"
+                },
                 "reply_to": {
                     "type": "string",
                     "example": "3EB0C767D71D"
+                },
+                "text": {
+                    "type": "string",
+                    "example": "Choose an option:"
                 },
                 "to": {
                     "type": "string",
@@ -5073,7 +5148,6 @@ const docTemplate = `{
             "properties": {
                 "contacts": {
                     "type": "array",
-                    "maxItems": 5,
                     "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/ContactInfo"
@@ -5102,9 +5176,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/ContactResult"
                     }
                 },
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "Operation completed successfully"
+                },
                 "remote_jid": {
                     "type": "string",
                     "example": "5511999999999@s.whatsapp.net"
+                },
+                "request_id": {
+                    "type": "string",
+                    "example": "req-123"
+                },
+                "results": {
+                    "description": "Alias para ContactResults",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ContactResult"
+                    }
                 },
                 "sent_at": {
                     "type": "string",
@@ -5112,23 +5202,41 @@ const docTemplate = `{
                 },
                 "session_id": {
                     "type": "string",
-                    "example": "1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"
+                    "example": "session-123"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
                 }
             }
         },
         "SendContactMessageRequest": {
             "type": "object",
             "required": [
-                "contact_name",
-                "contact_phone",
+                "name",
+                "phone",
                 "to"
             ],
             "properties": {
                 "contact_name": {
+                    "description": "Alias para Name",
                     "type": "string",
                     "example": "John Doe"
                 },
                 "contact_phone": {
+                    "description": "Alias para Phone",
+                    "type": "string",
+                    "example": "+5511888888888"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "phone": {
                     "type": "string",
                     "example": "+5511888888888"
                 },
@@ -5152,19 +5260,15 @@ const docTemplate = `{
             "properties": {
                 "caption": {
                     "type": "string",
-                    "example": "Important document"
+                    "example": "Document"
                 },
                 "file": {
                     "type": "string",
-                    "example": "https://example.com/document.pdf"
+                    "example": "base64_document_data"
                 },
                 "filename": {
                     "type": "string",
                     "example": "document.pdf"
-                },
-                "mime_type": {
-                    "type": "string",
-                    "example": "application/pdf"
                 },
                 "reply_to": {
                     "type": "string",
@@ -5185,19 +5289,15 @@ const docTemplate = `{
             "properties": {
                 "caption": {
                     "type": "string",
-                    "example": "Beautiful image"
+                    "example": "Check this image!"
                 },
                 "file": {
                     "type": "string",
-                    "example": "https://example.com/image.jpg"
+                    "example": "base64_image_data"
                 },
                 "filename": {
                     "type": "string",
                     "example": "image.jpg"
-                },
-                "mime_type": {
-                    "type": "string",
-                    "example": "image/jpeg"
                 },
                 "reply_to": {
                     "type": "string",
@@ -5254,7 +5354,7 @@ const docTemplate = `{
             "properties": {
                 "address": {
                     "type": "string",
-                    "example": "São Paulo, SP, Brasil"
+                    "example": "São Paulo, SP, Brazil"
                 },
                 "latitude": {
                     "type": "number",
@@ -5263,6 +5363,10 @@ const docTemplate = `{
                 "longitude": {
                     "type": "number",
                     "example": -46.6333
+                },
+                "name": {
+                    "type": "string",
+                    "example": "São Paulo"
                 },
                 "reply_to": {
                     "type": "string",
@@ -5284,11 +5388,15 @@ const docTemplate = `{
             "properties": {
                 "caption": {
                     "type": "string",
-                    "example": "Media caption"
+                    "example": "Check this out!"
+                },
+                "filename": {
+                    "type": "string",
+                    "example": "image.jpg"
                 },
                 "media_url": {
                     "type": "string",
-                    "example": "https://example.com/media.jpg"
+                    "example": "https://example.com/image.jpg"
                 },
                 "reply_to": {
                     "type": "string",
@@ -5302,8 +5410,8 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "image",
-                        "video",
                         "audio",
+                        "video",
                         "document"
                     ],
                     "example": "image"
@@ -5313,13 +5421,34 @@ const docTemplate = `{
         "SendMessageResponse": {
             "type": "object",
             "properties": {
+                "data": {},
+                "delivered_at": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:05Z"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Operation completed successfully"
+                },
                 "message_id": {
                     "type": "string",
                     "example": "3EB0C767D71D"
                 },
+                "read_at": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:10Z"
+                },
+                "request_id": {
+                    "type": "string",
+                    "example": "req-123"
+                },
                 "status": {
                     "type": "string",
                     "example": "sent"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 },
                 "timestamp": {
                     "type": "string",
@@ -5336,6 +5465,7 @@ const docTemplate = `{
             "required": [
                 "name",
                 "options",
+                "question",
                 "to"
             ],
             "properties": {
@@ -5345,7 +5475,7 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string",
-                    "example": "What's your favorite color?"
+                    "example": "Favorite Color Poll"
                 },
                 "options": {
                     "type": "array",
@@ -5355,12 +5485,17 @@ const docTemplate = `{
                         "$ref": "#/definitions/PollOptionInfo"
                     }
                 },
+                "question": {
+                    "type": "string",
+                    "example": "What's your favorite color?"
+                },
                 "reply_to": {
                     "type": "string",
                     "example": "3EB0C767D71D"
                 },
                 "selectable_count": {
                     "type": "integer",
+                    "minimum": 1,
                     "example": 1
                 },
                 "to": {
@@ -5424,7 +5559,7 @@ const docTemplate = `{
             "properties": {
                 "file": {
                     "type": "string",
-                    "example": "https://example.com/sticker.webp"
+                    "example": "base64_sticker_data"
                 },
                 "mime_type": {
                     "type": "string",
@@ -5443,17 +5578,35 @@ const docTemplate = `{
         "SendTextMessageRequest": {
             "type": "object",
             "required": [
-                "content",
+                "text",
                 "to"
             ],
             "properties": {
                 "content": {
+                    "description": "Alias para Text (compatibilidade)",
                     "type": "string",
-                    "example": "Hello World"
+                    "example": "Hello, World!"
+                },
+                "link_preview": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "mentioned_jid": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"5511888888888@s.whatsapp.net\"]"
+                    ]
                 },
                 "reply_to": {
                     "type": "string",
                     "example": "3EB0C767D71D"
+                },
+                "text": {
+                    "type": "string",
+                    "example": "Hello, World!"
                 },
                 "to": {
                     "type": "string",
@@ -5470,19 +5623,15 @@ const docTemplate = `{
             "properties": {
                 "caption": {
                     "type": "string",
-                    "example": "Amazing video"
+                    "example": "Check this video!"
                 },
                 "file": {
                     "type": "string",
-                    "example": "https://example.com/video.mp4"
+                    "example": "base64_video_data"
                 },
                 "filename": {
                     "type": "string",
                     "example": "video.mp4"
-                },
-                "mime_type": {
-                    "type": "string",
-                    "example": "video/mp4"
                 },
                 "reply_to": {
                     "type": "string",
@@ -5917,6 +6066,338 @@ const docTemplate = `{
                 }
             }
         },
+        "zpwoot_internal_adapters_server_contracts.CreateGroupRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "participants"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 512
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 25,
+                    "minLength": 1
+                },
+                "participants": {
+                    "type": "array",
+                    "maxItems": 256,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.CreateGroupResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "group_jid": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "participants": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.GetGroupInfoResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "group_jid": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "string"
+                },
+                "participants": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.ParticipantInfo"
+                    }
+                },
+                "settings": {
+                    "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.GroupSettings"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.GroupInfo": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "group_jid": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "string"
+                },
+                "participants": {
+                    "type": "integer"
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.GroupSettings": {
+            "type": "object",
+            "properties": {
+                "announce": {
+                    "type": "boolean"
+                },
+                "join_approval_mode": {
+                    "type": "string"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "member_add_mode": {
+                    "type": "string"
+                },
+                "restrict": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.ListGroupsResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.GroupInfo"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.MessageDTO": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "example": "Hello World"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                },
+                "cw_conversation_id": {
+                    "type": "integer",
+                    "example": 456
+                },
+                "cw_message_id": {
+                    "type": "integer",
+                    "example": 123
+                },
+                "id": {
+                    "type": "string",
+                    "example": "1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"
+                },
+                "media_type": {
+                    "type": "string",
+                    "example": "image"
+                },
+                "media_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
+                },
+                "session_id": {
+                    "type": "string",
+                    "example": "session-123"
+                },
+                "sync_status": {
+                    "type": "string",
+                    "example": "synced"
+                },
+                "synced_at": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:05Z"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                },
+                "zp_chat": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "zp_from_me": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "zp_message_id": {
+                    "type": "string",
+                    "example": "3EB0C767D71D"
+                },
+                "zp_sender": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "zp_timestamp": {
+                    "type": "string",
+                    "example": "2024-01-01T12:00:00Z"
+                },
+                "zp_type": {
+                    "type": "string",
+                    "example": "text"
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.ParticipantInfo": {
+            "type": "object",
+            "properties": {
+                "jid": {
+                    "type": "string"
+                },
+                "joined_at": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.SetGroupNameRequest": {
+            "type": "object",
+            "required": [
+                "group_jid",
+                "name"
+            ],
+            "properties": {
+                "group_jid": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 25,
+                    "minLength": 1
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.SetGroupNameResponse": {
+            "type": "object",
+            "properties": {
+                "group_jid": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.UpdateParticipantsRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "group_jid",
+                "participants"
+            ],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "add",
+                        "remove",
+                        "promote",
+                        "demote"
+                    ]
+                },
+                "group_jid": {
+                    "type": "string"
+                },
+                "participants": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "zpwoot_internal_adapters_server_contracts.UpdateParticipantsResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "group_jid": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "participants": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "zpwoot_internal_core_messaging.MessageStats": {
             "type": "object",
             "properties": {
@@ -5986,7 +6467,7 @@ const docTemplate = `{
                 "messages": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/zpwoot_internal_services_shared_dto.MessageDTO"
+                        "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.MessageDTO"
                     }
                 },
                 "offset": {
@@ -5996,332 +6477,26 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
-        },
-        "zpwoot_internal_services_shared_dto.CreateGroupRequest": {
-            "type": "object",
-            "required": [
-                "name",
-                "participants"
-            ],
-            "properties": {
-                "description": {
-                    "type": "string",
-                    "maxLength": 512
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 25,
-                    "minLength": 1
-                },
-                "participants": {
-                    "type": "array",
-                    "maxItems": 256,
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.CreateGroupResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "group_jid": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "participants": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.GetGroupInfoResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "group_jid": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "owner": {
-                    "type": "string"
-                },
-                "participants": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/zpwoot_internal_services_shared_dto.ParticipantInfo"
-                    }
-                },
-                "settings": {
-                    "$ref": "#/definitions/zpwoot_internal_services_shared_dto.GroupSettings"
-                },
-                "success": {
-                    "type": "boolean"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.GroupInfo": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "group_jid": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "owner": {
-                    "type": "string"
-                },
-                "participants": {
-                    "type": "integer"
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.GroupSettings": {
-            "type": "object",
-            "properties": {
-                "announce": {
-                    "type": "boolean"
-                },
-                "join_approval_mode": {
-                    "type": "string"
-                },
-                "locked": {
-                    "type": "boolean"
-                },
-                "member_add_mode": {
-                    "type": "string"
-                },
-                "restrict": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.ListGroupsResponse": {
-            "type": "object",
-            "properties": {
-                "count": {
-                    "type": "integer"
-                },
-                "groups": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/zpwoot_internal_services_shared_dto.GroupInfo"
-                    }
-                },
-                "message": {
-                    "type": "string"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.MessageDTO": {
-            "type": "object",
-            "properties": {
-                "content": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "description": "Timestamps",
-                    "type": "string"
-                },
-                "cw_conversation_id": {
-                    "type": "integer"
-                },
-                "cw_message_id": {
-                    "description": "Chatwoot Message Identifiers",
-                    "type": "integer"
-                },
-                "id": {
-                    "description": "Identificadores únicos",
-                    "type": "string"
-                },
-                "session_id": {
-                    "type": "string"
-                },
-                "sync_status": {
-                    "description": "Sync Status",
-                    "type": "string"
-                },
-                "synced_at": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "zp_chat": {
-                    "type": "string"
-                },
-                "zp_from_me": {
-                    "type": "boolean"
-                },
-                "zp_message_id": {
-                    "description": "WhatsApp Message Identifiers",
-                    "type": "string"
-                },
-                "zp_sender": {
-                    "type": "string"
-                },
-                "zp_timestamp": {
-                    "type": "string"
-                },
-                "zp_type": {
-                    "type": "string"
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.ParticipantInfo": {
-            "type": "object",
-            "properties": {
-                "jid": {
-                    "type": "string"
-                },
-                "joined_at": {
-                    "type": "string"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.SetGroupNameRequest": {
-            "type": "object",
-            "required": [
-                "group_jid",
-                "name"
-            ],
-            "properties": {
-                "group_jid": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 25,
-                    "minLength": 1
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.SetGroupNameResponse": {
-            "type": "object",
-            "properties": {
-                "group_jid": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.UpdateParticipantsRequest": {
-            "type": "object",
-            "required": [
-                "action",
-                "group_jid",
-                "participants"
-            ],
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": [
-                        "add",
-                        "remove",
-                        "promote",
-                        "demote"
-                    ]
-                },
-                "group_jid": {
-                    "type": "string"
-                },
-                "participants": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "zpwoot_internal_services_shared_dto.UpdateParticipantsResponse": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "group_jid": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "participants": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "description": "API Key authentication. Use: YOUR_API_KEY",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
-	Host:             "",
-	BasePath:         "",
+	Version:          "2.0.0",
+	Host:             "localhost:8080",
+	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Title:            "ZPWoot WhatsApp API",
+	Description:      "A comprehensive WhatsApp Business API built with Go. Provides endpoints for session management, messaging, contacts, groups, media handling, and integrations with Chatwoot.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

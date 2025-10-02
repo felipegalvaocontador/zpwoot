@@ -76,6 +76,7 @@ type Gateway struct {
 	// Internal state
 	clients       map[string]*Client
 	eventHandlers map[string][]session.EventHandler
+	sessionUUIDs  map[string]string // mapeamento sessionName -> sessionUUID
 	mu            sync.RWMutex
 
 	// External integrations (baseado no legacy)

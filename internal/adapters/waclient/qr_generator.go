@@ -187,36 +187,11 @@ func (g *QRGenerator) IsExpired(expiresAt time.Time) bool {
 // DisplayQRCodeInTerminal exibe QR code no terminal de forma visível
 // Compatível com a interface do wameow
 func (g *QRGenerator) DisplayQRCodeInTerminal(qrCode, sessionID string) {
-	// Separador visual para destacar o QR code
-	separator := strings.Repeat("=", 80)
+	// Exibir QR code usando half blocks (como na wuzapi)
+	qrterminal.GenerateHalfBlock(qrCode, qrterminal.L, os.Stdout)
+	fmt.Printf("QR code for session %s:\n%s\n", strings.ToUpper(sessionID), qrCode)
 
-	fmt.Printf("\n%s\n", separator)
-	fmt.Printf("🔗 QR CODE PARA SESSÃO: %s\n", strings.ToUpper(sessionID))
-	fmt.Printf("%s\n", separator)
-	fmt.Println("📱 Escaneie o QR code abaixo com seu WhatsApp:")
-	fmt.Println("   1. Abra o WhatsApp no seu celular")
-	fmt.Println("   2. Vá em Configurações > Aparelhos conectados")
-	fmt.Println("   3. Toque em 'Conectar um aparelho'")
-	fmt.Println("   4. Escaneie o código QR abaixo")
-	fmt.Printf("%s\n\n", separator)
-
-	// Configurar QR terminal para melhor visualização
-	config := qrterminal.Config{
-		Level:     qrterminal.M,
-		Writer:    os.Stdout,
-		BlackChar: qrterminal.BLACK,
-		WhiteChar: qrterminal.WHITE,
-		QuietZone: 1,
-	}
-
-	// Exibir QR code no terminal
-	qrterminal.GenerateWithConfig(qrCode, config)
-
-	fmt.Printf("\n%s\n", separator)
-	fmt.Printf("⏳ Aguardando escaneamento do QR code para sessão '%s'...\n", sessionID)
-	fmt.Printf("%s\n\n", separator)
-
-	// Log para arquivo também
+	// Log para arquivo
 	g.logger.InfoWithFields("QR code displayed in terminal", map[string]interface{}{
 		"session_id": sessionID,
 		"qr_length":  len(qrCode),

@@ -386,6 +386,155 @@ func (g *Gateway) SaveReceivedMessage(message *messaging.Message) error {
 	return nil
 }
 
+// ===== GROUP OPERATIONS =====
+
+// CreateGroup cria um novo grupo WhatsApp
+func (g *Gateway) CreateGroup(ctx context.Context, sessionID, name string, participants []string, description string) (*group.GroupInfo, error) {
+	g.logger.InfoWithFields("Creating group", map[string]interface{}{
+		"session_id":   sessionID,
+		"name":         name,
+		"participants": len(participants),
+		"description":  description != "",
+	})
+
+	client := g.getClient(sessionID)
+	if client == nil {
+		return nil, fmt.Errorf("session %s not found", sessionID)
+	}
+	if !client.IsLoggedIn() {
+		return nil, fmt.Errorf("session %s is not logged in", sessionID)
+	}
+
+	// Validar entrada
+	if name == "" {
+		return nil, fmt.Errorf("group name is required")
+	}
+	if len(participants) == 0 {
+		return nil, fmt.Errorf("at least one participant is required")
+	}
+
+	// Converter participantes para JIDs
+	participantJIDs := make([]types.JID, len(participants))
+	for i, participant := range participants {
+		jid, err := types.ParseJID(participant)
+		if err != nil {
+			return nil, fmt.Errorf("invalid participant JID %s: %w", participant, err)
+		}
+		participantJIDs[i] = jid
+	}
+
+	// Criar grupo via whatsmeow
+	groupInfo, err := client.CreateGroup(ctx, whatsmeow.ReqCreateGroup{
+		Name:         name,
+		Participants: participantJIDs,
+	})
+	if err != nil {
+		g.logger.ErrorWithFields("Failed to create group", map[string]interface{}{
+			"session_id": sessionID,
+			"name":       name,
+			"error":      err.Error(),
+		})
+		return nil, err
+	}
+
+	// Definir descrição se fornecida
+	if description != "" {
+		err = client.SetGroupTopic(groupInfo.JID, "", "", description)
+		if err != nil {
+			g.logger.WarnWithFields("Failed to set group description", map[string]interface{}{
+				"session_id": sessionID,
+				"group_jid":  groupInfo.JID.String(),
+				"error":      err.Error(),
+			})
+		}
+	}
+
+	// Converter para formato interno
+	result := g.convertToGroupInfo(groupInfo, description)
+
+	g.logger.InfoWithFields("Group created successfully", map[string]interface{}{
+		"session_id": sessionID,
+		"group_jid":  result.GroupJID,
+		"name":       result.Name,
+	})
+
+	return result, nil
+}
+
+// ListJoinedGroups lista todos os grupos de uma sessão
+func (g *Gateway) ListJoinedGroups(ctx context.Context, sessionID string) ([]*group.GroupInfo, error) {
+	g.logger.InfoWithFields("Listing joined groups", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	client := g.getClient(sessionID)
+	if client == nil {
+		return nil, fmt.Errorf("session %s not found", sessionID)
+	}
+	if !client.IsLoggedIn() {
+		return nil, fmt.Errorf("session %s is not logged in", sessionID)
+	}
+
+	// Obter grupos via whatsmeow
+	groups, err := client.GetJoinedGroups()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get joined groups: %w", err)
+	}
+
+	// Converter para formato interno
+	result := make([]*group.GroupInfo, len(groups))
+	for i, groupInfo := range groups {
+		result[i] = g.convertToGroupInfo(groupInfo, "")
+	}
+
+	g.logger.InfoWithFields("Groups listed successfully", map[string]interface{}{
+		"session_id":   sessionID,
+		"group_count":  len(result),
+	})
+
+	return result, nil
+}
+
+// GetGroupInfo obtém informações detalhadas de um grupo
+func (g *Gateway) GetGroupInfo(ctx context.Context, sessionID, groupJID string) (*group.GroupInfo, error) {
+	g.logger.InfoWithFields("Getting group info", map[string]interface{}{
+		"session_id": sessionID,
+		"group_jid":  groupJID,
+	})
+
+	client := g.getClient(sessionID)
+	if client == nil {
+		return nil, fmt.Errorf("session %s not found", sessionID)
+	}
+	if !client.IsLoggedIn() {
+		return nil, fmt.Errorf("session %s is not logged in", sessionID)
+	}
+
+	// Parse JID
+	jid, err := types.ParseJID(groupJID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid group JID: %w", err)
+	}
+
+	// Obter informações do grupo
+	groupInfo, err := client.GetGroupInfo(jid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get group info: %w", err)
+	}
+
+	// Converter para formato interno
+	result := g.convertToGroupInfo(groupInfo, "")
+
+	g.logger.InfoWithFields("Group info retrieved successfully", map[string]interface{}{
+		"session_id":       sessionID,
+		"group_jid":        groupJID,
+		"group_name":       result.Name,
+		"participant_count": len(result.Participants),
+	})
+
+	return result, nil
+}
+
 // UpdateSessionStatus atualiza o status de uma sessão no banco de dados
 func (g *Gateway) UpdateSessionStatus(sessionID, status string) error {
 	g.logger.InfoWithFields("Updating session status", map[string]interface{}{

@@ -1,0 +1,2 @@
+# Este arquivo faz com que o Go ignore este diretório durante o build
+# O diretório legacy contém código legado que não deve ser compilado

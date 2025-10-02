@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -55,7 +54,7 @@ func main() {
 	// Executar migrações se habilitado
 	if cfg.Database.AutoMigrate {
 		log.Info("Running database migrations...")
-		if err := runMigrations(db, cfg, log); err != nil {
+		if err := runMigrations(db, log); err != nil {
 			log.Fatal(fmt.Sprintf("Failed to run migrations: %v", err))
 		}
 	}
@@ -140,68 +139,23 @@ func main() {
 }
 
 // runMigrations executa as migrações do banco de dados
-func runMigrations(db *database.Database, cfg *config.Config, log *logger.Logger) error {
+func runMigrations(db *database.Database, log *logger.Logger) error {
 	migrator := database.NewMigrator(db, log)
 	return migrator.RunMigrations()
 }
 
-// printBanner exibe o banner da aplicação com design moderno
+// printBanner exibe o banner da aplicação
 func printBanner(cfg *config.Config) {
-	// Cores ANSI
-	const (
-		reset = "\033[0m"
-		bold  = "\033[1m"
-		cyan  = "\033[36m"
-		white = "\033[97m"
-		gray  = "\033[90m"
-		green = "\033[32m"
-	)
+	fmt.Printf(`
+    ███████╗██████╗ ██╗    ██╗ ██████╗  ██████╗ ████████╗
+    ╚══███╔╝██╔══██╗██║    ██║██╔═══██╗██╔═══██╗╚══██╔══╝
+      ███╔╝ ██████╔╝██║ █╗ ██║██║   ██║██║   ██║   ██║
+     ███╔╝  ██╔═══╝ ██║███╗██║██║   ██║██║   ██║   ██║
+    ███████╗██║     ╚███╔███╔╝╚██████╔╝╚██████╔╝   ██║
+    ╚══════╝╚═╝      ╚══╝╚══╝  ╚═════╝  ╚═════╝    ╚═╝
 
-	// Linhas compactas — menos “peso” que ASCII art grande
-	logo := "zpwoot"
-	tag := "WhatsApp Business API Gateway"
-	meta := fmt.Sprintf("v2.0.0 • %s", cfg.Environment)
+    💬 WhatsApp API Gateway
+    🚀 Version: %s | Environment: %s | Port: %d
 
-	// calcula largura baseada no maior item (runes)
-	items := []string{logo, tag, meta}
-	maxLen := 0
-	for _, s := range items {
-		if l := len([]rune(s)); l > maxLen {
-			maxLen = l
-		}
-	}
-	if maxLen < 40 {
-		maxLen = 40
-	}
-
-	// helpers
-	padCenter := func(s string, w int) string {
-		r := []rune(s)
-		if len(r) >= w {
-			return string(r)
-		}
-		total := w - len(r)
-		left := total / 2
-		right := total - left
-		return strings.Repeat(" ", left) + s + strings.Repeat(" ", right)
-	}
-	repeat := func(ch string, n int) string { return strings.Repeat(ch, n) }
-
-	// borda compacta
-	top := "╭" + repeat("─", maxLen+2) + "╮"
-	bot := "╰" + repeat("─", maxLen+2) + "╯"
-	empty := "│ " + padCenter("", maxLen) + " │"
-
-	// imprime compacto e moderno
-	fmt.Println()
-	fmt.Println(top)
-	fmt.Println(empty)
-	fmt.Printf("│ %s%s%s │\n", cyan+bold, padCenter(logo, maxLen), reset)
-	fmt.Printf("│ %s%s%s │\n", white, padCenter(tag, maxLen), reset)
-	fmt.Println(empty)
-	fmt.Printf("│ %s%s%s │\n", green, padCenter(meta, maxLen), reset)
-	fmt.Println(empty)
-	fmt.Println(bot)
-	fmt.Println()
-	fmt.Printf("%s>> Initializing application components...%s\n\n", gray, reset)
+`, appVersion, cfg.Environment, cfg.Server.Port)
 }

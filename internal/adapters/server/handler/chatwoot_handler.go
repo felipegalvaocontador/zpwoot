@@ -144,7 +144,7 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 // @Failure 400 {object} shared.SuccessResponse
 // @Failure 404 {object} shared.SuccessResponse
 // @Failure 500 {object} shared.SuccessResponse
-// @Router /sessions/{sessionId}/chatwoot/set [post]
+// @Router /chatwoot/set [post]
 func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "create chatwoot config")
 

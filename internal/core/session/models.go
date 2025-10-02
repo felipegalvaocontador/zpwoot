@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Session representa uma sessão WhatsApp
+
 type Session struct {
 	ID              uuid.UUID    `json:"id"`
 	Name            string       `json:"name"`
@@ -23,16 +23,16 @@ type Session struct {
 	LastSeen        *time.Time   `json:"lastSeen,omitempty"`
 }
 
-// ProxyConfig configuração de proxy para sessão
+
 type ProxyConfig struct {
-	Type     string `json:"type"`     // http, socks5
+	Type     string `json:"type"`
 	Host     string `json:"host"`
 	Port     int    `json:"port"`
 	Username string `json:"username,omitempty"`
 	Password string `json:"password,omitempty"`
 }
 
-// DeviceInfo informações do dispositivo conectado
+
 type DeviceInfo struct {
 	Platform    string `json:"platform"`
 	DeviceModel string `json:"device_model"`
@@ -40,7 +40,7 @@ type DeviceInfo struct {
 	AppVersion  string `json:"app_version"`
 }
 
-// QRCodeResponse resposta com QR Code para pareamento
+
 type QRCodeResponse struct {
 	QRCode      string    `json:"qr_code"`
 	QRCodeImage string    `json:"qr_code_image,omitempty"`
@@ -48,7 +48,7 @@ type QRCodeResponse struct {
 	Timeout     int       `json:"timeout_seconds"`
 }
 
-// SessionStatus constantes de status da sessão
+
 type SessionStatus string
 
 const (
@@ -60,7 +60,7 @@ const (
 	StatusLoggedOut    SessionStatus = "logged_out"
 )
 
-// NewSession cria uma nova sessão
+
 func NewSession(name string) *Session {
 	now := time.Now()
 	return &Session{
@@ -72,7 +72,7 @@ func NewSession(name string) *Session {
 	}
 }
 
-// UpdateConnectionStatus atualiza status de conexão
+
 func (s *Session) UpdateConnectionStatus(connected bool) {
 	s.IsConnected = connected
 	s.UpdatedAt = time.Now()
@@ -85,35 +85,35 @@ func (s *Session) UpdateConnectionStatus(connected bool) {
 	}
 }
 
-// SetConnectionError define erro de conexão
+
 func (s *Session) SetConnectionError(err string) {
 	s.ConnectionError = &err
 	s.IsConnected = false
 	s.UpdatedAt = time.Now()
 }
 
-// SetQRCode define QR code para pareamento
+
 func (s *Session) SetQRCode(qrCode string, expiresAt time.Time) {
 	s.QRCode = &qrCode
 	s.QRCodeExpiresAt = &expiresAt
 	s.UpdatedAt = time.Now()
 }
 
-// ClearQRCode limpa QR code
+
 func (s *Session) ClearQRCode() {
 	s.QRCode = nil
 	s.QRCodeExpiresAt = nil
 	s.UpdatedAt = time.Now()
 }
 
-// UpdateLastSeen atualiza último acesso
+
 func (s *Session) UpdateLastSeen() {
 	now := time.Now()
 	s.LastSeen = &now
 	s.UpdatedAt = now
 }
 
-// IsQRCodeExpired verifica se QR code expirou
+
 func (s *Session) IsQRCodeExpired() bool {
 	if s.QRCodeExpiresAt == nil {
 		return true
@@ -121,7 +121,7 @@ func (s *Session) IsQRCodeExpired() bool {
 	return time.Now().After(*s.QRCodeExpiresAt)
 }
 
-// GetStatus retorna status atual da sessão
+
 func (s *Session) GetStatus() SessionStatus {
 	if s.IsConnected {
 		return StatusConnected
@@ -142,7 +142,7 @@ func (s *Session) GetStatus() SessionStatus {
 	return StatusCreated
 }
 
-// Validate valida dados da sessão
+
 func (s *Session) Validate() error {
 	if s.Name == "" {
 		return ErrInvalidSessionName
@@ -155,12 +155,12 @@ func (s *Session) Validate() error {
 	return nil
 }
 
-// ToJSON converte ProxyConfig para JSON
+
 func (p *ProxyConfig) ToJSON() ([]byte, error) {
 	return json.Marshal(p)
 }
 
-// FromJSON carrega ProxyConfig de JSON
+
 func (p *ProxyConfig) FromJSON(data []byte) error {
 	return json.Unmarshal(data, p)
 }

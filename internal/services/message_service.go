@@ -14,24 +14,24 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// MessageService implementa a camada de aplicação para mensagens
-// Responsável por orquestrar entre core business logic e adapters externos
+
+
 type MessageService struct {
-	// Core business logic
+
 	messagingCore *messaging.Service
 	sessionCore   *session.Service
 
-	// External dependencies (injected via interfaces)
+
 	messageRepo messaging.Repository
 	sessionRepo session.Repository
 	whatsappGW  session.WhatsAppGateway
 
-	// Platform dependencies
+
 	logger    *logger.Logger
 	validator *validation.Validator
 }
 
-// NewMessageService cria nova instância do serviço de aplicação
+
 func NewMessageService(
 	messagingCore *messaging.Service,
 	sessionCore *session.Service,
@@ -52,7 +52,7 @@ func NewMessageService(
 	}
 }
 
-// CreateMessageRequest DTO para criação de mensagem
+
 type CreateMessageRequest struct {
 	SessionID   string `json:"session_id" validate:"required,uuid"`
 	ZpMessageID string `json:"zp_message_id" validate:"required"`
@@ -64,7 +64,7 @@ type CreateMessageRequest struct {
 	Content     string `json:"content,omitempty"`
 }
 
-// CreateMessageResponse DTO para resposta de criação
+
 type CreateMessageResponse struct {
 	ID          string    `json:"id"`
 	SessionID   string    `json:"session_id"`
@@ -73,7 +73,7 @@ type CreateMessageResponse struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-// ListMessagesRequest DTO para listagem de mensagens
+
 type ListMessagesRequest struct {
 	SessionID string `json:"session_id,omitempty" validate:"omitempty,uuid"`
 	ChatJID   string `json:"chat_jid,omitempty"`
@@ -81,7 +81,7 @@ type ListMessagesRequest struct {
 	Offset    int    `json:"offset" validate:"min=0"`
 }
 
-// ListMessagesResponse DTO para resposta de listagem
+
 type ListMessagesResponse struct {
 	Messages []*contracts.MessageDTO `json:"messages"`
 	Total    int64             `json:"total"`
@@ -89,7 +89,7 @@ type ListMessagesResponse struct {
 	Offset   int               `json:"offset"`
 }
 
-// UpdateSyncStatusRequest DTO para atualização de status de sync
+
 type UpdateSyncStatusRequest struct {
 	MessageID        string `json:"message_id" validate:"required,uuid"`
 	SyncStatus       string `json:"sync_status" validate:"required,oneof=pending synced failed"`
@@ -97,32 +97,32 @@ type UpdateSyncStatusRequest struct {
 	CwConversationID *int   `json:"cw_conversation_id,omitempty"`
 }
 
-// CreateMessage cria uma nova mensagem
+
 func (s *MessageService) CreateMessage(ctx context.Context, req *CreateMessageRequest) (*CreateMessageResponse, error) {
-	// Validar entrada
+
 	if err := s.validator.ValidateStruct(req); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Parse session ID
+
 	sessionID, err := uuid.Parse(req.SessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID: %w", err)
 	}
 
-	// Verificar se sessão existe
+
 	_, err = s.sessionCore.GetSession(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("session not found: %w", err)
 	}
 
-	// Parse timestamp
+
 	zpTimestamp, err := time.Parse(time.RFC3339, req.ZpTimestamp)
 	if err != nil {
 		return nil, fmt.Errorf("invalid timestamp format: %w", err)
 	}
 
-	// Criar request para o core
+
 	coreReq := &messaging.CreateMessageRequest{
 		SessionID:   sessionID,
 		ZpMessageID: req.ZpMessageID,
@@ -134,7 +134,7 @@ func (s *MessageService) CreateMessage(ctx context.Context, req *CreateMessageRe
 		Content:     req.Content,
 	}
 
-	// Criar mensagem via core service
+
 	message, err := s.messagingCore.CreateMessage(ctx, coreReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create message: %w", err)
@@ -156,15 +156,15 @@ func (s *MessageService) CreateMessage(ctx context.Context, req *CreateMessageRe
 	}, nil
 }
 
-// GetMessage busca uma mensagem por ID
+
 func (s *MessageService) GetMessage(ctx context.Context, messageID string) (*contracts.MessageDTO, error) {
-	// Parse message ID
+
 	id, err := uuid.Parse(messageID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid message ID: %w", err)
 	}
 
-	// Buscar mensagem via core service
+
 	message, err := s.messagingCore.GetMessage(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get message: %w", err)
@@ -173,19 +173,19 @@ func (s *MessageService) GetMessage(ctx context.Context, messageID string) (*con
 	return s.messageToDTO(message), nil
 }
 
-// ListMessages lista mensagens com filtros e paginação
+
 func (s *MessageService) ListMessages(ctx context.Context, req *ListMessagesRequest) (*ListMessagesResponse, error) {
-	// Validar entrada
+
 	if err := s.validator.ValidateStruct(req); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Aplicar defaults
+
 	if req.Limit == 0 {
 		req.Limit = 50
 	}
 
-	// Criar request para o core
+
 	coreReq := &messaging.ListMessagesRequest{
 		SessionID: req.SessionID,
 		ChatJID:   req.ChatJID,
@@ -193,13 +193,13 @@ func (s *MessageService) ListMessages(ctx context.Context, req *ListMessagesRequ
 		Offset:    req.Offset,
 	}
 
-	// Listar mensagens via core service
+
 	messages, total, err := s.messagingCore.ListMessages(ctx, coreReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list messages: %w", err)
 	}
 
-	// Converter para DTOs
+
 	messageDTOs := make([]*contracts.MessageDTO, len(messages))
 	for i, message := range messages {
 		messageDTOs[i] = s.messageToDTO(message)
@@ -213,20 +213,20 @@ func (s *MessageService) ListMessages(ctx context.Context, req *ListMessagesRequ
 	}, nil
 }
 
-// UpdateSyncStatus atualiza o status de sincronização de uma mensagem
+
 func (s *MessageService) UpdateSyncStatus(ctx context.Context, req *UpdateSyncStatusRequest) error {
-	// Validar entrada
+
 	if err := s.validator.ValidateStruct(req); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Parse message ID
+
 	messageID, err := uuid.Parse(req.MessageID)
 	if err != nil {
 		return fmt.Errorf("invalid message ID: %w", err)
 	}
 
-	// Atualizar status via core service
+
 	status := messaging.SyncStatus(req.SyncStatus)
 	err = s.messagingCore.UpdateSyncStatus(ctx, messageID, status, req.CwMessageID, req.CwConversationID)
 	if err != nil {
@@ -243,21 +243,21 @@ func (s *MessageService) UpdateSyncStatus(ctx context.Context, req *UpdateSyncSt
 	return nil
 }
 
-// GetPendingSyncMessages busca mensagens pendentes de sincronização
+
 func (s *MessageService) GetPendingSyncMessages(ctx context.Context, sessionID string, limit int) ([]*contracts.MessageDTO, error) {
-	// Parse session ID
+
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID: %w", err)
 	}
 
-	// Buscar mensagens pendentes via core service
+
 	messages, err := s.messagingCore.GetPendingSyncMessages(ctx, id, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pending sync messages: %w", err)
 	}
 
-	// Converter para DTOs
+
 	messageDTOs := make([]*contracts.MessageDTO, len(messages))
 	for i, message := range messages {
 		messageDTOs[i] = s.messageToDTO(message)
@@ -266,10 +266,10 @@ func (s *MessageService) GetPendingSyncMessages(ctx context.Context, sessionID s
 	return messageDTOs, nil
 }
 
-// GetMessageStats retorna estatísticas de mensagens
+
 func (s *MessageService) GetMessageStats(ctx context.Context, sessionID *string) (*messaging.MessageStats, error) {
 	if sessionID != nil {
-		// Parse session ID
+
 		id, err := uuid.Parse(*sessionID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid session ID: %w", err)
@@ -281,22 +281,22 @@ func (s *MessageService) GetMessageStats(ctx context.Context, sessionID *string)
 	return s.messagingCore.GetStats(ctx)
 }
 
-// ===== WHATSAPP MESSAGE SENDING METHODS =====
 
-// SendTextMessage envia uma mensagem de texto via WhatsApp
+
+
 func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, content string) (*contracts.SendMessageResponse, error) {
-	// Validar parâmetros
+
 	if sessionID == "" || to == "" || content == "" {
 		return nil, fmt.Errorf("sessionID, to, and content are required")
 	}
 
-	// Parse session ID
+
 	sessionUUID, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID: %w", err)
 	}
 
-	// Verificar se sessão existe e está conectada
+
 	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
 	if err != nil {
 		return nil, fmt.Errorf("session not found: %w", err)
@@ -312,13 +312,13 @@ func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, con
 		"content_len": len(content),
 	})
 
-	// Enviar mensagem via WhatsApp Gateway
+
 	result, err := s.whatsappGW.SendTextMessage(ctx, sessionID, to, content)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send text message via WhatsApp Gateway: %w", err)
 	}
 
-	// Criar resposta
+
 	response := &contracts.SendMessageResponse{
 		MessageID: result.MessageID,
 		To:        result.To,
@@ -335,20 +335,20 @@ func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, con
 	return response, nil
 }
 
-// SendMediaMessage envia uma mensagem de mídia via WhatsApp
+
 func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, mediaURL, caption, mediaType string) (*contracts.SendMessageResponse, error) {
-	// Validar parâmetros
+
 	if sessionID == "" || to == "" || mediaURL == "" {
 		return nil, fmt.Errorf("sessionID, to, and mediaURL are required")
 	}
 
-	// Parse session ID
+
 	sessionUUID, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID: %w", err)
 	}
 
-	// Verificar se sessão existe e está conectada
+
 	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
 	if err != nil {
 		return nil, fmt.Errorf("session not found: %w", err)
@@ -366,13 +366,13 @@ func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, me
 		"has_caption": caption != "",
 	})
 
-	// Enviar mensagem via WhatsApp Gateway
+
 	result, err := s.whatsappGW.SendMediaMessage(ctx, sessionID, to, mediaURL, caption, mediaType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send media message via WhatsApp Gateway: %w", err)
 	}
 
-	// Criar resposta
+
 	response := &contracts.SendMessageResponse{
 		MessageID: result.MessageID,
 		To:        result.To,
@@ -390,45 +390,45 @@ func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, me
 	return response, nil
 }
 
-// SendImageMessage envia uma mensagem de imagem via WhatsApp
+
 func (s *MessageService) SendImageMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*contracts.SendMessageResponse, error) {
 	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "image")
 }
 
-// SendAudioMessage envia uma mensagem de áudio via WhatsApp
+
 func (s *MessageService) SendAudioMessage(ctx context.Context, sessionID, to, file, caption string) (*contracts.SendMessageResponse, error) {
 	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "audio")
 }
 
-// SendVideoMessage envia uma mensagem de vídeo via WhatsApp
+
 func (s *MessageService) SendVideoMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*contracts.SendMessageResponse, error) {
 	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "video")
 }
 
-// SendDocumentMessage envia uma mensagem de documento via WhatsApp
+
 func (s *MessageService) SendDocumentMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*contracts.SendMessageResponse, error) {
 	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "document")
 }
 
-// SendStickerMessage envia uma mensagem de sticker via WhatsApp
+
 func (s *MessageService) SendStickerMessage(ctx context.Context, sessionID, to, file string) (*contracts.SendMessageResponse, error) {
 	return s.SendMediaMessage(ctx, sessionID, to, file, "", "sticker")
 }
 
-// SendLocationMessage envia uma mensagem de localização via WhatsApp
+
 func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to string, latitude, longitude float64, address string) (*contracts.SendMessageResponse, error) {
-	// Validar parâmetros
+
 	if sessionID == "" || to == "" {
 		return nil, fmt.Errorf("sessionID and to are required")
 	}
 
-	// Parse session ID
+
 	sessionUUID, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID: %w", err)
 	}
 
-	// Verificar se sessão existe e está conectada
+
 	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
 	if err != nil {
 		return nil, fmt.Errorf("session not found: %w", err)
@@ -446,13 +446,13 @@ func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to 
 		"address":    address,
 	})
 
-	// Enviar mensagem via WhatsApp Gateway
+
 	result, err := s.whatsappGW.SendLocationMessage(ctx, sessionID, to, latitude, longitude, address)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send location message via WhatsApp Gateway: %w", err)
 	}
 
-	// Criar resposta
+
 	response := &contracts.SendMessageResponse{
 		MessageID: result.MessageID,
 		To:        result.To,
@@ -469,20 +469,20 @@ func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to 
 	return response, nil
 }
 
-// SendContactMessage envia uma mensagem de contato via WhatsApp
+
 func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, contactName, contactPhone string) (*contracts.SendMessageResponse, error) {
-	// Validar parâmetros
+
 	if sessionID == "" || to == "" || contactName == "" || contactPhone == "" {
 		return nil, fmt.Errorf("sessionID, to, contactName, and contactPhone are required")
 	}
 
-	// Parse session ID
+
 	sessionUUID, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID: %w", err)
 	}
 
-	// Verificar se sessão existe e está conectada
+
 	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
 	if err != nil {
 		return nil, fmt.Errorf("session not found: %w", err)
@@ -499,13 +499,13 @@ func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, 
 		"contact_phone": contactPhone,
 	})
 
-	// Enviar mensagem via WhatsApp Gateway
+
 	result, err := s.whatsappGW.SendContactMessage(ctx, sessionID, to, contactName, contactPhone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send contact message via WhatsApp Gateway: %w", err)
 	}
 
-	// Criar resposta
+
 	response := &contracts.SendMessageResponse{
 		MessageID: result.MessageID,
 		To:        result.To,
@@ -522,7 +522,7 @@ func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, 
 	return response, nil
 }
 
-// messageToDTO converte uma mensagem do domínio para DTO
+
 func (s *MessageService) messageToDTO(message *messaging.Message) *contracts.MessageDTO {
 	return &contracts.MessageDTO{
 		ID:               message.ID.String(),

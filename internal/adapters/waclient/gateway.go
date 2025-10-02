@@ -20,16 +20,16 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// SessionService interface para atualizar dados da sessão
+
 type SessionService interface {
 	UpdateDeviceJID(ctx context.Context, id uuid.UUID, deviceJID string) error
 	UpdateQRCode(ctx context.Context, id uuid.UUID, qrCode string, expiresAt time.Time) error
 	ClearQRCode(ctx context.Context, id uuid.UUID) error
 }
 
-// ===== CONTACT TYPES =====
 
-// ProfilePictureInfo representa informações da foto de perfil
+
+
 type ProfilePictureInfo struct {
 	JID         string     `json:"jid"`
 	HasPicture  bool       `json:"has_picture"`
@@ -40,7 +40,7 @@ type ProfilePictureInfo struct {
 	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
 }
 
-// UserInfo representa informações detalhadas do usuário
+
 type UserInfo struct {
 	JID          string     `json:"jid"`
 	PhoneNumber  string     `json:"phone_number"`
@@ -54,7 +54,7 @@ type UserInfo struct {
 	IsOnline     bool       `json:"is_online"`
 }
 
-// ContactInfo representa informações de contato
+
 type ContactInfo struct {
 	JID          string `json:"jid"`
 	PhoneNumber  string `json:"phone_number"`
@@ -64,7 +64,7 @@ type ContactInfo struct {
 	IsContact    bool   `json:"is_contact"`
 }
 
-// BusinessProfile representa perfil de negócio
+
 type BusinessProfile struct {
 	JID          string `json:"jid"`
 	IsBusiness   bool   `json:"is_business"`
@@ -76,51 +76,51 @@ type BusinessProfile struct {
 	Address      string `json:"address,omitempty"`
 }
 
-// SessionServiceExtended interface estendida para operações de sessão
+
 type SessionServiceExtended interface {
-	SessionService // Herda métodos existentes
+	SessionService
 	GetSession(ctx context.Context, sessionID string) (*SessionInfoResponse, error)
 }
 
-// SessionInfoResponse representa informações de uma sessão (DTO simplificado)
+
 type SessionInfoResponse struct {
 	Session *SessionDTO `json:"session"`
 }
 
-// SessionDTO representa uma sessão (DTO simplificado)
+
 type SessionDTO struct {
 	ID        string  `json:"id"`
 	Name      string  `json:"name"`
 	DeviceJID *string `json:"deviceJid"`
 }
 
-// Gateway implementa session.WhatsAppGateway para integração com whatsmeow
+
 type Gateway struct {
-	// Dependencies
+
 	logger    *logger.Logger
 	container *sqlstore.Container
-	db        DatabaseInterface // Interface para consultas SQL diretas
+	db        DatabaseInterface
 
-	// Internal state
+
 	clients       map[string]*Client
 	eventHandlers map[string][]session.EventHandler
-	sessionUUIDs  map[string]string // mapeamento sessionName -> sessionUUID
+	sessionUUIDs  map[string]string
 	mu            sync.RWMutex
 
-	// External integrations (baseado no legacy)
+
 	webhookHandler  WebhookEventHandler
 	chatwootManager ChatwootManager
 
-	// Session service for database updates
+
 	sessionService SessionServiceExtended
 }
 
-// DatabaseInterface interface para consultas SQL diretas
+
 type DatabaseInterface interface {
 	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
-// NewGateway cria nova instância do gateway WhatsApp
+
 func NewGateway(container *sqlstore.Container, logger *logger.Logger) *Gateway {
 	return &Gateway{
 		logger:        logger,
@@ -131,23 +131,23 @@ func NewGateway(container *sqlstore.Container, logger *logger.Logger) *Gateway {
 	}
 }
 
-// SetDatabase configura o database para consultas SQL diretas
+
 func (g *Gateway) SetDatabase(db DatabaseInterface) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.db = db
 }
 
-// SetSessionService configura o session service para operações de banco
+
 func (g *Gateway) SetSessionService(service SessionServiceExtended) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.sessionService = service
 
-	// SessionService configured
+
 }
 
-// RegisterSessionUUID registra o mapeamento entre nome da sessão e UUID
+
 func (g *Gateway) RegisterSessionUUID(sessionName, sessionUUID string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -159,7 +159,7 @@ func (g *Gateway) RegisterSessionUUID(sessionName, sessionUUID string) {
 	})
 }
 
-// SessionExists verifica se uma sessão existe no gateway
+
 func (g *Gateway) SessionExists(sessionName string) bool {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -167,39 +167,39 @@ func (g *Gateway) SessionExists(sessionName string) bool {
 	return exists
 }
 
-// GetSessionUUID obtém o UUID da sessão pelo nome
+
 func (g *Gateway) GetSessionUUID(sessionName string) string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.sessionUUIDs[sessionName]
 }
 
-// CreateSession cria uma nova sessão WhatsApp
+
 func (g *Gateway) CreateSession(ctx context.Context, sessionName string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	// Verificar se sessão já existe
+
 	if _, exists := g.clients[sessionName]; exists {
 		return fmt.Errorf("session %s already exists", sessionName)
 	}
 
-	// Criar cliente WhatsApp
+
 	client, err := NewClient(sessionName, g.container, g.logger)
 	if err != nil {
 		return fmt.Errorf("failed to create WhatsApp client: %w", err)
 	}
 
-	// Configurar event handlers
+
 	g.setupEventHandlers(client, sessionName)
 
-	// Armazenar cliente
+
 	g.clients[sessionName] = client
 
 	return nil
 }
 
-// ConnectSession conecta uma sessão WhatsApp baseado no legacy
+
 func (g *Gateway) ConnectSession(ctx context.Context, sessionName string) error {
 	client := g.getClient(sessionName)
 	if client == nil {
@@ -207,7 +207,7 @@ func (g *Gateway) ConnectSession(ctx context.Context, sessionName string) error 
 			"session_name": sessionName,
 		})
 
-		// Restaurar cliente para sessão existente
+
 		err := g.RestoreSession(ctx, sessionName)
 		if err != nil {
 			g.logger.ErrorWithFields("Failed to restore session", map[string]interface{}{
@@ -226,12 +226,12 @@ func (g *Gateway) ConnectSession(ctx context.Context, sessionName string) error 
 		}
 	}
 
-	// Verificar se já está conectado
+
 	if client.GetClient().IsConnected() {
 		return nil
 	}
 
-	// Conectar
+
 	if err := client.Connect(); err != nil {
 		g.logger.ErrorWithFields("Failed to connect WhatsApp session", map[string]interface{}{
 			"session_name": sessionName,
@@ -243,19 +243,19 @@ func (g *Gateway) ConnectSession(ctx context.Context, sessionName string) error 
 	return nil
 }
 
-// RestoreSession restaura um cliente WhatsApp para uma sessão existente
+
 func (g *Gateway) RestoreSession(ctx context.Context, sessionName string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	// Verificar se cliente já existe na memória
+
 	if _, exists := g.clients[sessionName]; exists {
 		return nil
 	}
 
-	// Restoring session client
 
-	// Buscar deviceJID da sessão no banco para carregar device existente
+
+
 	sessionUUID, exists := g.sessionUUIDs[sessionName]
 	if !exists {
 		g.logger.ErrorWithFields("Session UUID not found in mapping", map[string]interface{}{
@@ -272,30 +272,30 @@ func (g *Gateway) RestoreSession(ctx context.Context, sessionName string) error 
 		return fmt.Errorf("session UUID not found for session %s", sessionName)
 	}
 
-	// Found session UUID for restoration
 
-	// Criar cliente WhatsApp com device existente
+
+
 	client, err := g.newClientWithExistingDevice(sessionName, sessionUUID)
 	if err != nil {
 		return fmt.Errorf("failed to create WhatsApp client: %w", err)
 	}
 
-	// Configurar event handlers
+
 	g.setupEventHandlers(client, sessionName)
 
-	// Armazenar cliente
+
 	g.clients[sessionName] = client
 
-	// Session client restored successfully
+
 
 	return nil
 }
 
-// newClientWithExistingDevice cria cliente WhatsApp carregando device existente
-func (g *Gateway) newClientWithExistingDevice(sessionName, sessionUUID string) (*Client, error) {
-	// Starting device restoration
 
-	// Buscar deviceJID do banco de dados
+func (g *Gateway) newClientWithExistingDevice(sessionName, sessionUUID string) (*Client, error) {
+
+
+
 	deviceJID, err := g.getDeviceJIDFromDatabase(sessionUUID)
 	if err != nil {
 		g.logger.WarnWithFields("Failed to get deviceJID from database, creating new device", map[string]interface{}{
@@ -305,7 +305,7 @@ func (g *Gateway) newClientWithExistingDevice(sessionName, sessionUUID string) (
 		return NewClient(sessionName, g.container, g.logger)
 	}
 
-	// Se não tem deviceJID, criar novo device
+
 	if deviceJID == "" {
 		g.logger.InfoWithFields("No deviceJID found, creating new device", map[string]interface{}{
 			"session_name": sessionName,
@@ -313,7 +313,7 @@ func (g *Gateway) newClientWithExistingDevice(sessionName, sessionUUID string) (
 		return NewClient(sessionName, g.container, g.logger)
 	}
 
-	// Carregar device existente pelo deviceJID
+
 	g.logger.InfoWithFields("Loading existing device", map[string]interface{}{
 		"module":  "gateway",
 		"session": sessionName,
@@ -331,13 +331,13 @@ func (g *Gateway) newClientWithExistingDevice(sessionName, sessionUUID string) (
 	return client, nil
 }
 
-// getDeviceJIDFromDatabase busca deviceJID diretamente do banco de dados
+
 func (g *Gateway) getDeviceJIDFromDatabase(sessionUUID string) (string, error) {
 	if g.db == nil {
 		return "", fmt.Errorf("database not configured")
 	}
 
-	// Query SQL direta para buscar deviceJid da sessão
+
 	query := `SELECT "deviceJid" FROM "zpSessions" WHERE "id" = $1`
 
 	var deviceJID *string
@@ -353,7 +353,7 @@ func (g *Gateway) getDeviceJIDFromDatabase(sessionUUID string) (string, error) {
 	return *deviceJID, nil
 }
 
-// newClientWithDeviceJID cria cliente com device existente
+
 func (g *Gateway) newClientWithDeviceJID(sessionName, deviceJID string) (*Client, error) {
 	jid, err := types.ParseJID(deviceJID)
 	if err != nil {
@@ -372,7 +372,7 @@ func (g *Gateway) newClientWithDeviceJID(sessionName, deviceJID string) (*Client
 	return NewClientWithDevice(sessionName, deviceStore, g.container, g.logger)
 }
 
-// RestoreAllSessions restaura clientes WhatsApp para todas as sessões do banco
+
 func (g *Gateway) RestoreAllSessions(ctx context.Context, sessionNames []string) error {
 	g.logger.InfoWithFields("Restoring WhatsApp clients for existing sessions", map[string]interface{}{
 		"session_count": len(sessionNames),
@@ -385,7 +385,7 @@ func (g *Gateway) RestoreAllSessions(ctx context.Context, sessionNames []string)
 				"session_name": sessionName,
 				"error":        err.Error(),
 			})
-			// Continuar com outras sessões mesmo se uma falhar
+
 			continue
 		}
 	}
@@ -397,7 +397,7 @@ func (g *Gateway) RestoreAllSessions(ctx context.Context, sessionNames []string)
 	return nil
 }
 
-// DisconnectSession desconecta uma sessão WhatsApp
+
 func (g *Gateway) DisconnectSession(ctx context.Context, sessionName string) error {
 	client := g.getClient(sessionName)
 	if client == nil {
@@ -419,7 +419,7 @@ func (g *Gateway) DisconnectSession(ctx context.Context, sessionName string) err
 	return nil
 }
 
-// DeleteSession remove uma sessão WhatsApp
+
 func (g *Gateway) DeleteSession(ctx context.Context, sessionName string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -433,7 +433,7 @@ func (g *Gateway) DeleteSession(ctx context.Context, sessionName string) error {
 		"session_name": sessionName,
 	})
 
-	// Desconectar se conectado
+
 	if client.IsConnected() {
 		if err := client.Disconnect(); err != nil {
 			g.logger.WarnWithFields("Error disconnecting session during deletion", map[string]interface{}{
@@ -443,7 +443,7 @@ func (g *Gateway) DeleteSession(ctx context.Context, sessionName string) error {
 		}
 	}
 
-	// Fazer logout se logado
+
 	if client.IsLoggedIn() {
 		if err := client.Logout(); err != nil {
 			g.logger.WarnWithFields("Error logging out session during deletion", map[string]interface{}{
@@ -453,7 +453,7 @@ func (g *Gateway) DeleteSession(ctx context.Context, sessionName string) error {
 		}
 	}
 
-	// Remover da memória
+
 	delete(g.clients, sessionName)
 	delete(g.eventHandlers, sessionName)
 
@@ -464,21 +464,21 @@ func (g *Gateway) DeleteSession(ctx context.Context, sessionName string) error {
 	return nil
 }
 
-// IsSessionConnected verifica se uma sessão está conectada baseado no legacy
+
 func (g *Gateway) IsSessionConnected(ctx context.Context, sessionName string) (bool, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
 		g.logger.DebugWithFields("Session not found for connection check", map[string]interface{}{
 			"session_name": sessionName,
 		})
-		return false, nil // Não retornar erro, apenas false
+		return false, nil
 	}
 
 	whatsmeowClient := client.GetClient()
 	isConnected := whatsmeowClient.IsConnected()
 	isLoggedIn := whatsmeowClient.IsLoggedIn()
 
-	// Sessão está realmente conectada se ambos são true
+
 	fullyConnected := isConnected && isLoggedIn
 
 	g.logger.DebugWithFields("Session connection status", map[string]interface{}{
@@ -492,7 +492,7 @@ func (g *Gateway) IsSessionConnected(ctx context.Context, sessionName string) (b
 	return fullyConnected, nil
 }
 
-// GenerateQRCode gera QR code para pareamento
+
 func (g *Gateway) GenerateQRCode(ctx context.Context, sessionName string) (*session.QRCodeResponse, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
@@ -503,31 +503,31 @@ func (g *Gateway) GenerateQRCode(ctx context.Context, sessionName string) (*sess
 		"session_name": sessionName,
 	})
 
-	// Verificar se já está logado
+
 	if client.IsLoggedIn() {
 		return nil, fmt.Errorf("session %s is already logged in", sessionName)
 	}
 
-	// Conectar se não estiver conectado
+
 	if !client.IsConnected() {
 		if err := client.Connect(); err != nil {
 			return nil, fmt.Errorf("failed to connect for QR generation: %w", err)
 		}
 	}
 
-	// Obter QR code
+
 	qrCode, err := client.GetQRCode()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get QR code: %w", err)
 	}
 
-	// Calcular expiração (2 minutos padrão do WhatsApp)
+
 	expiresAt := time.Now().Add(2 * time.Minute)
 
 	response := &session.QRCodeResponse{
 		QRCode:    qrCode,
 		ExpiresAt: expiresAt,
-		Timeout:   120, // 2 minutos em segundos
+		Timeout:   120,
 	}
 
 	g.logger.InfoWithFields("QR code generated successfully", map[string]interface{}{
@@ -538,14 +538,14 @@ func (g *Gateway) GenerateQRCode(ctx context.Context, sessionName string) (*sess
 	return response, nil
 }
 
-// SetProxy configura proxy para uma sessão
+
 func (g *Gateway) SetProxy(ctx context.Context, sessionName string, proxy *session.ProxyConfig) error {
 	client := g.getClient(sessionName)
 	if client == nil {
 		return fmt.Errorf("session %s not found", sessionName)
 	}
 
-	// Setting proxy for session
+
 
 	if err := client.SetProxy(proxy); err != nil {
 		return fmt.Errorf("failed to set proxy: %w", err)
@@ -554,7 +554,7 @@ func (g *Gateway) SetProxy(ctx context.Context, sessionName string, proxy *sessi
 	return nil
 }
 
-// AddEventHandler adiciona handler de eventos
+
 func (g *Gateway) AddEventHandler(sessionName string, handler session.EventHandler) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -571,7 +571,7 @@ func (g *Gateway) AddEventHandler(sessionName string, handler session.EventHandl
 	})
 }
 
-// RemoveEventHandler remove handler de eventos
+
 func (g *Gateway) RemoveEventHandler(sessionName string, handler session.EventHandler) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -581,7 +581,7 @@ func (g *Gateway) RemoveEventHandler(sessionName string, handler session.EventHa
 		return
 	}
 
-	// Remover handler da lista
+
 	for i, h := range handlers {
 		if h == handler {
 			g.eventHandlers[sessionName] = append(handlers[:i], handlers[i+1:]...)
@@ -595,36 +595,36 @@ func (g *Gateway) RemoveEventHandler(sessionName string, handler session.EventHa
 	})
 }
 
-// ===== MÉTODOS PRIVADOS =====
 
-// getClient obtém cliente de uma sessão
+
+
 func (g *Gateway) getClient(sessionName string) *Client {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.clients[sessionName]
 }
 
-// setupEventHandlers configura handlers de eventos para um cliente baseado no legacy
+
 func (g *Gateway) setupEventHandlers(client *Client, sessionName string) {
-	// Criar event handler baseado no legacy
+
 	eventHandler := NewEventHandler(g, sessionName, g.logger)
 
-	// Configurar webhook handler se disponível
+
 	if g.webhookHandler != nil {
 		eventHandler.SetWebhookHandler(g.webhookHandler)
 	}
 
-	// Configurar chatwoot manager se disponível
+
 	if g.chatwootManager != nil {
 		eventHandler.SetChatwootManager(g.chatwootManager)
 	}
 
-	// Configurar handler no cliente whatsmeow
+
 	client.GetClient().AddEventHandler(func(evt interface{}) {
-		// Obter UUID da sessão para o event handler
+
 		sessionUUID := g.GetSessionUUID(sessionName)
 		if sessionUUID == "" {
-			// Fallback para sessionName se UUID não estiver registrado
+
 			sessionUUID = sessionName
 			g.logger.WarnWithFields("Session UUID not found, using session name", map[string]interface{}{
 				"session_name": sessionName,
@@ -633,12 +633,12 @@ func (g *Gateway) setupEventHandlers(client *Client, sessionName string) {
 		eventHandler.HandleEvent(evt, sessionUUID)
 	})
 
-	// Registrar event handler no client para eventos customizados
+
 	client.AddEventHandler(func(evt interface{}) {
-		// Obter UUID da sessão para o event handler
+
 		sessionUUID := g.GetSessionUUID(sessionName)
 		if sessionUUID == "" {
-			// Fallback para sessionName se UUID não estiver registrado
+
 			sessionUUID = sessionName
 			g.logger.WarnWithFields("Session UUID not found for custom event, using session name", map[string]interface{}{
 				"session_name": sessionName,
@@ -655,7 +655,7 @@ func (g *Gateway) setupEventHandlers(client *Client, sessionName string) {
 	})
 }
 
-// SetWebhookHandler configura webhook handler baseado no legacy
+
 func (g *Gateway) SetWebhookHandler(handler WebhookEventHandler) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -664,7 +664,7 @@ func (g *Gateway) SetWebhookHandler(handler WebhookEventHandler) {
 	g.logger.Info("Webhook handler configured for WhatsApp gateway")
 }
 
-// SetChatwootManager configura Chatwoot manager baseado no legacy
+
 func (g *Gateway) SetChatwootManager(manager ChatwootManager) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -673,18 +673,18 @@ func (g *Gateway) SetChatwootManager(manager ChatwootManager) {
 	g.logger.Info("Chatwoot manager configured for WhatsApp gateway")
 }
 
-// SaveReceivedMessage salva mensagem recebida no banco de dados
+
 func (g *Gateway) SaveReceivedMessage(message *messaging.Message) error {
-	// TODO: Implementar salvamento via message repository
-	// Por enquanto, apenas log
-	// Message received and ready to save (silently)
+
+
+
 
 	return nil
 }
 
-// ===== GROUP OPERATIONS =====
 
-// CreateGroup cria um novo grupo WhatsApp
+
+
 func (g *Gateway) CreateGroup(ctx context.Context, sessionID, name string, participants []string, description string) (*group.GroupInfo, error) {
 	g.logger.InfoWithFields("Creating group", map[string]interface{}{
 		"session_id":   sessionID,
@@ -701,7 +701,7 @@ func (g *Gateway) CreateGroup(ctx context.Context, sessionID, name string, parti
 		return nil, fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Validar entrada
+
 	if name == "" {
 		return nil, fmt.Errorf("group name is required")
 	}
@@ -709,7 +709,7 @@ func (g *Gateway) CreateGroup(ctx context.Context, sessionID, name string, parti
 		return nil, fmt.Errorf("at least one participant is required")
 	}
 
-	// Converter participantes para JIDs
+
 	participantJIDs := make([]types.JID, len(participants))
 	for i, participant := range participants {
 		jid, err := types.ParseJID(participant)
@@ -719,7 +719,7 @@ func (g *Gateway) CreateGroup(ctx context.Context, sessionID, name string, parti
 		participantJIDs[i] = jid
 	}
 
-	// Criar grupo via whatsmeow
+
 	groupInfo, err := client.client.CreateGroup(ctx, whatsmeow.ReqCreateGroup{
 		Name:         name,
 		Participants: participantJIDs,
@@ -733,7 +733,7 @@ func (g *Gateway) CreateGroup(ctx context.Context, sessionID, name string, parti
 		return nil, err
 	}
 
-	// Definir descrição se fornecida
+
 	if description != "" {
 		err = client.client.SetGroupTopic(groupInfo.JID, "", "", description)
 		if err != nil {
@@ -745,7 +745,7 @@ func (g *Gateway) CreateGroup(ctx context.Context, sessionID, name string, parti
 		}
 	}
 
-	// Converter para formato interno
+
 	result := g.convertToGroupInfo(groupInfo, description)
 
 	g.logger.InfoWithFields("Group created successfully", map[string]interface{}{
@@ -757,7 +757,7 @@ func (g *Gateway) CreateGroup(ctx context.Context, sessionID, name string, parti
 	return result, nil
 }
 
-// ListJoinedGroups lista todos os grupos de uma sessão
+
 func (g *Gateway) ListJoinedGroups(ctx context.Context, sessionID string) ([]*group.GroupInfo, error) {
 	g.logger.InfoWithFields("Listing joined groups", map[string]interface{}{
 		"session_id": sessionID,
@@ -771,13 +771,13 @@ func (g *Gateway) ListJoinedGroups(ctx context.Context, sessionID string) ([]*gr
 		return nil, fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Obter grupos via whatsmeow
+
 	groups, err := client.client.GetJoinedGroups(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get joined groups: %w", err)
 	}
 
-	// Converter para formato interno
+
 	result := make([]*group.GroupInfo, len(groups))
 	for i, groupInfo := range groups {
 		result[i] = g.convertToGroupInfo(groupInfo, "")
@@ -791,7 +791,7 @@ func (g *Gateway) ListJoinedGroups(ctx context.Context, sessionID string) ([]*gr
 	return result, nil
 }
 
-// GetGroupInfo obtém informações detalhadas de um grupo
+
 func (g *Gateway) GetGroupInfo(ctx context.Context, sessionID, groupJID string) (*group.GroupInfo, error) {
 	g.logger.InfoWithFields("Getting group info", map[string]interface{}{
 		"session_id": sessionID,
@@ -806,19 +806,19 @@ func (g *Gateway) GetGroupInfo(ctx context.Context, sessionID, groupJID string) 
 		return nil, fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse JID
+
 	jid, err := types.ParseJID(groupJID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid group JID: %w", err)
 	}
 
-	// Obter informações do grupo
+
 	groupInfo, err := client.client.GetGroupInfo(jid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get group info: %w", err)
 	}
 
-	// Converter para formato interno
+
 	result := g.convertToGroupInfo(groupInfo, "")
 
 	g.logger.InfoWithFields("Group info retrieved successfully", map[string]interface{}{
@@ -831,12 +831,12 @@ func (g *Gateway) GetGroupInfo(ctx context.Context, sessionID, groupJID string) 
 	return result, nil
 }
 
-// UpdateSessionStatus atualiza o status de uma sessão no banco de dados
-func (g *Gateway) UpdateSessionStatus(sessionID, status string) error {
-	// Updating session status
 
-	// TODO: Implementar atualização via session repository
-	// Por enquanto, apenas log
+func (g *Gateway) UpdateSessionStatus(sessionID, status string) error {
+
+
+
+
 	g.logger.DebugWithFields("Session status updated", map[string]interface{}{
 		"session_id": sessionID,
 		"new_status": status,
@@ -845,14 +845,14 @@ func (g *Gateway) UpdateSessionStatus(sessionID, status string) error {
 	return nil
 }
 
-// UpdateSessionDeviceJID atualiza o device JID de uma sessão após pareamento bem-sucedido
+
 func (g *Gateway) UpdateSessionDeviceJID(sessionUUID, deviceJID string) error {
 	g.logger.InfoWithFields("Updating session device JID", map[string]interface{}{
 		"session_uuid": sessionUUID,
 		"device_jid":   deviceJID,
 	})
 
-	// Verificar se session service está configurado
+
 	if g.sessionService == nil {
 		g.logger.WarnWithFields("Session service not configured, skipping device JID update", map[string]interface{}{
 			"session_uuid": sessionUUID,
@@ -861,7 +861,7 @@ func (g *Gateway) UpdateSessionDeviceJID(sessionUUID, deviceJID string) error {
 		return nil
 	}
 
-	// Converter UUID string para uuid.UUID
+
 	id, err := uuid.Parse(sessionUUID)
 	if err != nil {
 		g.logger.ErrorWithFields("Invalid session UUID format", map[string]interface{}{
@@ -871,7 +871,7 @@ func (g *Gateway) UpdateSessionDeviceJID(sessionUUID, deviceJID string) error {
 		return fmt.Errorf("invalid session UUID: %w", err)
 	}
 
-	// Atualizar device JID no banco de dados
+
 	ctx := context.Background()
 	if err := g.sessionService.UpdateDeviceJID(ctx, id, deviceJID); err != nil {
 		g.logger.ErrorWithFields("Failed to update device JID in database", map[string]interface{}{
@@ -890,7 +890,7 @@ func (g *Gateway) UpdateSessionDeviceJID(sessionUUID, deviceJID string) error {
 	return nil
 }
 
-// UpdateSessionQRCode atualiza o QR code de uma sessão no banco de dados
+
 func (g *Gateway) UpdateSessionQRCode(sessionUUID, qrCode string, expiresAt time.Time) error {
 	g.logger.InfoWithFields("Updating session QR code", map[string]interface{}{
 		"session_uuid": sessionUUID,
@@ -898,7 +898,7 @@ func (g *Gateway) UpdateSessionQRCode(sessionUUID, qrCode string, expiresAt time
 		"expires_at":   expiresAt,
 	})
 
-	// Verificar se session service está configurado
+
 	if g.sessionService == nil {
 		g.logger.WarnWithFields("Session service not configured, skipping QR code update", map[string]interface{}{
 			"session_uuid": sessionUUID,
@@ -907,7 +907,7 @@ func (g *Gateway) UpdateSessionQRCode(sessionUUID, qrCode string, expiresAt time
 		return nil
 	}
 
-	// Converter UUID string para uuid.UUID
+
 	id, err := uuid.Parse(sessionUUID)
 	if err != nil {
 		g.logger.ErrorWithFields("Invalid session UUID format", map[string]interface{}{
@@ -917,7 +917,7 @@ func (g *Gateway) UpdateSessionQRCode(sessionUUID, qrCode string, expiresAt time
 		return fmt.Errorf("invalid session UUID: %w", err)
 	}
 
-	// Atualizar QR code no banco de dados
+
 	ctx := context.Background()
 	if err := g.sessionService.UpdateQRCode(ctx, id, qrCode, expiresAt); err != nil {
 		g.logger.ErrorWithFields("Failed to update QR code in database", map[string]interface{}{
@@ -937,13 +937,13 @@ func (g *Gateway) UpdateSessionQRCode(sessionUUID, qrCode string, expiresAt time
 	return nil
 }
 
-// ClearSessionQRCode limpa o QR code de uma sessão no banco de dados
+
 func (g *Gateway) ClearSessionQRCode(sessionUUID string) error {
 	g.logger.InfoWithFields("Clearing session QR code", map[string]interface{}{
 		"session_uuid": sessionUUID,
 	})
 
-	// Verificar se session service está configurado
+
 	if g.sessionService == nil {
 		g.logger.WarnWithFields("Session service not configured, skipping QR code clear", map[string]interface{}{
 			"session_uuid": sessionUUID,
@@ -951,7 +951,7 @@ func (g *Gateway) ClearSessionQRCode(sessionUUID string) error {
 		return nil
 	}
 
-	// Converter UUID string para uuid.UUID
+
 	id, err := uuid.Parse(sessionUUID)
 	if err != nil {
 		g.logger.ErrorWithFields("Invalid session UUID format", map[string]interface{}{
@@ -961,7 +961,7 @@ func (g *Gateway) ClearSessionQRCode(sessionUUID string) error {
 		return fmt.Errorf("invalid session UUID: %w", err)
 	}
 
-	// Limpar QR code no banco de dados
+
 	ctx := context.Background()
 	if err := g.sessionService.ClearQRCode(ctx, id); err != nil {
 		g.logger.ErrorWithFields("Failed to clear QR code in database", map[string]interface{}{
@@ -978,27 +978,27 @@ func (g *Gateway) ClearSessionQRCode(sessionUUID string) error {
 	return nil
 }
 
-// AddParticipants adiciona participantes ao grupo
+
 func (g *Gateway) AddParticipants(ctx context.Context, sessionID, groupJID string, participants []string) error {
 	return g.updateGroupParticipants(ctx, sessionID, groupJID, participants, "add")
 }
 
-// RemoveParticipants remove participantes do grupo
+
 func (g *Gateway) RemoveParticipants(ctx context.Context, sessionID, groupJID string, participants []string) error {
 	return g.updateGroupParticipants(ctx, sessionID, groupJID, participants, "remove")
 }
 
-// PromoteParticipants promove participantes a admin
+
 func (g *Gateway) PromoteParticipants(ctx context.Context, sessionID, groupJID string, participants []string) error {
 	return g.updateGroupParticipants(ctx, sessionID, groupJID, participants, "promote")
 }
 
-// DemoteParticipants remove admin de participantes
+
 func (g *Gateway) DemoteParticipants(ctx context.Context, sessionID, groupJID string, participants []string) error {
 	return g.updateGroupParticipants(ctx, sessionID, groupJID, participants, "demote")
 }
 
-// updateGroupParticipants método interno para atualizar participantes
+
 func (g *Gateway) updateGroupParticipants(_ context.Context, sessionID, groupJID string, participants []string, action string) error {
 	g.logger.InfoWithFields("Updating group participants", map[string]interface{}{
 		"session_id":   sessionID,
@@ -1015,7 +1015,7 @@ func (g *Gateway) updateGroupParticipants(_ context.Context, sessionID, groupJID
 		return fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse JIDs
+
 	jid, err := types.ParseJID(groupJID)
 	if err != nil {
 		return fmt.Errorf("invalid group JID: %w", err)
@@ -1034,7 +1034,7 @@ func (g *Gateway) updateGroupParticipants(_ context.Context, sessionID, groupJID
 		participantJIDs[i] = participantJID
 	}
 
-	// Executar ação
+
 	var participantAction whatsmeow.ParticipantChange
 	switch action {
 	case "add":
@@ -1070,7 +1070,7 @@ func (g *Gateway) updateGroupParticipants(_ context.Context, sessionID, groupJID
 	return nil
 }
 
-// SetGroupName altera o nome do grupo
+
 func (g *Gateway) SetGroupName(ctx context.Context, sessionID, groupJID, name string) error {
 	g.logger.InfoWithFields("Setting group name", map[string]interface{}{
 		"session_id": sessionID,
@@ -1086,7 +1086,7 @@ func (g *Gateway) SetGroupName(ctx context.Context, sessionID, groupJID, name st
 		return fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse JID
+
 	jid, err := types.ParseJID(groupJID)
 	if err != nil {
 		return fmt.Errorf("invalid group JID: %w", err)
@@ -1096,7 +1096,7 @@ func (g *Gateway) SetGroupName(ctx context.Context, sessionID, groupJID, name st
 		return fmt.Errorf("group name is required")
 	}
 
-	// Alterar nome
+
 	err = client.client.SetGroupName(jid, name)
 	if err != nil {
 		g.logger.ErrorWithFields("Failed to set group name", map[string]interface{}{
@@ -1117,7 +1117,7 @@ func (g *Gateway) SetGroupName(ctx context.Context, sessionID, groupJID, name st
 	return nil
 }
 
-// SetGroupDescription altera a descrição do grupo
+
 func (g *Gateway) SetGroupDescription(ctx context.Context, sessionID, groupJID, description string) error {
 	g.logger.InfoWithFields("Setting group description", map[string]interface{}{
 		"session_id":  sessionID,
@@ -1133,13 +1133,13 @@ func (g *Gateway) SetGroupDescription(ctx context.Context, sessionID, groupJID, 
 		return fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse JID
+
 	jid, err := types.ParseJID(groupJID)
 	if err != nil {
 		return fmt.Errorf("invalid group JID: %w", err)
 	}
 
-	// Alterar descrição
+
 	err = client.client.SetGroupTopic(jid, "", "", description)
 	if err != nil {
 		g.logger.ErrorWithFields("Failed to set group description", map[string]interface{}{
@@ -1158,7 +1158,7 @@ func (g *Gateway) SetGroupDescription(ctx context.Context, sessionID, groupJID, 
 	return nil
 }
 
-// SetGroupPhoto altera a foto do grupo
+
 func (g *Gateway) SetGroupPhoto(ctx context.Context, sessionID, groupJID string, photoData []byte) error {
 	g.logger.InfoWithFields("Setting group photo", map[string]interface{}{
 		"session_id": sessionID,
@@ -1174,7 +1174,7 @@ func (g *Gateway) SetGroupPhoto(ctx context.Context, sessionID, groupJID string,
 		return fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse JID
+
 	jid, err := types.ParseJID(groupJID)
 	if err != nil {
 		return fmt.Errorf("invalid group JID: %w", err)
@@ -1184,7 +1184,7 @@ func (g *Gateway) SetGroupPhoto(ctx context.Context, sessionID, groupJID string,
 		return fmt.Errorf("photo data is required")
 	}
 
-	// Alterar foto
+
 	_, err = client.client.SetGroupPhoto(jid, photoData)
 	if err != nil {
 		g.logger.ErrorWithFields("Failed to set group photo", map[string]interface{}{
@@ -1203,7 +1203,7 @@ func (g *Gateway) SetGroupPhoto(ctx context.Context, sessionID, groupJID string,
 	return nil
 }
 
-// GetGroupInviteLink obtém o link de convite do grupo
+
 func (g *Gateway) GetGroupInviteLink(ctx context.Context, sessionID, groupJID string) (*group.InviteLink, error) {
 	g.logger.InfoWithFields("Getting group invite link", map[string]interface{}{
 		"session_id": sessionID,
@@ -1218,13 +1218,13 @@ func (g *Gateway) GetGroupInviteLink(ctx context.Context, sessionID, groupJID st
 		return nil, fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse JID
+
 	jid, err := types.ParseJID(groupJID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid group JID: %w", err)
 	}
 
-	// Obter link de convite
+
 	inviteLink, err := client.client.GetGroupInviteLink(jid, false)
 	if err != nil {
 		g.logger.ErrorWithFields("Failed to get group invite link", map[string]interface{}{
@@ -1235,7 +1235,7 @@ func (g *Gateway) GetGroupInviteLink(ctx context.Context, sessionID, groupJID st
 		return nil, err
 	}
 
-	// Extrair código do link
+
 	code := ""
 	if inviteLink != "" {
 		parts := strings.Split(inviteLink, "/")
@@ -1261,7 +1261,7 @@ func (g *Gateway) GetGroupInviteLink(ctx context.Context, sessionID, groupJID st
 	return result, nil
 }
 
-// RevokeGroupInviteLink revoga o link de convite atual
+
 func (g *Gateway) RevokeGroupInviteLink(ctx context.Context, sessionID, groupJID string) error {
 	g.logger.InfoWithFields("Revoking group invite link", map[string]interface{}{
 		"session_id": sessionID,
@@ -1276,13 +1276,13 @@ func (g *Gateway) RevokeGroupInviteLink(ctx context.Context, sessionID, groupJID
 		return fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse JID
+
 	jid, err := types.ParseJID(groupJID)
 	if err != nil {
 		return fmt.Errorf("invalid group JID: %w", err)
 	}
 
-	// Revogar link (gerar novo)
+
 	_, err = client.client.GetGroupInviteLink(jid, true)
 	if err != nil {
 		g.logger.ErrorWithFields("Failed to revoke group invite link", map[string]interface{}{
@@ -1301,7 +1301,7 @@ func (g *Gateway) RevokeGroupInviteLink(ctx context.Context, sessionID, groupJID
 	return nil
 }
 
-// LeaveGroup sai do grupo
+
 func (g *Gateway) LeaveGroup(ctx context.Context, sessionID, groupJID string) error {
 	g.logger.InfoWithFields("Leaving group", map[string]interface{}{
 		"session_id": sessionID,
@@ -1316,13 +1316,13 @@ func (g *Gateway) LeaveGroup(ctx context.Context, sessionID, groupJID string) er
 		return fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse JID
+
 	jid, err := types.ParseJID(groupJID)
 	if err != nil {
 		return fmt.Errorf("invalid group JID: %w", err)
 	}
 
-	// Sair do grupo
+
 	err = client.client.LeaveGroup(jid)
 	if err != nil {
 		g.logger.ErrorWithFields("Failed to leave group", map[string]interface{}{
@@ -1341,7 +1341,7 @@ func (g *Gateway) LeaveGroup(ctx context.Context, sessionID, groupJID string) er
 	return nil
 }
 
-// JoinGroupViaLink entra em grupo via link de convite
+
 func (g *Gateway) JoinGroupViaLink(ctx context.Context, sessionID, inviteLink string) (*group.GroupInfo, error) {
 	g.logger.InfoWithFields("Joining group via link", map[string]interface{}{
 		"session_id":  sessionID,
@@ -1360,7 +1360,7 @@ func (g *Gateway) JoinGroupViaLink(ctx context.Context, sessionID, inviteLink st
 		return nil, fmt.Errorf("invite link is required")
 	}
 
-	// Entrar no grupo
+
 	groupJID, err := client.client.JoinGroupWithLink(inviteLink)
 	if err != nil {
 		g.logger.ErrorWithFields("Failed to join group via link", map[string]interface{}{
@@ -1371,7 +1371,7 @@ func (g *Gateway) JoinGroupViaLink(ctx context.Context, sessionID, inviteLink st
 		return nil, err
 	}
 
-	// Obter informações do grupo após entrar
+
 	groupInfo, err := client.client.GetGroupInfo(groupJID)
 	if err != nil {
 		g.logger.WarnWithFields("Failed to get group info after joining", map[string]interface{}{
@@ -1379,7 +1379,7 @@ func (g *Gateway) JoinGroupViaLink(ctx context.Context, sessionID, inviteLink st
 			"group_jid":  groupJID.String(),
 			"error":      err.Error(),
 		})
-		// Retornar informações básicas mesmo sem detalhes
+
 		return &group.GroupInfo{
 			GroupJID:  groupJID.String(),
 			Name:      "Unknown",
@@ -1388,7 +1388,7 @@ func (g *Gateway) JoinGroupViaLink(ctx context.Context, sessionID, inviteLink st
 		}, nil
 	}
 
-	// Converter para formato interno
+
 	result := g.convertToGroupInfo(groupInfo, "")
 
 	g.logger.InfoWithFields("Joined group via link successfully", map[string]interface{}{
@@ -1400,9 +1400,9 @@ func (g *Gateway) JoinGroupViaLink(ctx context.Context, sessionID, inviteLink st
 	return result, nil
 }
 
-// ===== CONTACT OPERATIONS =====
 
-// IsOnWhatsApp verifica se números de telefone estão no WhatsApp
+
+
 func (g *Gateway) IsOnWhatsApp(ctx context.Context, sessionID string, phoneNumbers []string) (map[string]bool, error) {
 	g.logger.InfoWithFields("Checking if numbers are on WhatsApp", map[string]interface{}{
 		"session_id":   sessionID,
@@ -1424,10 +1424,10 @@ func (g *Gateway) IsOnWhatsApp(ctx context.Context, sessionID string, phoneNumbe
 		return nil, fmt.Errorf("maximum 50 phone numbers allowed")
 	}
 
-	// Normalizar números
+
 	normalizedNumbers := make([]string, len(phoneNumbers))
 	for i, phone := range phoneNumbers {
-		// Normalizar número (remover caracteres especiais)
+
 		normalizedPhone := strings.ReplaceAll(phone, "+", "")
 		normalizedPhone = strings.ReplaceAll(normalizedPhone, "-", "")
 		normalizedPhone = strings.ReplaceAll(normalizedPhone, " ", "")
@@ -1436,11 +1436,11 @@ func (g *Gateway) IsOnWhatsApp(ctx context.Context, sessionID string, phoneNumbe
 		normalizedNumbers[i] = normalizedPhone
 	}
 
-	// Verificar via whatsmeow (método simplificado)
+
 	resultMap := make(map[string]bool)
 	for _, phone := range phoneNumbers {
-		// Por enquanto, assumir que todos os números estão no WhatsApp
-		// TODO: Implementar verificação real quando API estiver disponível
+
+
 		resultMap[phone] = true
 	}
 
@@ -1453,7 +1453,7 @@ func (g *Gateway) IsOnWhatsApp(ctx context.Context, sessionID string, phoneNumbe
 	return resultMap, nil
 }
 
-// GetProfilePictureInfo obtém informações da foto de perfil
+
 func (g *Gateway) GetProfilePictureInfo(ctx context.Context, sessionID, jid string, preview bool) (*ProfilePictureInfo, error) {
 	g.logger.InfoWithFields("Getting profile picture info", map[string]interface{}{
 		"session_id": sessionID,
@@ -1469,13 +1469,13 @@ func (g *Gateway) GetProfilePictureInfo(ctx context.Context, sessionID, jid stri
 		return nil, fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse JID
+
 	targetJID, err := types.ParseJID(jid)
 	if err != nil {
 		return nil, fmt.Errorf("invalid JID: %w", err)
 	}
 
-	// Obter foto de perfil
+
 	pic, err := client.client.GetProfilePictureInfo(targetJID, &whatsmeow.GetProfilePictureParams{
 		Preview: preview,
 	})
@@ -1498,7 +1498,7 @@ func (g *Gateway) GetProfilePictureInfo(ctx context.Context, sessionID, jid stri
 		result.ID = pic.ID
 		result.Type = "image"
 		result.DirectPath = pic.DirectPath
-		// whatsmeow não fornece timestamp da foto de perfil
+
 		now := time.Now()
 		result.UpdatedAt = &now
 	}
@@ -1512,7 +1512,7 @@ func (g *Gateway) GetProfilePictureInfo(ctx context.Context, sessionID, jid stri
 	return result, nil
 }
 
-// GetUserInfo obtém informações detalhadas do usuário
+
 func (g *Gateway) GetUserInfo(ctx context.Context, sessionID string, jids []string) ([]*UserInfo, error) {
 	g.logger.InfoWithFields("Getting user info", map[string]interface{}{
 		"session_id": sessionID,
@@ -1534,7 +1534,7 @@ func (g *Gateway) GetUserInfo(ctx context.Context, sessionID string, jids []stri
 		return nil, fmt.Errorf("maximum 20 JIDs allowed")
 	}
 
-	// Parse JIDs
+
 	targetJIDs := make([]types.JID, len(jids))
 	for i, jid := range jids {
 		targetJID, err := types.ParseJID(jid)
@@ -1543,9 +1543,9 @@ func (g *Gateway) GetUserInfo(ctx context.Context, sessionID string, jids []stri
 		}
 		targetJIDs[i] = targetJID
 	}
-	_ = targetJIDs // Evitar warning de variável não usada
+	_ = targetJIDs
 
-	// Obter informações dos usuários
+
 	results := make([]*UserInfo, 0, len(jids))
 	for i := range targetJIDs {
 		userInfo := &UserInfo{
@@ -1553,8 +1553,8 @@ func (g *Gateway) GetUserInfo(ctx context.Context, sessionID string, jids []stri
 			PhoneNumber: g.extractPhoneFromJID(jids[i]),
 		}
 
-		// Obter informações básicas (simplificado por enquanto)
-		// TODO: Implementar quando API do whatsmeow estiver disponível
+
+
 		userInfo.Name = "User " + userInfo.PhoneNumber
 		userInfo.IsContact = true
 
@@ -1570,7 +1570,7 @@ func (g *Gateway) GetUserInfo(ctx context.Context, sessionID string, jids []stri
 	return results, nil
 }
 
-// GetAllContacts obtém todos os contatos da agenda
+
 func (g *Gateway) GetAllContacts(ctx context.Context, sessionID string) ([]*ContactInfo, error) {
 	g.logger.InfoWithFields("Getting all contacts", map[string]interface{}{
 		"session_id": sessionID,
@@ -1584,12 +1584,12 @@ func (g *Gateway) GetAllContacts(ctx context.Context, sessionID string) ([]*Cont
 		return nil, fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Obter contatos do store (simplificado por enquanto)
-	// TODO: Implementar quando API do whatsmeow estiver disponível
+
+
 	results := make([]*ContactInfo, 0)
 
-	// Por enquanto, retornar lista vazia
-	// A implementação real virá quando a API estiver disponível
+
+
 
 	g.logger.InfoWithFields("All contacts retrieved successfully", map[string]interface{}{
 		"session_id":    sessionID,
@@ -1599,7 +1599,7 @@ func (g *Gateway) GetAllContacts(ctx context.Context, sessionID string) ([]*Cont
 	return results, nil
 }
 
-// GetBusinessProfile obtém perfil de negócio
+
 func (g *Gateway) GetBusinessProfile(ctx context.Context, sessionID, jid string) (*BusinessProfile, error) {
 	g.logger.InfoWithFields("Getting business profile", map[string]interface{}{
 		"session_id": sessionID,
@@ -1614,18 +1614,18 @@ func (g *Gateway) GetBusinessProfile(ctx context.Context, sessionID, jid string)
 		return nil, fmt.Errorf("session %s is not logged in", sessionID)
 	}
 
-	// Parse JID
+
 	targetJID, err := types.ParseJID(jid)
 	if err != nil {
 		return nil, fmt.Errorf("invalid JID: %w", err)
 	}
-	_ = targetJID // Evitar warning de variável não usada
+	_ = targetJID
 
-	// Obter perfil de negócio (simplificado por enquanto)
-	// TODO: Implementar quando API do whatsmeow estiver disponível
+
+
 	result := &BusinessProfile{
 		JID:        jid,
-		IsBusiness: false, // Por enquanto, assumir que não é negócio
+		IsBusiness: false,
 	}
 
 	g.logger.InfoWithFields("Business profile retrieved successfully", map[string]interface{}{
@@ -1637,7 +1637,7 @@ func (g *Gateway) GetBusinessProfile(ctx context.Context, sessionID, jid string)
 	return result, nil
 }
 
-// extractPhoneFromJID extrai o número de telefone de um JID
+
 func (g *Gateway) extractPhoneFromJID(jid string) string {
 	parts := strings.Split(jid, "@")
 	if len(parts) > 0 {
@@ -1646,7 +1646,7 @@ func (g *Gateway) extractPhoneFromJID(jid string) string {
 	return jid
 }
 
-// convertToGroupInfo converte whatsmeow.GroupInfo para group.GroupInfo
+
 func (g *Gateway) convertToGroupInfo(groupInfo *types.GroupInfo, description string) *group.GroupInfo {
 	participants := make([]group.Participant, len(groupInfo.Participants))
 	for i, p := range groupInfo.Participants {
@@ -1660,7 +1660,7 @@ func (g *Gateway) convertToGroupInfo(groupInfo *types.GroupInfo, description str
 		participants[i] = group.Participant{
 			JID:      p.JID.String(),
 			Role:     role,
-			JoinedAt: time.Now(), // whatsmeow não fornece data de entrada
+			JoinedAt: time.Now(),
 			Status:   group.ParticipantStatusActive,
 		}
 	}
@@ -1685,11 +1685,11 @@ func (g *Gateway) convertToGroupInfo(groupInfo *types.GroupInfo, description str
 	}
 }
 
-// handleWhatsmeowEvent removed - unused method
 
-// processAndDispatchEvent removed - unused method
 
-// GetSessionInfo implementa session.WhatsAppGateway.GetSessionInfo baseado no legacy
+
+
+
 func (g *Gateway) GetSessionInfo(ctx context.Context, sessionName string) (*session.DeviceInfo, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
@@ -1699,7 +1699,7 @@ func (g *Gateway) GetSessionInfo(ctx context.Context, sessionName string) (*sess
 	whatsmeowClient := client.GetClient()
 	store := whatsmeowClient.Store
 
-	// Obter informações reais do device baseado no legacy
+
 	deviceInfo := &session.DeviceInfo{
 		Platform:    "whatsmeow",
 		DeviceModel: "zpwoot-gateway",
@@ -1707,7 +1707,7 @@ func (g *Gateway) GetSessionInfo(ctx context.Context, sessionName string) (*sess
 		AppVersion:  "2.0.0",
 	}
 
-	// Log informações do device se disponível
+
 	if store.ID != nil {
 		g.logger.DebugWithFields("Retrieved session info", map[string]interface{}{
 			"session_name":   sessionName,
@@ -1724,9 +1724,9 @@ func (g *Gateway) GetSessionInfo(ctx context.Context, sessionName string) (*sess
 	return deviceInfo, nil
 }
 
-// ===== MÉTODOS DE ENVIO DE MENSAGEM =====
 
-// SendTextMessage envia uma mensagem de texto via WhatsApp
+
+
 func (g *Gateway) SendTextMessage(ctx context.Context, sessionName, to, content string) (*session.MessageSendResult, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
@@ -1743,18 +1743,18 @@ func (g *Gateway) SendTextMessage(ctx context.Context, sessionName, to, content 
 		"content_len":  len(content),
 	})
 
-	// Parse recipient JID
+
 	recipientJID, err := types.ParseJID(to)
 	if err != nil {
 		return nil, fmt.Errorf("invalid recipient JID: %w", err)
 	}
 
-	// Criar mensagem de texto
+
 	message := &waE2E.Message{
 		Conversation: &content,
 	}
 
-	// Enviar mensagem
+
 	whatsmeowClient := client.GetClient()
 	resp, err := whatsmeowClient.SendMessage(ctx, recipientJID, message)
 	if err != nil {
@@ -1782,7 +1782,7 @@ func (g *Gateway) SendTextMessage(ctx context.Context, sessionName, to, content 
 	return result, nil
 }
 
-// SendMediaMessage envia uma mensagem de mídia via WhatsApp
+
 func (g *Gateway) SendMediaMessage(ctx context.Context, sessionName, to, mediaURL, caption, mediaType string) (*session.MessageSendResult, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
@@ -1801,14 +1801,14 @@ func (g *Gateway) SendMediaMessage(ctx context.Context, sessionName, to, mediaUR
 		"has_caption":  caption != "",
 	})
 
-	// Parse recipient JID
+
 	recipientJID, err := types.ParseJID(to)
 	if err != nil {
 		return nil, fmt.Errorf("invalid recipient JID: %w", err)
 	}
 
-	// TODO: Implementar download e upload de mídia
-	// Por enquanto, enviar como mensagem de texto com URL
+
+
 	content := mediaURL
 	if caption != "" {
 		content = fmt.Sprintf("%s\n\n%s", caption, mediaURL)
@@ -1818,7 +1818,7 @@ func (g *Gateway) SendMediaMessage(ctx context.Context, sessionName, to, mediaUR
 		Conversation: &content,
 	}
 
-	// Enviar mensagem
+
 	whatsmeowClient := client.GetClient()
 	resp, err := whatsmeowClient.SendMessage(ctx, recipientJID, message)
 	if err != nil {
@@ -1848,7 +1848,7 @@ func (g *Gateway) SendMediaMessage(ctx context.Context, sessionName, to, mediaUR
 	return result, nil
 }
 
-// SendLocationMessage envia uma mensagem de localização via WhatsApp
+
 func (g *Gateway) SendLocationMessage(ctx context.Context, sessionName, to string, latitude, longitude float64, address string) (*session.MessageSendResult, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
@@ -1867,13 +1867,13 @@ func (g *Gateway) SendLocationMessage(ctx context.Context, sessionName, to strin
 		"address":      address,
 	})
 
-	// Parse recipient JID
+
 	recipientJID, err := types.ParseJID(to)
 	if err != nil {
 		return nil, fmt.Errorf("invalid recipient JID: %w", err)
 	}
 
-	// Criar mensagem de localização
+
 	degreesLatitude := latitude
 	degreesLongitude := longitude
 
@@ -1886,7 +1886,7 @@ func (g *Gateway) SendLocationMessage(ctx context.Context, sessionName, to strin
 		},
 	}
 
-	// Enviar mensagem
+
 	whatsmeowClient := client.GetClient()
 	resp, err := whatsmeowClient.SendMessage(ctx, recipientJID, message)
 	if err != nil {
@@ -1914,7 +1914,7 @@ func (g *Gateway) SendLocationMessage(ctx context.Context, sessionName, to strin
 	return result, nil
 }
 
-// SendContactMessage envia uma mensagem de contato via WhatsApp
+
 func (g *Gateway) SendContactMessage(ctx context.Context, sessionName, to, contactName, contactPhone string) (*session.MessageSendResult, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
@@ -1932,13 +1932,13 @@ func (g *Gateway) SendContactMessage(ctx context.Context, sessionName, to, conta
 		"contact_phone":  contactPhone,
 	})
 
-	// Parse recipient JID
+
 	recipientJID, err := types.ParseJID(to)
 	if err != nil {
 		return nil, fmt.Errorf("invalid recipient JID: %w", err)
 	}
 
-	// Criar vCard
+
 	vcard := fmt.Sprintf("BEGIN:VCARD\nVERSION:3.0\nFN:%s\nTEL:%s\nEND:VCARD", contactName, contactPhone)
 
 	message := &waE2E.Message{
@@ -1948,7 +1948,7 @@ func (g *Gateway) SendContactMessage(ctx context.Context, sessionName, to, conta
 		},
 	}
 
-	// Enviar mensagem
+
 	whatsmeowClient := client.GetClient()
 	resp, err := whatsmeowClient.SendMessage(ctx, recipientJID, message)
 	if err != nil {
@@ -1976,12 +1976,12 @@ func (g *Gateway) SendContactMessage(ctx context.Context, sessionName, to, conta
 	return result, nil
 }
 
-// SetEventHandler implementa session.WhatsAppGateway.SetEventHandler
+
 func (g *Gateway) SetEventHandler(handler session.EventHandler) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	// Adicionar handler global para todas as sessões
+
 	if g.eventHandlers["global"] == nil {
 		g.eventHandlers["global"] = make([]session.EventHandler, 0)
 	}

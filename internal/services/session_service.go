@@ -13,23 +13,23 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// SessionService implementa a camada de aplicação para sessões
-// Responsável por orquestrar entre core business logic e adapters externos
+
+
 type SessionService struct {
-	// Core business logic
+
 	coreService *session.Service
 
-	// External dependencies (injected via interfaces)
+
 	repository session.Repository
 	gateway    session.WhatsAppGateway
 	qrGen      session.QRCodeGenerator
 
-	// Platform dependencies
+
 	logger    *logger.Logger
 	validator *validation.Validator
 }
 
-// NewSessionService cria nova instância do serviço de aplicação
+
 func NewSessionService(
 	coreService *session.Service,
 	repository session.Repository,
@@ -48,16 +48,16 @@ func NewSessionService(
 	}
 }
 
-// CreateSession cria uma nova sessão com validação e orquestração
+
 func (s *SessionService) CreateSession(ctx context.Context, req *contracts.CreateSessionRequest) (*contracts.CreateSessionResponse, error) {
-	// Log da operação
+
 	s.logger.InfoWithFields("Creating session", map[string]interface{}{
 		"name":     req.Name,
 		"qr_code":  req.QRCode,
 		"has_proxy": req.ProxyConfig != nil,
 	})
 
-	// Validar entrada
+
 	if err := s.validator.ValidateStruct(req); err != nil {
 		s.logger.WarnWithFields("Invalid create session request", map[string]interface{}{
 			"error": err.Error(),
@@ -65,13 +65,13 @@ func (s *SessionService) CreateSession(ctx context.Context, req *contracts.Creat
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Converter DTO para request do core
+
 	coreReq := &session.CreateSessionRequest{
 		Name:        req.Name,
-		AutoConnect: req.QRCode, // Se QR code solicitado, auto-conectar
+		AutoConnect: req.QRCode,
 	}
 
-	// Converter proxy config se fornecido
+
 	if req.ProxyConfig != nil {
 		coreReq.ProxyConfig = &session.ProxyConfig{
 			Type:     req.ProxyConfig.Type,
@@ -82,7 +82,7 @@ func (s *SessionService) CreateSession(ctx context.Context, req *contracts.Creat
 		}
 	}
 
-	// Executar lógica de negócio no core
+
 	sess, err := s.coreService.CreateSession(ctx, coreReq)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to create session", map[string]interface{}{
@@ -92,7 +92,7 @@ func (s *SessionService) CreateSession(ctx context.Context, req *contracts.Creat
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
 
-	// Converter entidade para DTO de resposta
+
 	response := &contracts.CreateSessionResponse{
 		ID:          sess.ID.String(),
 		Name:        sess.Name,
@@ -100,7 +100,7 @@ func (s *SessionService) CreateSession(ctx context.Context, req *contracts.Creat
 		CreatedAt:   sess.CreatedAt,
 	}
 
-	// Adicionar proxy config se presente
+
 	if sess.ProxyConfig != nil {
 		response.ProxyConfig = &contracts.ProxyConfig{
 			Type:     sess.ProxyConfig.Type,
@@ -111,15 +111,15 @@ func (s *SessionService) CreateSession(ctx context.Context, req *contracts.Creat
 		}
 	}
 
-	// Se QR code foi solicitado, tentar obter
+
 	if req.QRCode {
-		// Aguardar um pouco para o gateway processar
+
 		time.Sleep(500 * time.Millisecond)
 
 		qrResponse, err := s.coreService.GetQRCode(ctx, sess.ID)
 		if err == nil && qrResponse != nil {
 			response.QRCode = qrResponse.QRCode
-			response.QRCodeImage = qrResponse.QRCode // TODO: Implementar geração de imagem
+			response.QRCodeImage = qrResponse.QRCode
 		} else {
 			s.logger.WarnWithFields("Failed to get QR code after session creation", map[string]interface{}{
 				"session_id": sess.ID.String(),
@@ -138,15 +138,15 @@ func (s *SessionService) CreateSession(ctx context.Context, req *contracts.Creat
 	return response, nil
 }
 
-// GetSession busca informações de uma sessão
+
 func (s *SessionService) GetSession(ctx context.Context, sessionID string) (*contracts.SessionInfoResponse, error) {
-	// Validar UUID
+
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID format: %w", err)
 	}
 
-	// Buscar no core
+
 	sess, err := s.coreService.GetSession(ctx, id)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to get session", map[string]interface{}{
@@ -156,24 +156,24 @@ func (s *SessionService) GetSession(ctx context.Context, sessionID string) (*con
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
-	// Converter para DTO
+
 	response := &contracts.SessionInfoResponse{
 		Session: s.sessionToDTO(sess),
 	}
 
-	// TODO: Adicionar device info se disponível
-	// if deviceInfo, err := s.gateway.GetDeviceInfo(ctx, sess.Name); err == nil {
-	//     response.DeviceInfo = s.deviceInfoToDTO(deviceInfo)
-	// }
+
+
+
+
 
 	return response, nil
 }
 
-// ResolveSessionID resolve um identificador (UUID ou nome) para UUID
+
 func (s *SessionService) ResolveSessionID(ctx context.Context, idOrName string) (uuid.UUID, error) {
-	// Tentar primeiro como UUID
+
 	if id, err := uuid.Parse(idOrName); err == nil {
-		// Verificar se a sessão existe
+
 		_, err := s.coreService.GetSession(ctx, id)
 		if err != nil {
 			return uuid.Nil, fmt.Errorf("session with ID %s not found: %w", idOrName, err)
@@ -181,7 +181,7 @@ func (s *SessionService) ResolveSessionID(ctx context.Context, idOrName string) 
 		return id, nil
 	}
 
-	// Se não for UUID, buscar por nome
+
 	sess, err := s.coreService.GetSessionByName(ctx, idOrName)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("session with name '%s' not found: %w", idOrName, err)
@@ -190,12 +190,12 @@ func (s *SessionService) ResolveSessionID(ctx context.Context, idOrName string) 
 	return sess.ID, nil
 }
 
-// RestoreAllSessions restaura clientes WhatsApp para todas as sessões do banco
+
 func (s *SessionService) RestoreAllSessions(ctx context.Context) error {
 	s.logger.Info("Starting session restoration process")
 
-	// Obter todas as sessões do banco (não apenas nomes)
-	sessions, err := s.coreService.ListSessions(ctx, 1000, 0) // Buscar todas as sessões
+
+	sessions, err := s.coreService.ListSessions(ctx, 1000, 0)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to get sessions for restoration", map[string]interface{}{
 			"error": err.Error(),
@@ -208,18 +208,18 @@ func (s *SessionService) RestoreAllSessions(ctx context.Context) error {
 		return nil
 	}
 
-	// Registrar mapeamentos sessionName -> sessionUUID no gateway
+
 	for _, sess := range sessions {
 		s.gateway.RegisterSessionUUID(sess.Name, sess.ID.String())
 	}
 
-	// Extrair nomes das sessões para restauração
+
 	sessionNames := make([]string, len(sessions))
 	for i, sess := range sessions {
 		sessionNames[i] = sess.Name
 	}
 
-	// Restaurar clientes WhatsApp no gateway
+
 	err = s.gateway.RestoreAllSessions(ctx, sessionNames)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to restore sessions in gateway", map[string]interface{}{
@@ -236,26 +236,26 @@ func (s *SessionService) RestoreAllSessions(ctx context.Context) error {
 	return nil
 }
 
-// DeleteSessionByNameOrID deleta uma sessão por nome ou UUID
+
 func (s *SessionService) DeleteSessionByNameOrID(ctx context.Context, idOrName string) error {
-	// Resolver para UUID
+
 	sessionID, err := s.ResolveSessionID(ctx, idOrName)
 	if err != nil {
 		return err
 	}
 
-	// Deletar usando o UUID
+
 	return s.DeleteSession(ctx, sessionID.String())
 }
 
-// GetSessionByNameOrID busca uma sessão por nome ou UUID
+
 func (s *SessionService) GetSessionByNameOrID(ctx context.Context, identifier string) (*contracts.SessionInfoResponse, error) {
-	// Tentar primeiro como UUID
+
 	if id, err := uuid.Parse(identifier); err == nil {
 		return s.GetSession(ctx, id.String())
 	}
 
-	// Se não for UUID, buscar por nome
+
 	sess, err := s.coreService.GetSessionByName(ctx, identifier)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to get session by name", map[string]interface{}{
@@ -265,7 +265,7 @@ func (s *SessionService) GetSessionByNameOrID(ctx context.Context, identifier st
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
-	// Converter para DTO
+
 	response := &contracts.SessionInfoResponse{
 		Session: s.sessionToDTO(sess),
 	}
@@ -273,14 +273,14 @@ func (s *SessionService) GetSessionByNameOrID(ctx context.Context, identifier st
 	return response, nil
 }
 
-// ListSessions lista sessões com paginação
+
 func (s *SessionService) ListSessions(ctx context.Context, req *contracts.ListSessionsRequest) (*contracts.ListSessionsResponse, error) {
-	// Validar entrada
+
 	if err := s.validator.ValidateStruct(req); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Definir valores padrão
+
 	limit := req.Limit
 	if limit == 0 {
 		limit = 20
@@ -294,7 +294,7 @@ func (s *SessionService) ListSessions(ctx context.Context, req *contracts.ListSe
 		offset = 0
 	}
 
-	// Buscar no core
+
 	sessions, err := s.coreService.ListSessions(ctx, limit, offset)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to list sessions", map[string]interface{}{
@@ -305,7 +305,7 @@ func (s *SessionService) ListSessions(ctx context.Context, req *contracts.ListSe
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
 
-	// Converter para DTOs
+
 	sessionResponses := make([]contracts.SessionInfoResponse, len(sessions))
 	for i, sess := range sessions {
 		sessionResponses[i] = contracts.SessionInfoResponse{
@@ -313,8 +313,8 @@ func (s *SessionService) ListSessions(ctx context.Context, req *contracts.ListSe
 		}
 	}
 
-	// TODO: Obter total count do repositório
-	total := len(sessions) // Placeholder
+
+	total := len(sessions)
 
 	response := &contracts.ListSessionsResponse{
 		Sessions: sessionResponses,
@@ -326,24 +326,24 @@ func (s *SessionService) ListSessions(ctx context.Context, req *contracts.ListSe
 	return response, nil
 }
 
-// ConnectSession inicia conexão de uma sessão
+
 func (s *SessionService) ConnectSession(ctx context.Context, sessionID string) (*contracts.ConnectSessionResponse, error) {
-	// Validar UUID
+
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID format: %w", err)
 	}
 
-	// Connecting session
 
-	// Executar conexão no core
+
+
 	err = s.coreService.ConnectSession(ctx, id)
 
 	response := &contracts.ConnectSessionResponse{
 		Success: true,
 	}
 
-	// Tratar diferentes tipos de erro
+
 	if err != nil {
 		if err == session.ErrSessionAlreadyConnected {
 			response.Message = "Session is already connected and active"
@@ -358,11 +358,11 @@ func (s *SessionService) ConnectSession(ctx context.Context, sessionID string) (
 		response.Message = "Session connection initiated successfully"
 	}
 
-	// Tentar obter QR code
+
 	qrResponse, qrErr := s.coreService.GetQRCode(ctx, id)
 	if qrErr == nil && qrResponse != nil {
 		response.QRCode = qrResponse.QRCode
-		response.QRCodeImage = qrResponse.QRCode // TODO: Implementar geração de imagem
+		response.QRCodeImage = qrResponse.QRCode
 
 		if err != nil && response.Message == "Session is already connected and active" {
 			response.Message = "Session is connected"
@@ -371,14 +371,14 @@ func (s *SessionService) ConnectSession(ctx context.Context, sessionID string) (
 		}
 	}
 
-	// Session connection processed
+
 
 	return response, nil
 }
 
-// DisconnectSession desconecta uma sessão
+
 func (s *SessionService) DisconnectSession(ctx context.Context, sessionID string) error {
-	// Validar UUID
+
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
 		return fmt.Errorf("invalid session ID format: %w", err)
@@ -388,7 +388,7 @@ func (s *SessionService) DisconnectSession(ctx context.Context, sessionID string
 		"session_id": sessionID,
 	})
 
-	// Executar no core
+
 	if err := s.coreService.DisconnectSession(ctx, id); err != nil {
 		s.logger.ErrorWithFields("Failed to disconnect session", map[string]interface{}{
 			"session_id": sessionID,
@@ -404,9 +404,9 @@ func (s *SessionService) DisconnectSession(ctx context.Context, sessionID string
 	return nil
 }
 
-// DeleteSession remove uma sessão
+
 func (s *SessionService) DeleteSession(ctx context.Context, sessionID string) error {
-	// Validar UUID
+
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
 		return fmt.Errorf("invalid session ID format: %w", err)
@@ -416,7 +416,7 @@ func (s *SessionService) DeleteSession(ctx context.Context, sessionID string) er
 		"session_id": sessionID,
 	})
 
-	// Executar no core
+
 	if err := s.coreService.DeleteSession(ctx, id); err != nil {
 		s.logger.ErrorWithFields("Failed to delete session", map[string]interface{}{
 			"session_id": sessionID,
@@ -432,15 +432,15 @@ func (s *SessionService) DeleteSession(ctx context.Context, sessionID string) er
 	return nil
 }
 
-// GetQRCode obtém QR code de uma sessão
+
 func (s *SessionService) GetQRCode(ctx context.Context, sessionID string) (*contracts.QRCodeResponse, error) {
-	// Validar UUID
+
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID format: %w", err)
 	}
 
-	// Buscar no core
+
 	qrResponse, err := s.coreService.GetQRCode(ctx, id)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to get QR code", map[string]interface{}{
@@ -450,22 +450,22 @@ func (s *SessionService) GetQRCode(ctx context.Context, sessionID string) (*cont
 		return nil, fmt.Errorf("failed to get QR code: %w", err)
 	}
 
-	// Converter para DTO
+
 	response := &contracts.QRCodeResponse{
 		QRCode:    qrResponse.QRCode,
 		ExpiresAt: qrResponse.ExpiresAt,
 		Timeout:   qrResponse.Timeout,
 	}
 
-	// TODO: Gerar imagem do QR code
-	// response.QRCodeImage = s.qrGen.GenerateQRCodeImage(qrResponse.QRCode)
+
+
 
 	return response, nil
 }
 
-// GenerateQRCode gera novo QR code para uma sessão
+
 func (s *SessionService) GenerateQRCode(ctx context.Context, sessionID string) (*contracts.QRCodeResponse, error) {
-	// Validar UUID
+
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID format: %w", err)
@@ -475,7 +475,7 @@ func (s *SessionService) GenerateQRCode(ctx context.Context, sessionID string) (
 		"session_id": sessionID,
 	})
 
-	// Gerar no core
+
 	qrResponse, err := s.coreService.GenerateQRCode(ctx, id)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to generate QR code", map[string]interface{}{
@@ -485,15 +485,15 @@ func (s *SessionService) GenerateQRCode(ctx context.Context, sessionID string) (
 		return nil, fmt.Errorf("failed to generate QR code: %w", err)
 	}
 
-	// Converter para DTO
+
 	response := &contracts.QRCodeResponse{
 		QRCode:    qrResponse.QRCode,
 		ExpiresAt: qrResponse.ExpiresAt,
 		Timeout:   qrResponse.Timeout,
 	}
 
-	// TODO: Gerar imagem do QR code
-	// response.QRCodeImage = s.qrGen.GenerateQRCodeImage(qrResponse.QRCode)
+
+
 
 	s.logger.InfoWithFields("QR code generated successfully", map[string]interface{}{
 		"session_id": sessionID,
@@ -503,15 +503,15 @@ func (s *SessionService) GenerateQRCode(ctx context.Context, sessionID string) (
 	return response, nil
 }
 
-// SetProxy configura proxy para uma sessão
+
 func (s *SessionService) SetProxy(ctx context.Context, sessionID string, req *contracts.SetProxyRequest) error {
-	// Validar UUID
+
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
 		return fmt.Errorf("invalid session ID format: %w", err)
 	}
 
-	// Validar entrada
+
 	if err := s.validator.ValidateStruct(req); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
@@ -522,7 +522,7 @@ func (s *SessionService) SetProxy(ctx context.Context, sessionID string, req *co
 		"proxy_host": req.ProxyConfig.Host,
 	})
 
-	// Converter DTO para entidade do core
+
 	proxyConfig := &session.ProxyConfig{
 		Type:     req.ProxyConfig.Type,
 		Host:     req.ProxyConfig.Host,
@@ -531,7 +531,7 @@ func (s *SessionService) SetProxy(ctx context.Context, sessionID string, req *co
 		Password: req.ProxyConfig.Password,
 	}
 
-	// Executar no core
+
 	if err := s.coreService.SetProxy(ctx, id, proxyConfig); err != nil {
 		s.logger.ErrorWithFields("Failed to set proxy", map[string]interface{}{
 			"session_id": sessionID,
@@ -547,15 +547,15 @@ func (s *SessionService) SetProxy(ctx context.Context, sessionID string, req *co
 	return nil
 }
 
-// GetProxy obtém configuração de proxy de uma sessão
+
 func (s *SessionService) GetProxy(ctx context.Context, sessionID string) (*contracts.ProxyResponse, error) {
-	// Validar UUID
+
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID format: %w", err)
 	}
 
-	// Buscar no core
+
 	proxyConfig, err := s.coreService.GetProxy(ctx, id)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to get proxy", map[string]interface{}{
@@ -567,7 +567,7 @@ func (s *SessionService) GetProxy(ctx context.Context, sessionID string) (*contr
 
 	response := &contracts.ProxyResponse{}
 
-	// Converter se proxy existe
+
 	if proxyConfig != nil {
 		response.ProxyConfig = &contracts.ProxyConfig{
 			Type:     proxyConfig.Type,
@@ -581,9 +581,9 @@ func (s *SessionService) GetProxy(ctx context.Context, sessionID string) (*contr
 	return response, nil
 }
 
-// GetSessionStats obtém estatísticas das sessões
+
 func (s *SessionService) GetSessionStats(ctx context.Context) (*contracts.SessionStatsResponse, error) {
-	// Buscar no core
+
 	stats, err := s.coreService.GetSessionStats(ctx)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to get session stats", map[string]interface{}{
@@ -592,7 +592,7 @@ func (s *SessionService) GetSessionStats(ctx context.Context) (*contracts.Sessio
 		return nil, fmt.Errorf("failed to get session stats: %w", err)
 	}
 
-	// Converter para DTO
+
 	response := &contracts.SessionStatsResponse{
 		Total:     stats.Total,
 		Connected: stats.Connected,
@@ -602,15 +602,15 @@ func (s *SessionService) GetSessionStats(ctx context.Context) (*contracts.Sessio
 	return response, nil
 }
 
-// UpdateLastSeen atualiza timestamp de último acesso
+
 func (s *SessionService) UpdateLastSeen(ctx context.Context, sessionID string) error {
-	// Validar UUID
+
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
 		return fmt.Errorf("invalid session ID format: %w", err)
 	}
 
-	// Executar no core
+
 	if err := s.coreService.UpdateLastSeen(ctx, id); err != nil {
 		return fmt.Errorf("failed to update last seen: %w", err)
 	}
@@ -618,9 +618,9 @@ func (s *SessionService) UpdateLastSeen(ctx context.Context, sessionID string) e
 	return nil
 }
 
-// ===== MÉTODOS AUXILIARES PRIVADOS =====
 
-// sessionToDTO converte entidade Session para DTO
+
+
 func (s *SessionService) sessionToDTO(sess *session.Session) *contracts.SessionResponse {
 	response := &contracts.SessionResponse{
 		ID:          sess.ID.String(),
@@ -630,7 +630,7 @@ func (s *SessionService) sessionToDTO(sess *session.Session) *contracts.SessionR
 		UpdatedAt:   sess.UpdatedAt,
 	}
 
-	// Campos opcionais
+
 	if sess.DeviceJID != nil {
 		response.DeviceJID = *sess.DeviceJID
 	}
@@ -656,12 +656,11 @@ func (s *SessionService) sessionToDTO(sess *session.Session) *contracts.SessionR
 	return response
 }
 
-// deviceInfoToDTO converte DeviceInfo para DTO (placeholder)
-// func (s *SessionService) deviceInfoToDTO(deviceInfo *session.DeviceInfo) *contracts.DeviceInfoResponse {
-//     return &contracts.DeviceInfoResponse{
-//         Platform:    deviceInfo.Platform,
-//         DeviceModel: deviceInfo.DeviceModel,
-//         OSVersion:   deviceInfo.OSVersion,
-//         AppVersion:  deviceInfo.AppVersion,
-//     }
-// }
+
+
+
+
+
+
+
+

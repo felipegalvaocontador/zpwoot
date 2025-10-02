@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Erros comuns do domínio
+
 var (
 	ErrNotFound      = errors.New("resource not found")
 	ErrAlreadyExists = errors.New("resource already exists")
@@ -15,7 +15,7 @@ var (
 	ErrInternal      = errors.New("internal error")
 )
 
-// Erros específicos de sessão
+
 var (
 	ErrSessionNotFound           = errors.New("session not found")
 	ErrSessionNameAlreadyExists  = errors.New("session name already exists")
@@ -24,7 +24,7 @@ var (
 	ErrSessionInvalidState       = errors.New("session in invalid state")
 )
 
-// DomainError representa um erro de domínio
+
 type DomainError struct {
 	Code    string
 	Message string
@@ -42,7 +42,7 @@ func (e *DomainError) Unwrap() error {
 	return e.Cause
 }
 
-// NewDomainError cria um novo erro de domínio
+
 func NewDomainError(code, message string, cause error) *DomainError {
 	return &DomainError{
 		Code:    code,
@@ -51,7 +51,7 @@ func NewDomainError(code, message string, cause error) *DomainError {
 	}
 }
 
-// ValidationError representa um erro de validação
+
 type ValidationError struct {
 	Field   string
 	Message string
@@ -61,7 +61,7 @@ func (e *ValidationError) Error() string {
 	return fmt.Sprintf("validation error on field '%s': %s", e.Field, e.Message)
 }
 
-// NewValidationError cria um novo erro de validação
+
 func NewValidationError(field, message string) *ValidationError {
 	return &ValidationError{
 		Field:   field,

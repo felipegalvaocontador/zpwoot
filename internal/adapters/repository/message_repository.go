@@ -15,13 +15,13 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// MessageRepository implementa messaging.Repository para PostgreSQL
+
 type MessageRepository struct {
 	db     *sqlx.DB
 	logger *logger.Logger
 }
 
-// NewMessageRepository cria uma nova instância do repositório de mensagens
+
 func NewMessageRepository(db *sqlx.DB, logger *logger.Logger) messaging.Repository {
 	return &MessageRepository{
 		db:     db,
@@ -29,7 +29,7 @@ func NewMessageRepository(db *sqlx.DB, logger *logger.Logger) messaging.Reposito
 	}
 }
 
-// messageModel representa o modelo de dados para PostgreSQL
+
 type messageModel struct {
 	ID               string         `db:"id"`
 	SessionID        string         `db:"sessionId"`
@@ -48,7 +48,7 @@ type messageModel struct {
 	UpdatedAt        time.Time      `db:"updatedAt"`
 }
 
-// Create implementa messaging.Repository.Create
+
 func (r *MessageRepository) Create(ctx context.Context, message *messaging.Message) error {
 	r.logger.DebugWithFields("Creating message", map[string]interface{}{
 		"message_id":    message.ID.String(),
@@ -74,11 +74,11 @@ func (r *MessageRepository) Create(ctx context.Context, message *messaging.Messa
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code {
-			case "23505": // unique_violation
+			case "23505": 
 				if pqErr.Constraint == "idx_zp_message_unique_zp" {
 					return errors.ErrAlreadyExists
 				}
-			case "23503": // foreign_key_violation
+			case "23503": 
 				return fmt.Errorf("session not found")
 			}
 		}
@@ -93,7 +93,7 @@ func (r *MessageRepository) Create(ctx context.Context, message *messaging.Messa
 	return nil
 }
 
-// GetByID implementa messaging.Repository.GetByID
+
 func (r *MessageRepository) GetByID(ctx context.Context, id uuid.UUID) (*messaging.Message, error) {
 	var model messageModel
 
@@ -109,7 +109,7 @@ func (r *MessageRepository) GetByID(ctx context.Context, id uuid.UUID) (*messagi
 	return r.modelToMessage(&model)
 }
 
-// GetByZpMessageID implementa messaging.Repository.GetByZpMessageID
+
 func (r *MessageRepository) GetByZpMessageID(ctx context.Context, sessionID uuid.UUID, zpMessageID string) (*messaging.Message, error) {
 	var model messageModel
 
@@ -125,7 +125,7 @@ func (r *MessageRepository) GetByZpMessageID(ctx context.Context, sessionID uuid
 	return r.modelToMessage(&model)
 }
 
-// ExistsByZpMessageID implementa messaging.Repository.ExistsByZpMessageID
+
 func (r *MessageRepository) ExistsByZpMessageID(ctx context.Context, sessionID uuid.UUID, zpMessageID string) (bool, error) {
 	var count int
 
@@ -138,7 +138,7 @@ func (r *MessageRepository) ExistsByZpMessageID(ctx context.Context, sessionID u
 	return count > 0, nil
 }
 
-// Update implementa messaging.Repository.Update
+
 func (r *MessageRepository) Update(ctx context.Context, message *messaging.Message) error {
 	message.UpdatedAt = time.Now()
 	model := r.messageToModel(message)
@@ -176,7 +176,7 @@ func (r *MessageRepository) Update(ctx context.Context, message *messaging.Messa
 	return nil
 }
 
-// Delete implementa messaging.Repository.Delete
+
 func (r *MessageRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM "zpMessage" WHERE id = $1`
 	result, err := r.db.ExecContext(ctx, query, id.String())
@@ -196,7 +196,7 @@ func (r *MessageRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// List implementa messaging.Repository.List
+
 func (r *MessageRepository) List(ctx context.Context, limit, offset int) ([]*messaging.Message, error) {
 	var models []messageModel
 
@@ -222,7 +222,7 @@ func (r *MessageRepository) List(ctx context.Context, limit, offset int) ([]*mes
 	return messages, nil
 }
 
-// ListBySession implementa messaging.Repository.ListBySession
+
 func (r *MessageRepository) ListBySession(ctx context.Context, sessionID uuid.UUID, limit, offset int) ([]*messaging.Message, error) {
 	var models []messageModel
 
@@ -249,7 +249,7 @@ func (r *MessageRepository) ListBySession(ctx context.Context, sessionID uuid.UU
 	return messages, nil
 }
 
-// ListByChat implementa messaging.Repository.ListByChat
+
 func (r *MessageRepository) ListByChat(ctx context.Context, sessionID uuid.UUID, chatJID string, limit, offset int) ([]*messaging.Message, error) {
 	var models []messageModel
 
@@ -276,7 +276,7 @@ func (r *MessageRepository) ListByChat(ctx context.Context, sessionID uuid.UUID,
 	return messages, nil
 }
 
-// GetByCwMessageID implementa messaging.Repository.GetByCwMessageID
+
 func (r *MessageRepository) GetByCwMessageID(ctx context.Context, cwMessageID int) (*messaging.Message, error) {
 	var model messageModel
 
@@ -292,7 +292,7 @@ func (r *MessageRepository) GetByCwMessageID(ctx context.Context, cwMessageID in
 	return r.modelToMessage(&model)
 }
 
-// GetByCwConversationID implementa messaging.Repository.GetByCwConversationID
+
 func (r *MessageRepository) GetByCwConversationID(ctx context.Context, cwConversationID int, limit, offset int) ([]*messaging.Message, error) {
 	var models []messageModel
 
@@ -319,7 +319,7 @@ func (r *MessageRepository) GetByCwConversationID(ctx context.Context, cwConvers
 	return messages, nil
 }
 
-// ListBySyncStatus implementa messaging.Repository.ListBySyncStatus
+
 func (r *MessageRepository) ListBySyncStatus(ctx context.Context, status messaging.SyncStatus, limit, offset int) ([]*messaging.Message, error) {
 	var models []messageModel
 
@@ -346,7 +346,7 @@ func (r *MessageRepository) ListBySyncStatus(ctx context.Context, status messagi
 	return messages, nil
 }
 
-// UpdateSyncStatus implementa messaging.Repository.UpdateSyncStatus
+
 func (r *MessageRepository) UpdateSyncStatus(ctx context.Context, id uuid.UUID, status messaging.SyncStatus, cwMessageID, cwConversationID *int) error {
 	now := time.Now()
 
@@ -382,7 +382,7 @@ func (r *MessageRepository) UpdateSyncStatus(ctx context.Context, id uuid.UUID, 
 	return nil
 }
 
-// GetPendingSyncMessages implementa messaging.Repository.GetPendingSyncMessages
+
 func (r *MessageRepository) GetPendingSyncMessages(ctx context.Context, sessionID uuid.UUID, limit int) ([]*messaging.Message, error) {
 	var models []messageModel
 
@@ -409,7 +409,7 @@ func (r *MessageRepository) GetPendingSyncMessages(ctx context.Context, sessionI
 	return messages, nil
 }
 
-// GetFailedSyncMessages implementa messaging.Repository.GetFailedSyncMessages
+
 func (r *MessageRepository) GetFailedSyncMessages(ctx context.Context, sessionID uuid.UUID, limit int) ([]*messaging.Message, error) {
 	var models []messageModel
 
@@ -436,7 +436,7 @@ func (r *MessageRepository) GetFailedSyncMessages(ctx context.Context, sessionID
 	return messages, nil
 }
 
-// MarkAsSynced implementa messaging.Repository.MarkAsSynced
+
 func (r *MessageRepository) MarkAsSynced(ctx context.Context, id uuid.UUID, cwMessageID, cwConversationID int) error {
 	now := time.Now()
 
@@ -467,7 +467,7 @@ func (r *MessageRepository) MarkAsSynced(ctx context.Context, id uuid.UUID, cwMe
 	return nil
 }
 
-// MarkAsFailed implementa messaging.Repository.MarkAsFailed
+
 func (r *MessageRepository) MarkAsFailed(ctx context.Context, id uuid.UUID, errorReason string) error {
 	now := time.Now()
 
@@ -495,7 +495,7 @@ func (r *MessageRepository) MarkAsFailed(ctx context.Context, id uuid.UUID, erro
 	return nil
 }
 
-// Count implementa messaging.Repository.Count
+
 func (r *MessageRepository) Count(ctx context.Context) (int64, error) {
 	var count int64
 
@@ -508,7 +508,7 @@ func (r *MessageRepository) Count(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
-// CountBySession implementa messaging.Repository.CountBySession
+
 func (r *MessageRepository) CountBySession(ctx context.Context, sessionID uuid.UUID) (int64, error) {
 	var count int64
 
@@ -521,7 +521,7 @@ func (r *MessageRepository) CountBySession(ctx context.Context, sessionID uuid.U
 	return count, nil
 }
 
-// CountByChat implementa messaging.Repository.CountByChat
+
 func (r *MessageRepository) CountByChat(ctx context.Context, sessionID uuid.UUID, chatJID string) (int64, error) {
 	var count int64
 
@@ -534,7 +534,7 @@ func (r *MessageRepository) CountByChat(ctx context.Context, sessionID uuid.UUID
 	return count, nil
 }
 
-// CountBySyncStatus implementa messaging.Repository.CountBySyncStatus
+
 func (r *MessageRepository) CountBySyncStatus(ctx context.Context, status messaging.SyncStatus) (int64, error) {
 	var count int64
 
@@ -547,7 +547,7 @@ func (r *MessageRepository) CountBySyncStatus(ctx context.Context, status messag
 	return count, nil
 }
 
-// CountByType implementa messaging.Repository.CountByType
+
 func (r *MessageRepository) CountByType(ctx context.Context, messageType messaging.MessageType) (int64, error) {
 	var count int64
 
@@ -560,21 +560,21 @@ func (r *MessageRepository) CountByType(ctx context.Context, messageType messagi
 	return count, nil
 }
 
-// GetStats implementa messaging.Repository.GetStats
+
 func (r *MessageRepository) GetStats(ctx context.Context) (*messaging.MessageStats, error) {
 	stats := &messaging.MessageStats{
 		MessagesByType:   make(map[string]int64),
 		MessagesByStatus: make(map[string]int64),
 	}
 
-	// Total messages
+
 	totalCount, err := r.Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get total count: %w", err)
 	}
 	stats.TotalMessages = totalCount
 
-	// Messages by type
+
 	typeQuery := `
 		SELECT "zpType", COUNT(*) as count
 		FROM "zpMessage"
@@ -595,7 +595,7 @@ func (r *MessageRepository) GetStats(ctx context.Context) (*messaging.MessageSta
 		stats.MessagesByType[msgType] = count
 	}
 
-	// Messages by status
+
 	statusQuery := `
 		SELECT "syncStatus", COUNT(*) as count
 		FROM "zpMessage"
@@ -615,7 +615,7 @@ func (r *MessageRepository) GetStats(ctx context.Context) (*messaging.MessageSta
 		}
 		stats.MessagesByStatus[status] = count
 
-		// Set specific counters
+
 		switch status {
 		case "synced":
 			stats.SyncedMessages = count
@@ -626,13 +626,13 @@ func (r *MessageRepository) GetStats(ctx context.Context) (*messaging.MessageSta
 		}
 	}
 
-	// Messages today, this week, this month
+
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	weekStart := today.AddDate(0, 0, -int(today.Weekday()))
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
-	// Today
+
 	var todayCount int64
 	todayQuery := `SELECT COUNT(*) FROM "zpMessage" WHERE "createdAt" >= $1`
 	err = r.db.GetContext(ctx, &todayCount, todayQuery, today)
@@ -641,7 +641,7 @@ func (r *MessageRepository) GetStats(ctx context.Context) (*messaging.MessageSta
 	}
 	stats.MessagesToday = todayCount
 
-	// This week
+
 	var weekCount int64
 	weekQuery := `SELECT COUNT(*) FROM "zpMessage" WHERE "createdAt" >= $1`
 	err = r.db.GetContext(ctx, &weekCount, weekQuery, weekStart)
@@ -650,7 +650,7 @@ func (r *MessageRepository) GetStats(ctx context.Context) (*messaging.MessageSta
 	}
 	stats.MessagesThisWeek = weekCount
 
-	// This month
+
 	var monthCount int64
 	monthQuery := `SELECT COUNT(*) FROM "zpMessage" WHERE "createdAt" >= $1`
 	err = r.db.GetContext(ctx, &monthCount, monthQuery, monthStart)
@@ -662,7 +662,7 @@ func (r *MessageRepository) GetStats(ctx context.Context) (*messaging.MessageSta
 	return stats, nil
 }
 
-// GetStatsBySession implementa messaging.Repository.GetStatsBySession
+
 func (r *MessageRepository) GetStatsBySession(ctx context.Context, sessionID uuid.UUID) (*messaging.MessageStats, error) {
 	stats := &messaging.MessageStats{
 		MessagesByType:   make(map[string]int64),
@@ -671,14 +671,14 @@ func (r *MessageRepository) GetStatsBySession(ctx context.Context, sessionID uui
 
 	sessionIDStr := sessionID.String()
 
-	// Total messages for session
+
 	totalCount, err := r.CountBySession(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get total count for session: %w", err)
 	}
 	stats.TotalMessages = totalCount
 
-	// Messages by type for session
+
 	typeQuery := `
 		SELECT "zpType", COUNT(*) as count
 		FROM "zpMessage"
@@ -700,7 +700,7 @@ func (r *MessageRepository) GetStatsBySession(ctx context.Context, sessionID uui
 		stats.MessagesByType[msgType] = count
 	}
 
-	// Messages by status for session
+
 	statusQuery := `
 		SELECT "syncStatus", COUNT(*) as count
 		FROM "zpMessage"
@@ -734,7 +734,7 @@ func (r *MessageRepository) GetStatsBySession(ctx context.Context, sessionID uui
 	return stats, nil
 }
 
-// GetStatsForPeriod implementa messaging.Repository.GetStatsForPeriod
+
 func (r *MessageRepository) GetStatsForPeriod(ctx context.Context, sessionID uuid.UUID, from, to int64) (*messaging.MessageStats, error) {
 	stats := &messaging.MessageStats{
 		MessagesByType:   make(map[string]int64),
@@ -745,7 +745,7 @@ func (r *MessageRepository) GetStatsForPeriod(ctx context.Context, sessionID uui
 	toTime := time.Unix(to, 0)
 	sessionIDStr := sessionID.String()
 
-	// Total messages for period
+
 	var totalCount int64
 	totalQuery := `
 		SELECT COUNT(*) FROM "zpMessage"
@@ -757,7 +757,7 @@ func (r *MessageRepository) GetStatsForPeriod(ctx context.Context, sessionID uui
 	}
 	stats.TotalMessages = totalCount
 
-	// Messages by type for period
+
 	typeQuery := `
 		SELECT "zpType", COUNT(*) as count
 		FROM "zpMessage"
@@ -779,7 +779,7 @@ func (r *MessageRepository) GetStatsForPeriod(ctx context.Context, sessionID uui
 		stats.MessagesByType[msgType] = count
 	}
 
-	// Messages by status for period
+
 	statusQuery := `
 		SELECT "syncStatus", COUNT(*) as count
 		FROM "zpMessage"
@@ -813,7 +813,7 @@ func (r *MessageRepository) GetStatsForPeriod(ctx context.Context, sessionID uui
 	return stats, nil
 }
 
-// DeleteOldMessages implementa messaging.Repository.DeleteOldMessages
+
 func (r *MessageRepository) DeleteOldMessages(ctx context.Context, olderThanDays int) (int64, error) {
 	cutoffDate := time.Now().AddDate(0, 0, -olderThanDays)
 
@@ -831,7 +831,7 @@ func (r *MessageRepository) DeleteOldMessages(ctx context.Context, olderThanDays
 	return rowsAffected, nil
 }
 
-// DeleteBySession implementa messaging.Repository.DeleteBySession
+
 func (r *MessageRepository) DeleteBySession(ctx context.Context, sessionID uuid.UUID) (int64, error) {
 	query := `DELETE FROM "zpMessage" WHERE "sessionId" = $1`
 	result, err := r.db.ExecContext(ctx, query, sessionID.String())
@@ -847,7 +847,7 @@ func (r *MessageRepository) DeleteBySession(ctx context.Context, sessionID uuid.
 	return rowsAffected, nil
 }
 
-// CleanupFailedMessages implementa messaging.Repository.CleanupFailedMessages
+
 func (r *MessageRepository) CleanupFailedMessages(ctx context.Context, olderThanHours int) (int64, error) {
 	cutoffDate := time.Now().Add(-time.Duration(olderThanHours) * time.Hour)
 
@@ -865,7 +865,7 @@ func (r *MessageRepository) CleanupFailedMessages(ctx context.Context, olderThan
 	return rowsAffected, nil
 }
 
-// messageToModel converte uma mensagem do domínio para o modelo de dados
+
 func (r *MessageRepository) messageToModel(message *messaging.Message) *messageModel {
 	model := &messageModel{
 		ID:          message.ID.String(),
@@ -881,22 +881,22 @@ func (r *MessageRepository) messageToModel(message *messaging.Message) *messageM
 		UpdatedAt:   message.UpdatedAt,
 	}
 
-	// Content (nullable)
+
 	if message.Content != "" {
 		model.Content = sql.NullString{String: message.Content, Valid: true}
 	}
 
-	// CwMessageID (nullable)
+
 	if message.CwMessageID != nil {
 		model.CwMessageID = sql.NullInt64{Int64: int64(*message.CwMessageID), Valid: true}
 	}
 
-	// CwConversationID (nullable)
+
 	if message.CwConversationID != nil {
 		model.CwConversationID = sql.NullInt64{Int64: int64(*message.CwConversationID), Valid: true}
 	}
 
-	// SyncedAt (nullable)
+
 	if message.SyncedAt != nil {
 		model.SyncedAt = pq.NullTime{Time: *message.SyncedAt, Valid: true}
 	}
@@ -904,9 +904,9 @@ func (r *MessageRepository) messageToModel(message *messaging.Message) *messageM
 	return model
 }
 
-// modelToMessage converte um modelo de dados para uma mensagem do domínio
+
 func (r *MessageRepository) modelToMessage(model *messageModel) (*messaging.Message, error) {
-	// Parse UUIDs
+
 	id, err := uuid.Parse(model.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse message ID: %w", err)
@@ -931,24 +931,24 @@ func (r *MessageRepository) modelToMessage(model *messageModel) (*messaging.Mess
 		UpdatedAt:   model.UpdatedAt,
 	}
 
-	// Content (nullable)
+
 	if model.Content.Valid {
 		message.Content = model.Content.String
 	}
 
-	// CwMessageID (nullable)
+
 	if model.CwMessageID.Valid {
 		cwMessageID := int(model.CwMessageID.Int64)
 		message.CwMessageID = &cwMessageID
 	}
 
-	// CwConversationID (nullable)
+
 	if model.CwConversationID.Valid {
 		cwConversationID := int(model.CwConversationID.Int64)
 		message.CwConversationID = &cwConversationID
 	}
 
-	// SyncedAt (nullable)
+
 	if model.SyncedAt.Valid {
 		message.SyncedAt = &model.SyncedAt.Time
 	}

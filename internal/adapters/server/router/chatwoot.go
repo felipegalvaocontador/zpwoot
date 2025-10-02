@@ -8,16 +8,16 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// setupChatwootRoutes configura todas as rotas relacionadas ao Chatwoot
+
 func setupChatwootRoutes(r chi.Router, messageService *services.MessageService, sessionService *services.SessionService, appLogger *logger.Logger) {
 	chatwootHandler := handler.NewChatwootHandler(messageService, sessionService, appLogger)
 
 	r.Route("/{sessionId}/chatwoot", func(r chi.Router) {
-		// Rotas públicas documentadas no Swagger
+
 		r.Post("/set", chatwootHandler.CreateConfig)
 		r.Get("/find", chatwootHandler.FindConfig)
 
-		// Rotas internas (não documentadas no Swagger) - mantidas para compatibilidade
+
 		r.Get("/", chatwootHandler.FindConfig)
 		r.Put("/", chatwootHandler.UpdateConfig)
 		r.Delete("/", chatwootHandler.DeleteConfig)

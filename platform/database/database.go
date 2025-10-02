@@ -7,33 +7,33 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" // PostgreSQL driver
+	_ "github.com/lib/pq"
 
 	"zpwoot/platform/config"
 	"zpwoot/platform/logger"
 )
 
-// Database wrapper para sqlx.DB com funcionalidades específicas
+
 type Database struct {
 	*sqlx.DB
 	config config.DatabaseConfig
 	logger *logger.Logger
 }
 
-// New cria nova conexão com banco de dados
+
 func New(cfg config.DatabaseConfig, log *logger.Logger) (*Database, error) {
-	// Conectar ao banco
+
 	db, err := sqlx.Connect("postgres", cfg.URL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Configurar pool de conexões
+
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
 	db.SetConnMaxLifetime(time.Duration(cfg.ConnMaxLifetime) * time.Second)
 
-	// Testar conexão
+
 	if err := db.Ping(); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
@@ -45,17 +45,17 @@ func New(cfg config.DatabaseConfig, log *logger.Logger) (*Database, error) {
 		logger: log,
 	}
 
-	// Database connected successfully
+
 
 	return database, nil
 }
 
-// NewFromAppConfig cria database a partir da configuração da aplicação
+
 func NewFromAppConfig(appConfig *config.Config, log *logger.Logger) (*Database, error) {
 	return New(appConfig.Database, log)
 }
 
-// Close fecha conexão com banco de dados
+
 func (d *Database) Close() error {
 	d.logger.InfoWithFields("Closing database connection", map[string]interface{}{
 		"module": "database",
@@ -63,7 +63,7 @@ func (d *Database) Close() error {
 	return d.DB.Close()
 }
 
-// Health verifica saúde da conexão
+
 func (d *Database) Health(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -71,7 +71,7 @@ func (d *Database) Health(ctx context.Context) error {
 	return d.PingContext(ctx)
 }
 
-// Transaction executa função dentro de uma transação
+
 func (d *Database) Transaction(ctx context.Context, fn func(*sqlx.Tx) error) error {
 	tx, err := d.BeginTxx(ctx, nil)
 	if err != nil {
@@ -105,19 +105,19 @@ func (d *Database) Transaction(ctx context.Context, fn func(*sqlx.Tx) error) err
 	return err
 }
 
-// Stats retorna estatísticas do pool de conexões
+
 func (d *Database) Stats() sql.DBStats {
 	return d.DB.Stats()
 }
 
-// GetConfig retorna configuração do banco
+
 func (d *Database) GetConfig() config.DatabaseConfig {
 	return d.config
 }
 
-// ===== MÉTODOS DE CONVENIÊNCIA =====
 
-// ExecContext executa query com contexto
+
+
 func (d *Database) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	start := time.Now()
 	result, err := d.DB.ExecContext(ctx, query, args...)
@@ -126,7 +126,7 @@ func (d *Database) ExecContext(ctx context.Context, query string, args ...interf
 	return result, err
 }
 
-// QueryContext executa query de seleção com contexto
+
 func (d *Database) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	start := time.Now()
 	rows, err := d.DB.QueryContext(ctx, query, args...)
@@ -135,7 +135,7 @@ func (d *Database) QueryContext(ctx context.Context, query string, args ...inter
 	return rows, err
 }
 
-// QueryRowContext executa query que retorna uma linha com contexto
+
 func (d *Database) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	start := time.Now()
 	row := d.DB.QueryRowContext(ctx, query, args...)
@@ -144,7 +144,7 @@ func (d *Database) QueryRowContext(ctx context.Context, query string, args ...in
 	return row
 }
 
-// GetContext executa query e escaneia resultado em dest
+
 func (d *Database) GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	start := time.Now()
 	err := d.DB.GetContext(ctx, dest, query, args...)
@@ -153,7 +153,7 @@ func (d *Database) GetContext(ctx context.Context, dest interface{}, query strin
 	return err
 }
 
-// SelectContext executa query e escaneia múltiplos resultados em dest
+
 func (d *Database) SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	start := time.Now()
 	err := d.DB.SelectContext(ctx, dest, query, args...)
@@ -162,7 +162,7 @@ func (d *Database) SelectContext(ctx context.Context, dest interface{}, query st
 	return err
 }
 
-// NamedExecContext executa query nomeada com contexto
+
 func (d *Database) NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error) {
 	start := time.Now()
 	result, err := d.DB.NamedExecContext(ctx, query, arg)
@@ -171,7 +171,7 @@ func (d *Database) NamedExecContext(ctx context.Context, query string, arg inter
 	return result, err
 }
 
-// NamedQueryContext executa query nomeada de seleção com contexto
+
 func (d *Database) NamedQueryContext(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error) {
 	start := time.Now()
 	rows, err := d.DB.NamedQueryContext(ctx, query, arg)
@@ -180,9 +180,9 @@ func (d *Database) NamedQueryContext(ctx context.Context, query string, arg inte
 	return rows, err
 }
 
-// ===== MÉTODOS PRIVADOS =====
 
-// logQuery registra informações da query executada
+
+
 func (d *Database) logQuery(operation, query string, duration time.Duration, err error) {
 	if !d.logger.IsDebugEnabled() {
 		return
@@ -206,9 +206,9 @@ func (d *Database) logQuery(operation, query string, duration time.Duration, err
 	}
 }
 
-// ===== HEALTH CHECK =====
 
-// HealthCheck estrutura para verificação de saúde
+
+
 type HealthCheck struct {
 	Status      string        `json:"status"`
 	Latency     time.Duration `json:"latency"`
@@ -216,7 +216,7 @@ type HealthCheck struct {
 	Error       string        `json:"error,omitempty"`
 }
 
-// DBStats estatísticas do banco
+
 type DBStats struct {
 	OpenConnections     int `json:"open_connections"`
 	InUse              int `json:"in_use"`
@@ -228,7 +228,7 @@ type DBStats struct {
 	MaxLifetimeClosed  int64 `json:"max_lifetime_closed"`
 }
 
-// PerformHealthCheck executa verificação completa de saúde
+
 func (d *Database) PerformHealthCheck(ctx context.Context) HealthCheck {
 	start := time.Now()
 	

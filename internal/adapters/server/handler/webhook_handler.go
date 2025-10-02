@@ -10,13 +10,13 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// WebhookHandler implementa handlers REST para configuração de webhooks
+
 type WebhookHandler struct {
 	*shared.BaseHandler
 	sessionService *services.SessionService
 }
 
-// NewWebhookHandler cria nova instância do handler de webhooks
+
 func NewWebhookHandler(
 	sessionService *services.SessionService,
 	logger *logger.Logger,
@@ -27,7 +27,7 @@ func NewWebhookHandler(
 	}
 }
 
-// SetConfig configura webhook para a sessão
+
 // @Summary Set webhook configuration
 // @Description Configure webhook settings for the session
 // @Tags Webhooks
@@ -48,14 +48,14 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar se sessão existe
+
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
 
-	// TODO: Implementar configuração de webhook
+
 	h.LogSuccess("set webhook config", map[string]interface{}{
 		"session_id": sessionID,
 	})
@@ -63,7 +63,7 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Webhook configuration set successfully")
 }
 
-// FindConfig obtém configuração de webhook
+
 // @Summary Get webhook configuration
 // @Description Get the current webhook configuration for the session
 // @Tags Webhooks
@@ -82,14 +82,14 @@ func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar se sessão existe
+
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
 
-	// TODO: Implementar busca de configuração de webhook
+
 	h.LogSuccess("find webhook config", map[string]interface{}{
 		"session_id": sessionID,
 	})
@@ -97,7 +97,7 @@ func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Webhook configuration retrieved successfully")
 }
 
-// TestWebhook testa a configuração de webhook
+
 // @Summary Test webhook configuration
 // @Description Test the webhook configuration by sending a test event
 // @Tags Webhooks
@@ -117,14 +117,14 @@ func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar se sessão existe
+
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
 
-	// TODO: Implementar teste de webhook
+
 	h.LogSuccess("test webhook", map[string]interface{}{
 		"session_id": sessionID,
 	})

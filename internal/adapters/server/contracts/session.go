@@ -6,16 +6,16 @@ import (
 	"zpwoot/internal/core/session"
 )
 
-// ===== REQUEST DTOs =====
 
-// CreateSessionRequest DTO para criação de sessão
+
+
 type CreateSessionRequest struct {
 	Name        string       `json:"name" validate:"required,min=3,max=50" example:"my-session"`
 	ProxyConfig *ProxyConfig `json:"proxyConfig,omitempty"`
 	QRCode      bool         `json:"qrCode" example:"false"`
 } // @name CreateSessionRequest
 
-// ListSessionsRequest DTO para listagem de sessões
+
 type ListSessionsRequest struct {
 	IsConnected *bool   `json:"isConnected,omitempty" query:"isConnected" example:"true"`
 	DeviceJID   *string `json:"deviceJid,omitempty" query:"deviceJid" example:"5511999999999@s.whatsapp.net"`
@@ -23,19 +23,19 @@ type ListSessionsRequest struct {
 	Offset      int     `json:"offset,omitempty" query:"offset" validate:"omitempty,min=0" example:"0"`
 } // @name ListSessionsRequest
 
-// SetProxyRequest DTO para configuração de proxy
+
 type SetProxyRequest struct {
 	ProxyConfig ProxyConfig `json:"proxyConfig" validate:"required"`
 } // @name SetProxyRequest
 
-// PairPhoneRequest DTO para pareamento por telefone
+
 type PairPhoneRequest struct {
 	PhoneNumber string `json:"phoneNumber" validate:"required,e164" example:"+5511999999999"`
 } // @name PairPhoneRequest
 
-// ===== RESPONSE DTOs =====
 
-// CreateSessionResponse DTO de resposta para criação de sessão
+
+
 type CreateSessionResponse struct {
 	ID          string       `json:"id" example:"1b2e424c-a2a0-41a4-b992-15b7ec06b9bc"`
 	Name        string       `json:"name" example:"my-session"`
@@ -46,7 +46,7 @@ type CreateSessionResponse struct {
 	CreatedAt   time.Time    `json:"createdAt" example:"2024-01-01T00:00:00Z"`
 } // @name CreateSessionResponse
 
-// SessionResponse DTO de resposta para informações de sessão
+
 type SessionResponse struct {
 	ID              string       `json:"id" example:"session-123"`
 	Name            string       `json:"name" example:"my-whatsapp-session"`
@@ -59,13 +59,13 @@ type SessionResponse struct {
 	ConnectedAt     *time.Time   `json:"connectedAt,omitempty" example:"2024-01-01T00:00:30Z"`
 } // @name SessionResponse
 
-// SessionInfoResponse DTO de resposta para informações completas de sessão
+
 type SessionInfoResponse struct {
 	Session    *SessionResponse    `json:"session"`
 	DeviceInfo *DeviceInfoResponse `json:"deviceInfo,omitempty"`
 } // @name SessionInfoResponse
 
-// ListSessionsResponse DTO de resposta para listagem de sessões
+
 type ListSessionsResponse struct {
 	Sessions []SessionInfoResponse `json:"sessions"`
 	Total    int                   `json:"total" example:"10"`
@@ -73,7 +73,7 @@ type ListSessionsResponse struct {
 	Offset   int                   `json:"offset" example:"0"`
 } // @name ListSessionsResponse
 
-// ConnectSessionResponse DTO de resposta para conexão de sessão
+
 type ConnectSessionResponse struct {
 	Success     bool   `json:"success" example:"true"`
 	Message     string `json:"message" example:"Session connection initiated successfully"`
@@ -81,7 +81,7 @@ type ConnectSessionResponse struct {
 	QRCodeImage string `json:"qrCodeImage,omitempty" example:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."`
 } // @name ConnectSessionResponse
 
-// QRCodeResponse DTO de resposta para QR code
+
 type QRCodeResponse struct {
 	QRCode      string    `json:"qrCode" example:"2@abc123def456..." description:"Raw QR code string"`
 	QRCodeImage string    `json:"qrCodeImage,omitempty" example:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..." description:"Base64 encoded QR code image"`
@@ -89,21 +89,21 @@ type QRCodeResponse struct {
 	Timeout     int       `json:"timeoutSeconds" example:"60"`
 } // @name QRCodeResponse
 
-// ProxyResponse DTO de resposta para configuração de proxy
+
 type ProxyResponse struct {
 	ProxyConfig *ProxyConfig `json:"proxyConfig,omitempty"`
 } // @name ProxyResponse
 
-// SessionStatsResponse DTO de resposta para estatísticas de sessões
+
 type SessionStatsResponse struct {
 	Total     int `json:"total" example:"10"`
 	Connected int `json:"connected" example:"3"`
 	Offline   int `json:"offline" example:"7"`
 } // @name SessionStatsResponse
 
-// ===== SHARED DTOs =====
 
-// ProxyConfig DTO para configuração de proxy
+
+
 type ProxyConfig struct {
 	Type     string `json:"type" validate:"required,oneof=http socks5" example:"http"`
 	Host     string `json:"host" validate:"required,hostname_rfc1123" example:"proxy.example.com"`
@@ -112,7 +112,7 @@ type ProxyConfig struct {
 	Password string `json:"password,omitempty" example:"proxypass123"`
 } // @name ProxyConfig
 
-// DeviceInfoResponse DTO de resposta para informações do dispositivo
+
 type DeviceInfoResponse struct {
 	Platform    string `json:"platform" example:"android"`
 	DeviceModel string `json:"deviceModel" example:"Samsung Galaxy S21"`
@@ -120,9 +120,9 @@ type DeviceInfoResponse struct {
 	AppVersion  string `json:"appVersion" example:"2.21.4.18"`
 } // @name DeviceInfoResponse
 
-// ===== CONVERSION METHODS =====
 
-// ToCreateSessionRequest converte DTO para request do core
+
+
 func (r *CreateSessionRequest) ToCreateSessionRequest() *session.CreateSessionRequest {
 	req := &session.CreateSessionRequest{
 		Name:        r.Name,
@@ -142,7 +142,7 @@ func (r *CreateSessionRequest) ToCreateSessionRequest() *session.CreateSessionRe
 	return req
 }
 
-// FromSession converte entidade Session para DTO
+
 func FromSession(s *session.Session) *SessionResponse {
 	response := &SessionResponse{
 		ID:          s.ID.String(),
@@ -152,7 +152,7 @@ func FromSession(s *session.Session) *SessionResponse {
 		UpdatedAt:   s.UpdatedAt,
 	}
 
-	// Campos opcionais
+
 	if s.DeviceJID != nil {
 		response.DeviceJID = *s.DeviceJID
 	}
@@ -178,12 +178,12 @@ func FromSession(s *session.Session) *SessionResponse {
 	return response
 }
 
-// FromQRCodeResponse converte QRCodeResponse do core para DTO
+
 func FromQRCodeResponse(qr *session.QRCodeResponse) *QRCodeResponse {
 	return &QRCodeResponse{
 		QRCode:    qr.QRCode,
 		ExpiresAt: qr.ExpiresAt,
 		Timeout:   qr.Timeout,
-		// QRCodeImage será preenchido pelo serviço
+
 	}
 }

@@ -2,9 +2,9 @@ package group
 
 import "errors"
 
-// Erros de domínio para grupos
+
 var (
-	// Erros de validação
+
 	ErrInvalidGroupName        = errors.New("invalid group name")
 	ErrInvalidGroupDescription = errors.New("invalid group description")
 	ErrInvalidParticipant      = errors.New("invalid participant")
@@ -12,7 +12,7 @@ var (
 	ErrInvalidJID              = errors.New("invalid JID")
 	ErrInvalidGroupSettings    = errors.New("invalid group settings")
 
-	// Erros de negócio
+
 	ErrGroupNotFound           = errors.New("group not found")
 	ErrGroupAlreadyExists      = errors.New("group already exists")
 	ErrParticipantNotFound     = errors.New("participant not found")
@@ -21,36 +21,36 @@ var (
 	ErrNotGroupOwner           = errors.New("user is not the group owner")
 	ErrNotGroupParticipant     = errors.New("user is not a group participant")
 
-	// Erros de permissão
+
 	ErrCannotRemoveOwner       = errors.New("cannot remove group owner")
 	ErrCannotLeaveAsOwner      = errors.New("group owner cannot leave")
 	ErrCannotDemoteOwner       = errors.New("cannot demote group owner")
 	ErrInsufficientPermissions = errors.New("insufficient permissions")
 
-	// Erros de participantes
+
 	ErrNoParticipants          = errors.New("no participants provided")
 	ErrTooManyParticipants     = errors.New("too many participants")
 	ErrDuplicateParticipant    = errors.New("duplicate participant")
 	ErrParticipantAlreadyAdmin = errors.New("participant is already an admin")
 	ErrParticipantNotAdmin     = errors.New("participant is not an admin")
 
-	// Erros de convite
+
 	ErrInviteLinkNotFound      = errors.New("invite link not found")
 	ErrInviteLinkExpired       = errors.New("invite link expired")
 	ErrInviteLinkInactive      = errors.New("invite link is inactive")
 
-	// Erros de solicitação
+
 	ErrGroupRequestNotFound    = errors.New("group request not found")
 	ErrGroupRequestAlreadyExists = errors.New("group request already exists")
 	ErrGroupRequestAlreadyProcessed = errors.New("group request already processed")
 
-	// Erros de operação
+
 	ErrGroupLocked             = errors.New("group is locked")
 	ErrOperationNotAllowed     = errors.New("operation not allowed")
 	ErrInvalidAction           = errors.New("invalid action")
 )
 
-// GroupError representa um erro específico de grupo com contexto
+
 type GroupError struct {
 	Code    string
 	Message string
@@ -69,7 +69,7 @@ func (e *GroupError) Unwrap() error {
 	return e.Cause
 }
 
-// NewGroupError cria um novo erro de grupo
+
 func NewGroupError(code, message string, cause error) *GroupError {
 	return &GroupError{
 		Code:    code,
@@ -79,13 +79,13 @@ func NewGroupError(code, message string, cause error) *GroupError {
 	}
 }
 
-// WithContext adiciona contexto ao erro
+
 func (e *GroupError) WithContext(key string, value interface{}) *GroupError {
 	e.Context[key] = value
 	return e
 }
 
-// Códigos de erro específicos
+
 const (
 	ErrCodeValidation     = "VALIDATION_ERROR"
 	ErrCodeNotFound       = "NOT_FOUND"
@@ -97,7 +97,7 @@ const (
 	ErrCodeSettings       = "SETTINGS_ERROR"
 )
 
-// Funções helper para criar erros específicos
+
 func NewValidationError(message string, cause error) *GroupError {
 	return NewGroupError(ErrCodeValidation, message, cause)
 }

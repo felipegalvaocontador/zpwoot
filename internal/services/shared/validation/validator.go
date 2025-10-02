@@ -8,19 +8,19 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// Validator wrapper para go-playground/validator com funcionalidades customizadas
+
 type Validator struct {
 	validate *validator.Validate
 }
 
-// New cria nova instância do validador
+
 func New() *Validator {
 	validate := validator.New()
 
-	// Registrar validações customizadas
+
 	registerCustomValidations(validate)
 
-	// Configurar nomes de campos usando tags JSON
+
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
 		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
 		if name == "-" {
@@ -34,7 +34,7 @@ func New() *Validator {
 	}
 }
 
-// ValidateStruct valida uma struct
+
 func (v *Validator) ValidateStruct(s interface{}) error {
 	if err := v.validate.Struct(s); err != nil {
 		return v.formatValidationError(err)
@@ -42,7 +42,7 @@ func (v *Validator) ValidateStruct(s interface{}) error {
 	return nil
 }
 
-// ValidateVar valida uma variável individual
+
 func (v *Validator) ValidateVar(field interface{}, tag string) error {
 	if err := v.validate.Var(field, tag); err != nil {
 		return v.formatValidationError(err)
@@ -50,7 +50,7 @@ func (v *Validator) ValidateVar(field interface{}, tag string) error {
 	return nil
 }
 
-// formatValidationError formata erros de validação para serem mais legíveis
+
 func (v *Validator) formatValidationError(err error) error {
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
 		var messages []string
@@ -66,7 +66,7 @@ func (v *Validator) formatValidationError(err error) error {
 	return err
 }
 
-// getErrorMessage retorna mensagem de erro personalizada para cada tipo de validação
+
 func (v *Validator) getErrorMessage(fieldError validator.FieldError) string {
 	field := fieldError.Field()
 	tag := fieldError.Tag()
@@ -100,19 +100,19 @@ func (v *Validator) getErrorMessage(fieldError validator.FieldError) string {
 	}
 }
 
-// registerCustomValidations registra validações customizadas
+
 func registerCustomValidations(validate *validator.Validate) {
-	// Validação para nome de sessão
+
 	validate.RegisterValidation("session_name", validateSessionName)
 
-	// Validação para tipo de proxy
+
 	validate.RegisterValidation("proxy_type", validateProxyType)
 
-	// Validação para formato E.164 de telefone
+
 	validate.RegisterValidation("e164", validateE164)
 }
 
-// validateSessionName valida nome de sessão (apenas alfanuméricos, hífen e underscore)
+
 func validateSessionName(fl validator.FieldLevel) bool {
 	name := fl.Field().String()
 	if name == "" {
@@ -131,22 +131,22 @@ func validateSessionName(fl validator.FieldLevel) bool {
 	return true
 }
 
-// validateProxyType valida tipo de proxy
+
 func validateProxyType(fl validator.FieldLevel) bool {
 	proxyType := fl.Field().String()
 	return proxyType == "http" || proxyType == "socks5"
 }
 
-// validateE164 valida formato E.164 para números de telefone
+
 func validateE164(fl validator.FieldLevel) bool {
 	phone := fl.Field().String()
 
-	// Deve começar com +
+
 	if !strings.HasPrefix(phone, "+") {
 		return false
 	}
 
-	// Remover o + e verificar se o resto são apenas dígitos
+
 	digits := phone[1:]
 	if len(digits) < 7 || len(digits) > 15 {
 		return false
@@ -161,7 +161,7 @@ func validateE164(fl validator.FieldLevel) bool {
 	return true
 }
 
-// IsValidSessionName verifica se nome de sessão é válido
+
 func IsValidSessionName(name string) bool {
 	validator := New()
 	return validator.ValidateVar(name, "session_name") == nil

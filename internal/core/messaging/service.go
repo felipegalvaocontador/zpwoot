@@ -10,14 +10,14 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// Service implementa a lógica de negócio pura para mensagens
-// Esta é a camada Core da Clean Architecture - sem dependências externas
+
+
 type Service struct {
 	repository Repository
 	logger     *logger.Logger
 }
 
-// NewService cria uma nova instância do serviço de mensagens
+
 func NewService(repo Repository, logger *logger.Logger) *Service {
 	return &Service{
 		repository: repo,
@@ -25,14 +25,14 @@ func NewService(repo Repository, logger *logger.Logger) *Service {
 	}
 }
 
-// CreateMessage cria uma nova mensagem no sistema
+
 func (s *Service) CreateMessage(ctx context.Context, req *CreateMessageRequest) (*Message, error) {
-	// Validação de entrada
+
 	if err := s.validateCreateRequest(req); err != nil {
 		return nil, fmt.Errorf("invalid create request: %w", err)
 	}
 
-	// Verificar se mensagem já existe
+
 	exists, err := s.repository.ExistsByZpMessageID(ctx, req.SessionID, req.ZpMessageID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check message existence: %w", err)
@@ -41,7 +41,7 @@ func (s *Service) CreateMessage(ctx context.Context, req *CreateMessageRequest) 
 		return nil, fmt.Errorf("message with zpMessageID %s already exists", req.ZpMessageID)
 	}
 
-	// Criar nova mensagem
+
 	now := time.Now()
 	message := &Message{
 		ID:          uuid.New(),
@@ -58,7 +58,7 @@ func (s *Service) CreateMessage(ctx context.Context, req *CreateMessageRequest) 
 		UpdatedAt:   now,
 	}
 
-	// Persistir mensagem
+
 	if err := s.repository.Create(ctx, message); err != nil {
 		return nil, fmt.Errorf("failed to create message: %w", err)
 	}
@@ -74,7 +74,7 @@ func (s *Service) CreateMessage(ctx context.Context, req *CreateMessageRequest) 
 	return message, nil
 }
 
-// GetMessage busca uma mensagem por ID
+
 func (s *Service) GetMessage(ctx context.Context, id uuid.UUID) (*Message, error) {
 	message, err := s.repository.GetByID(ctx, id)
 	if err != nil {
@@ -84,7 +84,7 @@ func (s *Service) GetMessage(ctx context.Context, id uuid.UUID) (*Message, error
 	return message, nil
 }
 
-// GetMessageByZpID busca uma mensagem pelo ID do WhatsApp
+
 func (s *Service) GetMessageByZpID(ctx context.Context, sessionID uuid.UUID, zpMessageID string) (*Message, error) {
 	message, err := s.repository.GetByZpMessageID(ctx, sessionID, zpMessageID)
 	if err != nil {
@@ -94,14 +94,14 @@ func (s *Service) GetMessageByZpID(ctx context.Context, sessionID uuid.UUID, zpM
 	return message, nil
 }
 
-// UpdateSyncStatus atualiza o status de sincronização de uma mensagem
+
 func (s *Service) UpdateSyncStatus(ctx context.Context, id uuid.UUID, status SyncStatus, cwMessageID, cwConversationID *int) error {
-	// Validar status
+
 	if !IsValidSyncStatus(string(status)) {
 		return fmt.Errorf("invalid sync status: %s", status)
 	}
 
-	// Atualizar status
+
 	if err := s.repository.UpdateSyncStatus(ctx, id, status, cwMessageID, cwConversationID); err != nil {
 		return fmt.Errorf("failed to update sync status: %w", err)
 	}
@@ -116,7 +116,7 @@ func (s *Service) UpdateSyncStatus(ctx context.Context, id uuid.UUID, status Syn
 	return nil
 }
 
-// MarkAsSynced marca uma mensagem como sincronizada com sucesso
+
 func (s *Service) MarkAsSynced(ctx context.Context, id uuid.UUID, cwMessageID, cwConversationID int) error {
 	if err := s.repository.MarkAsSynced(ctx, id, cwMessageID, cwConversationID); err != nil {
 		return fmt.Errorf("failed to mark message as synced: %w", err)
@@ -131,7 +131,7 @@ func (s *Service) MarkAsSynced(ctx context.Context, id uuid.UUID, cwMessageID, c
 	return nil
 }
 
-// MarkAsFailed marca uma mensagem como falha na sincronização
+
 func (s *Service) MarkAsFailed(ctx context.Context, id uuid.UUID, errorReason string) error {
 	if err := s.repository.MarkAsFailed(ctx, id, errorReason); err != nil {
 		return fmt.Errorf("failed to mark message as failed: %w", err)
@@ -145,9 +145,9 @@ func (s *Service) MarkAsFailed(ctx context.Context, id uuid.UUID, errorReason st
 	return nil
 }
 
-// ListMessages lista mensagens com paginação
+
 func (s *Service) ListMessages(ctx context.Context, req *ListMessagesRequest) ([]*Message, int64, error) {
-	// Validar request
+
 	if err := s.validateListRequest(req); err != nil {
 		return nil, 0, fmt.Errorf("invalid list request: %w", err)
 	}
@@ -155,7 +155,7 @@ func (s *Service) ListMessages(ctx context.Context, req *ListMessagesRequest) ([
 	var messages []*Message
 	var err error
 
-	// Buscar mensagens baseado nos filtros
+
 	if req.SessionID != "" {
 		sessionID, err := uuid.Parse(req.SessionID)
 		if err != nil {
@@ -175,7 +175,7 @@ func (s *Service) ListMessages(ctx context.Context, req *ListMessagesRequest) ([
 		return nil, 0, fmt.Errorf("failed to list messages: %w", err)
 	}
 
-	// Contar total
+
 	var total int64
 	if req.SessionID != "" {
 		sessionID, _ := uuid.Parse(req.SessionID)
@@ -195,7 +195,7 @@ func (s *Service) ListMessages(ctx context.Context, req *ListMessagesRequest) ([
 	return messages, total, nil
 }
 
-// GetPendingSyncMessages busca mensagens pendentes de sincronização
+
 func (s *Service) GetPendingSyncMessages(ctx context.Context, sessionID uuid.UUID, limit int) ([]*Message, error) {
 	messages, err := s.repository.GetPendingSyncMessages(ctx, sessionID, limit)
 	if err != nil {
@@ -205,7 +205,7 @@ func (s *Service) GetPendingSyncMessages(ctx context.Context, sessionID uuid.UUI
 	return messages, nil
 }
 
-// GetStats retorna estatísticas de mensagens
+
 func (s *Service) GetStats(ctx context.Context) (*MessageStats, error) {
 	stats, err := s.repository.GetStats(ctx)
 	if err != nil {
@@ -215,7 +215,7 @@ func (s *Service) GetStats(ctx context.Context) (*MessageStats, error) {
 	return stats, nil
 }
 
-// GetStatsBySession retorna estatísticas de mensagens por sessão
+
 func (s *Service) GetStatsBySession(ctx context.Context, sessionID uuid.UUID) (*MessageStats, error) {
 	stats, err := s.repository.GetStatsBySession(ctx, sessionID)
 	if err != nil {
@@ -225,7 +225,7 @@ func (s *Service) GetStatsBySession(ctx context.Context, sessionID uuid.UUID) (*
 	return stats, nil
 }
 
-// validateCreateRequest valida os dados de criação de mensagem
+
 func (s *Service) validateCreateRequest(req *CreateMessageRequest) error {
 	if req.SessionID == uuid.Nil {
 		return fmt.Errorf("session ID is required")
@@ -249,13 +249,13 @@ func (s *Service) validateCreateRequest(req *CreateMessageRequest) error {
 	return nil
 }
 
-// validateListRequest valida os dados de listagem de mensagens
+
 func (s *Service) validateListRequest(req *ListMessagesRequest) error {
 	if req.Limit <= 0 {
-		req.Limit = 50 // default
+		req.Limit = 50
 	}
 	if req.Limit > 100 {
-		req.Limit = 100 // max
+		req.Limit = 100
 	}
 	if req.Offset < 0 {
 		req.Offset = 0

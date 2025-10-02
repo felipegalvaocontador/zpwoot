@@ -12,7 +12,7 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// Server encapsula toda a lógica do servidor HTTP
+
 type Server struct {
 	config         *config.Config
 	logger         *logger.Logger
@@ -22,7 +22,7 @@ type Server struct {
 	groupService   *services.GroupService
 }
 
-// Config estrutura de configuração para o servidor
+
 type Config struct {
 	Config         *config.Config
 	Logger         *logger.Logger
@@ -31,7 +31,7 @@ type Config struct {
 	GroupService   *services.GroupService
 }
 
-// New cria uma nova instância do servidor HTTP
+
 func New(cfg *Config) *Server {
 	return &Server{
 		config:         cfg.Config,
@@ -42,9 +42,9 @@ func New(cfg *Config) *Server {
 	}
 }
 
-// Start inicia o servidor HTTP
+
 func (s *Server) Start(ctx context.Context) error {
-	// Configurar handler com todas as rotas
+
 	handler := router.SetupRoutes(
 		s.config,
 		s.logger,
@@ -53,7 +53,7 @@ func (s *Server) Start(ctx context.Context) error {
 		s.groupService,
 	)
 
-	// Configurar servidor HTTP
+
 	s.httpServer = &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.config.Server.Port),
 		Handler:      handler,
@@ -69,7 +69,7 @@ func (s *Server) Start(ctx context.Context) error {
 		"idle_timeout":  s.config.Server.IdleTimeout,
 	})
 
-	// Iniciar servidor em goroutine separada
+
 	go func() {
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			s.logger.ErrorWithFields("HTTP server failed", map[string]interface{}{
@@ -85,7 +85,7 @@ func (s *Server) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop para o servidor HTTP gracefully
+
 func (s *Server) Stop(ctx context.Context) error {
 	if s.httpServer == nil {
 		return nil
@@ -93,7 +93,7 @@ func (s *Server) Stop(ctx context.Context) error {
 
 	s.logger.Info("Stopping HTTP server...")
 
-	// Shutdown graceful com timeout
+
 	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -108,7 +108,7 @@ func (s *Server) Stop(ctx context.Context) error {
 	return nil
 }
 
-// Handler retorna o handler HTTP configurado (útil para testes)
+
 func (s *Server) Handler() http.Handler {
 	return router.SetupRoutes(
 		s.config,
@@ -119,7 +119,7 @@ func (s *Server) Handler() http.Handler {
 	)
 }
 
-// Address retorna o endereço do servidor
+
 func (s *Server) Address() string {
 	if s.httpServer != nil {
 		return s.httpServer.Addr
@@ -127,7 +127,7 @@ func (s *Server) Address() string {
 	return fmt.Sprintf(":%d", s.config.Server.Port)
 }
 
-// IsRunning verifica se o servidor está rodando
+
 func (s *Server) IsRunning() bool {
 	return s.httpServer != nil
 }

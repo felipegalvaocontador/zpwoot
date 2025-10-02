@@ -14,10 +14,10 @@ import (
 	"zpwoot/platform/logger"
 )
 
-//go:embed migrations
+
 var migrationsFS embed.FS
 
-// Migration representa uma migração de banco de dados
+
 type Migration struct {
 	AppliedAt *time.Time
 	Name      string
@@ -26,13 +26,13 @@ type Migration struct {
 	Version   int
 }
 
-// Migrator gerencia migrações de banco de dados
+
 type Migrator struct {
 	db     *Database
 	logger *logger.Logger
 }
 
-// NewMigrator cria uma nova instância do migrador
+
 func NewMigrator(db *Database, logger *logger.Logger) *Migrator {
 	return &Migrator{
 		db:     db,
@@ -40,7 +40,7 @@ func NewMigrator(db *Database, logger *logger.Logger) *Migrator {
 	}
 }
 
-// RunMigrations executa todas as migrações pendentes
+
 func (m *Migrator) RunMigrations() error {
 	if err := m.createMigrationsTable(); err != nil {
 		return fmt.Errorf("failed to create migrations table: %w", err)
@@ -66,12 +66,12 @@ func (m *Migrator) RunMigrations() error {
 		}
 	}
 
-	// Migrations completed silently
+
 
 	return nil
 }
 
-// createMigrationsTable cria a tabela de controle de migrações
+
 func (m *Migrator) createMigrationsTable() error {
 	query := `
 		CREATE TABLE IF NOT EXISTS "zpMigrations" (
@@ -95,7 +95,7 @@ func (m *Migrator) createMigrationsTable() error {
 	return nil
 }
 
-// loadMigrations carrega todas as migrações dos arquivos
+
 func (m *Migrator) loadMigrations() ([]*Migration, error) {
 	entries, err := m.readMigrationDirectory()
 	if err != nil {
@@ -116,7 +116,7 @@ func (m *Migrator) loadMigrations() ([]*Migration, error) {
 	return migrations, nil
 }
 
-// readMigrationDirectory lê o diretório de migrações
+
 func (m *Migrator) readMigrationDirectory() ([]fs.DirEntry, error) {
 	entries, err := fs.ReadDir(migrationsFS, "migrations")
 	if err != nil {
@@ -125,7 +125,7 @@ func (m *Migrator) readMigrationDirectory() ([]fs.DirEntry, error) {
 	return entries, nil
 }
 
-// processMigrationFiles processa os arquivos de migração
+
 func (m *Migrator) processMigrationFiles(entries []fs.DirEntry) (map[int]map[string]string, error) {
 	migrationFiles := make(map[int]map[string]string)
 
@@ -158,7 +158,7 @@ func (m *Migrator) processMigrationFiles(entries []fs.DirEntry) (map[int]map[str
 	return migrationFiles, nil
 }
 
-// extractVersionFromFilename extrai o número da versão do nome do arquivo
+
 func (m *Migrator) extractVersionFromFilename(filename string) (int, error) {
 	parts := strings.Split(filename, "_")
 	if len(parts) < 2 {
@@ -173,7 +173,7 @@ func (m *Migrator) extractVersionFromFilename(filename string) (int, error) {
 	return version, nil
 }
 
-// readMigrationFile lê o conteúdo de um arquivo de migração
+
 func (m *Migrator) readMigrationFile(filename string) (string, error) {
 	content, err := fs.ReadFile(migrationsFS, filepath.Join("migrations", filename))
 	if err != nil {
@@ -182,7 +182,7 @@ func (m *Migrator) readMigrationFile(filename string) (string, error) {
 	return string(content), nil
 }
 
-// categorizeMigrationFile categoriza o arquivo como up ou down
+
 func (m *Migrator) categorizeMigrationFile(filename, content string, files map[string]string) {
 	if strings.Contains(filename, ".up.sql") {
 		files["up"] = content
@@ -197,7 +197,7 @@ func (m *Migrator) categorizeMigrationFile(filename, content string, files map[s
 	}
 }
 
-// buildMigrationObjects constrói objetos Migration a partir dos arquivos
+
 func (m *Migrator) buildMigrationObjects(migrationFiles map[int]map[string]string) []*Migration {
 	migrations := make([]*Migration, 0, len(migrationFiles))
 
@@ -222,7 +222,7 @@ func (m *Migrator) buildMigrationObjects(migrationFiles map[int]map[string]strin
 	return migrations
 }
 
-// getAppliedMigrations retorna as migrações já aplicadas
+
 func (m *Migrator) getAppliedMigrations() (map[int]bool, error) {
 	query := `SELECT "version" FROM "zpMigrations" ORDER BY "version"`
 
@@ -248,12 +248,12 @@ func (m *Migrator) getAppliedMigrations() (map[int]bool, error) {
 	return applied, nil
 }
 
-// isMigrationApplied verifica se uma migração já foi aplicada
+
 func (m *Migrator) isMigrationApplied(version int, appliedMigrations map[int]bool) bool {
 	return appliedMigrations[version]
 }
 
-// executeMigration executa uma migração específica
+
 func (m *Migrator) executeMigration(migration *Migration) error {
 	m.logger.InfoWithFields("Applying migration", map[string]interface{}{
 		"version": migration.Version,
@@ -299,7 +299,7 @@ func (m *Migrator) executeMigration(migration *Migration) error {
 	return nil
 }
 
-// Rollback reverte a última migração aplicada
+
 func (m *Migrator) Rollback() error {
 	m.logger.Info("Rolling back last migration...")
 
@@ -321,7 +321,7 @@ func (m *Migrator) Rollback() error {
 	return m.executeRollback(targetMigration, version, name)
 }
 
-// getLastMigration retorna a última migração aplicada
+
 func (m *Migrator) getLastMigration() (int, string, error) {
 	query := `SELECT "version", "name" FROM "zpMigrations" ORDER BY "version" DESC LIMIT 1`
 
@@ -338,7 +338,7 @@ func (m *Migrator) getLastMigration() (int, string, error) {
 	return version, name, nil
 }
 
-// findTargetMigration encontra uma migração específica
+
 func (m *Migrator) findTargetMigration(version int) (*Migration, error) {
 	migrations, err := m.loadMigrations()
 	if err != nil {
@@ -357,7 +357,7 @@ func (m *Migrator) findTargetMigration(version int) (*Migration, error) {
 	return nil, fmt.Errorf("migration %d not found in files", version)
 }
 
-// executeRollback executa o rollback de uma migração
+
 func (m *Migrator) executeRollback(targetMigration *Migration, version int, name string) error {
 	m.logger.InfoWithFields("Rolling back migration", map[string]interface{}{
 		"version": version,
@@ -400,7 +400,7 @@ func (m *Migrator) executeRollback(targetMigration *Migration, version int, name
 	return nil
 }
 
-// GetMigrationStatus retorna o status de todas as migrações
+
 func (m *Migrator) GetMigrationStatus() ([]*Migration, error) {
 	migrations, err := m.loadMigrations()
 	if err != nil {

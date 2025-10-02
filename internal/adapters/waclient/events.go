@@ -14,61 +14,61 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// EventHandler processa eventos do WhatsApp baseado no legacy
+
 type EventHandler struct {
 	gateway     *Gateway
 	sessionName string
 	logger      *logger.Logger
 
-	// QR code generator (reutilizado para evitar criação desnecessária)
+
 	qrGenerator *QRGenerator
 
-	// Callbacks externos
+
 	webhookHandler  WebhookEventHandler
 	chatwootManager ChatwootManager
 }
 
-// WebhookEventHandler interface para processar eventos via webhook
+
 type WebhookEventHandler interface {
 	HandleWhatsmeowEvent(evt interface{}, sessionID string) error
 }
 
-// ChatwootManager interface para integração com Chatwoot
+
 type ChatwootManager interface {
 	IsEnabled(sessionID string) bool
 	ProcessWhatsAppMessage(sessionID, messageID, from, content, messageType string, timestamp time.Time, fromMe bool) error
 }
 
-// NewEventHandler cria novo event handler
+
 func NewEventHandler(gateway *Gateway, sessionName string, logger *logger.Logger) *EventHandler {
 	return &EventHandler{
 		gateway:     gateway,
 		sessionName: sessionName,
 		logger:      logger,
-		qrGenerator: NewQRGenerator(logger), // Inicializar QR generator uma vez
+		qrGenerator: NewQRGenerator(logger),
 	}
 }
 
-// SetWebhookHandler configura webhook handler
+
 func (h *EventHandler) SetWebhookHandler(handler WebhookEventHandler) {
 	h.webhookHandler = handler
 }
 
-// SetChatwootManager configura Chatwoot manager
+
 func (h *EventHandler) SetChatwootManager(manager ChatwootManager) {
 	h.chatwootManager = manager
 }
 
-// HandleEvent processa eventos do WhatsApp
+
 func (h *EventHandler) HandleEvent(evt interface{}, sessionID string) {
-	// Entregar para webhook primeiro
+
 	h.deliverToWebhook(evt, sessionID)
 
-	// Processar evento internamente
+
 	h.handleEventInternal(evt, sessionID)
 }
 
-// handleEventInternal processa eventos internamente
+
 func (h *EventHandler) handleEventInternal(evt interface{}, sessionID string) {
 	switch v := evt.(type) {
 	case *events.Connected:
@@ -94,7 +94,7 @@ func (h *EventHandler) handleEventInternal(evt interface{}, sessionID string) {
 	}
 }
 
-// deliverToWebhook entrega evento para webhook se configurado
+
 func (h *EventHandler) deliverToWebhook(evt interface{}, sessionID string) {
 	if h.webhookHandler == nil {
 		return
@@ -120,16 +120,16 @@ func (h *EventHandler) deliverToWebhook(evt interface{}, sessionID string) {
 	}()
 }
 
-// ===== EVENT HANDLERS =====
 
-// handleConnected processa evento de conexão
+
+
 func (h *EventHandler) handleConnected(_ *events.Connected, sessionID string) {
 	h.logger.InfoWithFields("WhatsApp connected", map[string]interface{}{
 		"module":     "events",
 		"session_id": sessionID,
 	})
 
-	// Atualizar status da sessão no banco de dados
+
 	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
 			"session_id": sessionID,
@@ -139,13 +139,13 @@ func (h *EventHandler) handleConnected(_ *events.Connected, sessionID string) {
 	}
 }
 
-// handleDisconnected processa evento de desconexão
+
 func (h *EventHandler) handleDisconnected(_ *events.Disconnected, sessionID string) {
 	h.logger.WarnWithFields("WhatsApp disconnected", map[string]interface{}{
 		"session_id": sessionID,
 	})
 
-	// Atualizar status da sessão no banco de dados
+
 	if err := h.gateway.UpdateSessionStatus(sessionID, "disconnected"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
 			"session_id": sessionID,
@@ -155,14 +155,14 @@ func (h *EventHandler) handleDisconnected(_ *events.Disconnected, sessionID stri
 	}
 }
 
-// handleLoggedOut processa evento de logout
+
 func (h *EventHandler) handleLoggedOut(evt *events.LoggedOut, sessionID string) {
 	h.logger.WarnWithFields("WhatsApp logged out", map[string]interface{}{
 		"session_id": sessionID,
 		"reason":     evt.Reason,
 	})
 
-	// Atualizar status da sessão no banco de dados
+
 	if err := h.gateway.UpdateSessionStatus(sessionID, "logged_out"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
 			"session_id": sessionID,
@@ -172,13 +172,13 @@ func (h *EventHandler) handleLoggedOut(evt *events.LoggedOut, sessionID string) 
 	}
 }
 
-// handleQREvent processa evento de QR code (sem dados do QR)
+
 func (h *EventHandler) handleQREvent(sessionID string) {
 	h.logger.InfoWithFields("QR code event received", map[string]interface{}{
 		"session_id": sessionID,
 	})
 
-	// Atualizar status da sessão no banco de dados
+
 	if err := h.gateway.UpdateSessionStatus(sessionID, "qr_code"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
 			"session_id": sessionID,
@@ -188,7 +188,7 @@ func (h *EventHandler) handleQREvent(sessionID string) {
 	}
 }
 
-// handleQRCodeEvent processa evento de QR code customizado (com dados do QR)
+
 func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
 	h.logger.InfoWithFields("QR code event with data received", map[string]interface{}{
 		"session_id":   sessionID,
@@ -197,10 +197,10 @@ func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
 		"expires_at":   evt.ExpiresAt,
 	})
 
-	// Exibir QR code no terminal usando o QR generator reutilizado
+
 	h.qrGenerator.DisplayQRCodeInTerminal(evt.QRCode, evt.SessionName)
 
-	// Atualizar status da sessão no banco de dados
+
 	if err := h.gateway.UpdateSessionStatus(sessionID, "qr_code"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
 			"session_id": sessionID,
@@ -209,7 +209,7 @@ func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
 		})
 	}
 
-	// Atualizar QR code no banco de dados
+
 	if err := h.gateway.UpdateSessionQRCode(sessionID, evt.QRCode, evt.ExpiresAt); err != nil {
 		h.logger.ErrorWithFields("Failed to update QR code in database", map[string]interface{}{
 			"session_id": sessionID,
@@ -219,7 +219,7 @@ func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
 	}
 }
 
-// handlePairSuccess processa evento de pareamento bem-sucedido
+
 func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID string) {
 	deviceJID := evt.ID.String()
 
@@ -228,7 +228,7 @@ func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID stri
 		"device_jid": deviceJID,
 	})
 
-	// Atualizar device JID da sessão no banco de dados
+
 	if err := h.gateway.UpdateSessionDeviceJID(sessionID, deviceJID); err != nil {
 		h.logger.ErrorWithFields("Failed to update session device JID", map[string]interface{}{
 			"session_id": sessionID,
@@ -237,7 +237,7 @@ func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID stri
 		})
 	}
 
-	// Atualizar status da sessão para conectada
+
 	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status after pairing", map[string]interface{}{
 			"session_id": sessionID,
@@ -247,17 +247,17 @@ func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID stri
 	}
 }
 
-// handlePairError processa evento de erro de pareamento
+
 func (h *EventHandler) handlePairError(evt *events.PairError, sessionID string) {
 	h.logger.ErrorWithFields("WhatsApp pairing failed", map[string]interface{}{
 		"session_id": sessionID,
 		"error":      evt.Error.Error(),
 	})
 
-	// TODO: Atualizar status da sessão no banco de dados
+
 }
 
-// handleMessage processa evento de mensagem baseado no legacy
+
 func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 	h.logger.InfoWithFields("Message received", map[string]interface{}{
 		"module": "events",
@@ -265,7 +265,7 @@ func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 		"from_me": evt.Info.IsFromMe,
 	})
 
-	// Salvar mensagem no banco de dados
+
 	if err := h.saveMessageToDatabase(evt, sessionID); err != nil {
 		h.logger.ErrorWithFields("Failed to save message to database", map[string]interface{}{
 			"session_id": sessionID,
@@ -274,13 +274,13 @@ func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 		})
 	}
 
-	// Processar para Chatwoot se habilitado
+
 	if h.chatwootManager != nil && h.chatwootManager.IsEnabled(sessionID) {
 		h.processMessageForChatwoot(evt, sessionID)
 	}
 }
 
-// handleReceipt processa evento de recibo
+
 func (h *EventHandler) handleReceipt(evt *events.Receipt, sessionID string) {
 	h.logger.DebugWithFields("Receipt received", map[string]interface{}{
 		"session_id": sessionID,
@@ -289,10 +289,10 @@ func (h *EventHandler) handleReceipt(evt *events.Receipt, sessionID string) {
 		"timestamp":  evt.Timestamp,
 	})
 
-	// TODO: Atualizar status das mensagens
+
 }
 
-// handleOtherEvents processa outros eventos
+
 func (h *EventHandler) handleOtherEvents(evt interface{}, sessionID string) {
 	switch v := evt.(type) {
 	case *events.Presence:
@@ -325,17 +325,17 @@ func (h *EventHandler) handleOtherEvents(evt interface{}, sessionID string) {
 	}
 }
 
-// processMessageForChatwoot processa mensagem para Chatwoot
+
 func (h *EventHandler) processMessageForChatwoot(evt *events.Message, sessionID string) {
 	messageID := evt.Info.ID
 	from := evt.Info.Sender.String()
 	timestamp := evt.Info.Timestamp
 	fromMe := evt.Info.IsFromMe
 
-	// Extrair conteúdo e tipo da mensagem
+
 	content, messageType := h.extractMessageContentString(evt.Message)
 
-	// Extrair número de telefone do contato
+
 	contactNumber := h.extractContactNumber(from)
 
 	h.logger.DebugWithFields("Processing message for Chatwoot", map[string]interface{}{
@@ -362,23 +362,23 @@ func (h *EventHandler) processMessageForChatwoot(evt *events.Message, sessionID 
 	}
 }
 
-// extractMessageContentString extrai conteúdo e tipo da mensagem como string
+
 func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (string, string) {
 	if message == nil {
 		return "", "unknown"
 	}
 
-	// Texto simples
+
 	if message.Conversation != nil {
 		return *message.Conversation, "text"
 	}
 
-	// Texto estendido
+
 	if message.ExtendedTextMessage != nil && message.ExtendedTextMessage.Text != nil {
 		return *message.ExtendedTextMessage.Text, "text"
 	}
 
-	// Imagem
+
 	if message.ImageMessage != nil {
 		caption := ""
 		if message.ImageMessage.Caption != nil {
@@ -387,12 +387,12 @@ func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (stri
 		return caption, "image"
 	}
 
-	// Áudio
+
 	if message.AudioMessage != nil {
 		return "[Audio]", "audio"
 	}
 
-	// Vídeo
+
 	if message.VideoMessage != nil {
 		caption := ""
 		if message.VideoMessage.Caption != nil {
@@ -401,7 +401,7 @@ func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (stri
 		return caption, "video"
 	}
 
-	// Documento
+
 	if message.DocumentMessage != nil {
 		filename := ""
 		if message.DocumentMessage.FileName != nil {
@@ -410,17 +410,17 @@ func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (stri
 		return fmt.Sprintf("[Document: %s]", filename), "document"
 	}
 
-	// Sticker
+
 	if message.StickerMessage != nil {
 		return "[Sticker]", "sticker"
 	}
 
-	// Localização
+
 	if message.LocationMessage != nil {
 		return "[Location]", "location"
 	}
 
-	// Contato
+
 	if message.ContactMessage != nil {
 		name := ""
 		if message.ContactMessage.DisplayName != nil {
@@ -432,9 +432,9 @@ func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (stri
 	return "[Unknown message type]", "unknown"
 }
 
-// extractContactNumber extrai número de telefone do JID
+
 func (h *EventHandler) extractContactNumber(jid string) string {
-	// JID format: number@s.whatsapp.net
+
 	parts := strings.Split(jid, "@")
 	if len(parts) > 0 {
 		return parts[0]
@@ -442,9 +442,9 @@ func (h *EventHandler) extractContactNumber(jid string) string {
 	return jid
 }
 
-// ===== OTHER EVENT HANDLERS =====
 
-// handlePresence processa evento de presença
+
+
 func (h *EventHandler) handlePresence(evt *events.Presence, sessionID string) {
 	h.logger.DebugWithFields("Presence update", map[string]interface{}{
 		"session_id": sessionID,
@@ -453,7 +453,7 @@ func (h *EventHandler) handlePresence(evt *events.Presence, sessionID string) {
 	})
 }
 
-// handleChatPresence processa evento de presença em chat
+
 func (h *EventHandler) handleChatPresence(evt *events.ChatPresence, sessionID string) {
 	h.logger.DebugWithFields("Chat presence update", map[string]interface{}{
 		"session_id": sessionID,
@@ -462,7 +462,7 @@ func (h *EventHandler) handleChatPresence(evt *events.ChatPresence, sessionID st
 	})
 }
 
-// handleHistorySync processa evento de sincronização de histórico
+
 func (h *EventHandler) handleHistorySync(evt *events.HistorySync, sessionID string) {
 	h.logger.InfoWithFields("History sync", map[string]interface{}{
 		"session_id": sessionID,
@@ -471,14 +471,14 @@ func (h *EventHandler) handleHistorySync(evt *events.HistorySync, sessionID stri
 	})
 }
 
-// handleAppState processa evento de estado da aplicação
+
 func (h *EventHandler) handleAppState(_ *events.AppState) {
 	h.logger.DebugWithFields("App state update", map[string]interface{}{
 		"name": "app_state",
 	})
 }
 
-// handleAppStateSyncComplete processa evento de sincronização completa
+
 func (h *EventHandler) handleAppStateSyncComplete(evt *events.AppStateSyncComplete, sessionID string) {
 	h.logger.InfoWithFields("App state sync complete", map[string]interface{}{
 		"session_id": sessionID,
@@ -486,21 +486,21 @@ func (h *EventHandler) handleAppStateSyncComplete(evt *events.AppStateSyncComple
 	})
 }
 
-// handleKeepAliveTimeout processa evento de timeout de keep alive
+
 func (h *EventHandler) handleKeepAliveTimeout(_ *events.KeepAliveTimeout, sessionID string) {
 	h.logger.WarnWithFields("Keep alive timeout", map[string]interface{}{
 		"session_id": sessionID,
 	})
 }
 
-// handleKeepAliveRestored processa evento de keep alive restaurado
+
 func (h *EventHandler) handleKeepAliveRestored(_ *events.KeepAliveRestored, sessionID string) {
 	h.logger.InfoWithFields("Keep alive restored", map[string]interface{}{
 		"session_id": sessionID,
 	})
 }
 
-// handleContact processa evento de contato
+
 func (h *EventHandler) handleContact(evt *events.Contact, sessionID string) {
 	h.logger.DebugWithFields("Contact update", map[string]interface{}{
 		"session_id": sessionID,
@@ -508,7 +508,7 @@ func (h *EventHandler) handleContact(evt *events.Contact, sessionID string) {
 	})
 }
 
-// handleGroupInfo processa evento de informações de grupo
+
 func (h *EventHandler) handleGroupInfo(evt *events.GroupInfo, sessionID string) {
 	h.logger.DebugWithFields("Group info update", map[string]interface{}{
 		"session_id": sessionID,
@@ -516,7 +516,7 @@ func (h *EventHandler) handleGroupInfo(evt *events.GroupInfo, sessionID string) 
 	})
 }
 
-// handlePicture processa evento de foto
+
 func (h *EventHandler) handlePicture(evt *events.Picture, sessionID string) {
 	h.logger.DebugWithFields("Picture update", map[string]interface{}{
 		"session_id": sessionID,
@@ -524,7 +524,7 @@ func (h *EventHandler) handlePicture(evt *events.Picture, sessionID string) {
 	})
 }
 
-// handleBusinessName processa evento de nome comercial
+
 func (h *EventHandler) handleBusinessName(evt *events.BusinessName, sessionID string) {
 	h.logger.DebugWithFields("Business name update", map[string]interface{}{
 		"session_id": sessionID,
@@ -532,17 +532,17 @@ func (h *EventHandler) handleBusinessName(evt *events.BusinessName, sessionID st
 	})
 }
 
-// ===== MESSAGE PROCESSING =====
 
-// saveMessageToDatabase salva mensagem recebida no banco de dados baseado no legacy
+
+
 func (h *EventHandler) saveMessageToDatabase(evt *events.Message, sessionID string) error {
-	// Converter mensagem whatsmeow para formato interno
+
 	message, err := h.convertWhatsmeowMessage(evt, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to convert message: %w", err)
 	}
 
-	// Salvar via gateway (que tem acesso aos repositórios)
+
 	if err := h.gateway.SaveReceivedMessage(message); err != nil {
 		return fmt.Errorf("failed to save message: %w", err)
 	}
@@ -556,21 +556,21 @@ func (h *EventHandler) saveMessageToDatabase(evt *events.Message, sessionID stri
 	return nil
 }
 
-// convertWhatsmeowMessage converte mensagem whatsmeow para formato interno
+
 func (h *EventHandler) convertWhatsmeowMessage(evt *events.Message, sessionID string) (*messaging.Message, error) {
-	// Extrair conteúdo da mensagem baseado no tipo
+
 	contentMap := h.extractMessageContent(evt.Message)
 
-	// Converter content map para string JSON
+
 	contentStr := fmt.Sprintf("%v", contentMap)
 
-	// Parse sessionID para UUID
+
 	sessionUUID, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID: %w", err)
 	}
 
-	// Criar mensagem no formato interno
+
 	message := &messaging.Message{
 		ID:          uuid.New(),
 		SessionID:   sessionUUID,
@@ -589,7 +589,7 @@ func (h *EventHandler) convertWhatsmeowMessage(evt *events.Message, sessionID st
 	return message, nil
 }
 
-// extractMessageContent extrai conteúdo da mensagem baseado no tipo
+
 func (h *EventHandler) extractMessageContent(message *waE2E.Message) map[string]interface{} {
 	content := make(map[string]interface{})
 

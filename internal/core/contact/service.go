@@ -11,9 +11,9 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// ===== GATEWAY TYPES =====
 
-// ProfilePictureInfo representa informações da foto de perfil
+
+
 type ProfilePictureInfo struct {
 	JID         string     `json:"jid"`
 	HasPicture  bool       `json:"has_picture"`
@@ -24,7 +24,7 @@ type ProfilePictureInfo struct {
 	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
 }
 
-// UserInfo representa informações detalhadas do usuário
+
 type UserInfo struct {
 	JID          string     `json:"jid"`
 	PhoneNumber  string     `json:"phone_number"`
@@ -38,7 +38,7 @@ type UserInfo struct {
 	IsOnline     bool       `json:"is_online"`
 }
 
-// ContactInfo representa informações de contato
+
 type ContactInfo struct {
 	JID          string `json:"jid"`
 	PhoneNumber  string `json:"phone_number"`
@@ -48,7 +48,7 @@ type ContactInfo struct {
 	IsContact    bool   `json:"is_contact"`
 }
 
-// BusinessProfile representa perfil de negócio
+
 type BusinessProfile struct {
 	JID          string `json:"jid"`
 	IsBusiness   bool   `json:"is_business"`
@@ -60,23 +60,23 @@ type BusinessProfile struct {
 	Address      string `json:"address,omitempty"`
 }
 
-// ContactGateway interface para operações de contato no WhatsApp
+
 type ContactGateway interface {
-	// Verificação de números
+
 	IsOnWhatsApp(ctx context.Context, sessionID string, phoneNumbers []string) (map[string]bool, error)
 	
-	// Informações de perfil
+
 	GetProfilePictureInfo(ctx context.Context, sessionID, jid string, preview bool) (*ProfilePictureInfo, error)
 	GetUserInfo(ctx context.Context, sessionID string, jids []string) ([]*UserInfo, error)
 	
-	// Listagem de contatos
+
 	GetAllContacts(ctx context.Context, sessionID string) ([]*ContactInfo, error)
 	
-	// Perfil de negócio
+
 	GetBusinessProfile(ctx context.Context, sessionID, jid string) (*BusinessProfile, error)
 }
 
-// ContactRepository interface para persistência de contatos
+
 type ContactRepository interface {
 	Create(ctx context.Context, contact *Contact) error
 	Update(ctx context.Context, contact *Contact) error
@@ -88,14 +88,14 @@ type ContactRepository interface {
 	UpdateSyncStatus(ctx context.Context, req *UpdateSyncStatusRequest) error
 }
 
-// Service implementa a lógica de negócio para contatos
+
 type Service struct {
 	gateway    ContactGateway
 	repository ContactRepository
 	logger     *logger.Logger
 }
 
-// NewService cria uma nova instância do serviço de contatos
+
 func NewService(gateway ContactGateway, repository ContactRepository, logger *logger.Logger) *Service {
 	return &Service{
 		gateway:    gateway,
@@ -104,14 +104,14 @@ func NewService(gateway ContactGateway, repository ContactRepository, logger *lo
 	}
 }
 
-// CheckWhatsApp verifica se números de telefone estão no WhatsApp
+
 func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *contracts.CheckWhatsAppRequest) (*contracts.CheckWhatsAppResponse, error) {
 	s.logger.InfoWithFields("Checking WhatsApp numbers", map[string]interface{}{
 		"session_id":   sessionID,
 		"phone_count":  len(req.PhoneNumbers),
 	})
 
-	// Validar entrada
+
 	if len(req.PhoneNumbers) == 0 {
 		return nil, fmt.Errorf("no phone numbers provided")
 	}
@@ -119,7 +119,7 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *cont
 		return nil, fmt.Errorf("maximum 50 phone numbers allowed")
 	}
 
-	// Verificar via gateway
+
 	results, err := s.gateway.IsOnWhatsApp(ctx, sessionID, req.PhoneNumbers)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to check WhatsApp numbers", map[string]interface{}{
@@ -129,7 +129,7 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *cont
 		return nil, err
 	}
 
-	// Converter resultado
+
 	checkResults := make([]contracts.WhatsAppCheckResult, 0, len(req.PhoneNumbers))
 	foundCount := 0
 
@@ -145,7 +145,7 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *cont
 		}
 
 		if isOnWhatsApp {
-			// Gerar JID para números que estão no WhatsApp
+
 			cleanPhone := s.cleanPhoneNumber(phone)
 			result.JID = cleanPhone + "@s.whatsapp.net"
 		}
@@ -170,7 +170,7 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *cont
 	return response, nil
 }
 
-// GetProfilePictureInfo obtém informações da foto de perfil
+
 func (s *Service) GetProfilePictureInfo(ctx context.Context, sessionID string, req *contracts.GetProfilePictureInfoRequest) (*contracts.GetProfilePictureInfoResponse, error) {
 	s.logger.InfoWithFields("Getting profile picture info", map[string]interface{}{
 		"session_id": sessionID,
@@ -178,7 +178,7 @@ func (s *Service) GetProfilePictureInfo(ctx context.Context, sessionID string, r
 		"preview":    req.Preview,
 	})
 
-	// Obter via gateway
+
 	info, err := s.gateway.GetProfilePictureInfo(ctx, sessionID, req.JID, req.Preview)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to get profile picture info", map[string]interface{}{
@@ -204,14 +204,14 @@ func (s *Service) GetProfilePictureInfo(ctx context.Context, sessionID string, r
 	return response, nil
 }
 
-// GetUserInfo obtém informações detalhadas do usuário
+
 func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *contracts.GetUserInfoRequest) (*contracts.GetUserInfoResponse, error) {
 	s.logger.InfoWithFields("Getting user info", map[string]interface{}{
 		"session_id": sessionID,
 		"jid_count":  len(req.JIDs),
 	})
 
-	// Validar entrada
+
 	if len(req.JIDs) == 0 {
 		return nil, fmt.Errorf("no JIDs provided")
 	}
@@ -219,7 +219,7 @@ func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *contra
 		return nil, fmt.Errorf("maximum 20 JIDs allowed")
 	}
 
-	// Obter via gateway
+
 	users, err := s.gateway.GetUserInfo(ctx, sessionID, req.JIDs)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to get user info", map[string]interface{}{
@@ -229,7 +229,7 @@ func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *contra
 		return nil, err
 	}
 
-	// Converter resultado
+
 	userInfos := make([]contracts.UserInfo, 0, len(users))
 	for _, user := range users {
 		userInfo := contracts.UserInfo{
@@ -258,7 +258,7 @@ func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *contra
 	return response, nil
 }
 
-// ListContacts lista contatos com paginação
+
 func (s *Service) ListContacts(ctx context.Context, sessionID string, req *contracts.ListContactsRequest) (*contracts.ListContactsResponse, error) {
 	s.logger.InfoWithFields("Listing contacts", map[string]interface{}{
 		"session_id": sessionID,
@@ -266,19 +266,19 @@ func (s *Service) ListContacts(ctx context.Context, sessionID string, req *contr
 		"offset":     req.Offset,
 	})
 
-	// Converter para request do repository
+
 	listReq := &ListContactsRequest{
 		SessionID: sessionID,
 		Limit:     req.Limit,
 		Offset:    req.Offset,
 	}
 
-	// Se não especificado, usar valores padrão
+
 	if listReq.Limit == 0 {
 		listReq.Limit = 50
 	}
 
-	// Obter contatos do repository
+
 	contacts, total, err := s.repository.List(ctx, listReq)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to list contacts", map[string]interface{}{
@@ -288,14 +288,14 @@ func (s *Service) ListContacts(ctx context.Context, sessionID string, req *contr
 		return nil, err
 	}
 
-	// Converter resultado
+
 	contactInfos := make([]contracts.ContactDetails, 0, len(contacts))
 	for _, contact := range contacts {
 		contactInfo := contracts.ContactDetails{
 			JID:          contact.ZpJID,
 			PhoneNumber:  contact.PhoneNumber,
 			Name:         contact.GetDisplayName(),
-			BusinessName: "", // TODO: Implementar quando disponível
+			BusinessName: "",
 			IsBusiness:   contact.IsBusiness,
 			IsContact:    true,
 			IsBlocked:    contact.IsBlocked,
@@ -315,14 +315,14 @@ func (s *Service) ListContacts(ctx context.Context, sessionID string, req *contr
 	return response, nil
 }
 
-// SyncContacts sincroniza contatos do WhatsApp
+
 func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *contracts.SyncContactsRequest) (*contracts.SyncContactsResponse, error) {
 	s.logger.InfoWithFields("Syncing contacts", map[string]interface{}{
 		"session_id": sessionID,
 		"force":      req.Force,
 	})
 
-	// Obter contatos do WhatsApp via gateway
+
 	whatsappContacts, err := s.gateway.GetAllContacts(ctx, sessionID)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to get WhatsApp contacts", map[string]interface{}{
@@ -341,9 +341,9 @@ func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *contr
 	newCount := 0
 	updatedCount := 0
 
-	// Processar cada contato
+
 	for _, whatsappContact := range whatsappContacts {
-		// Verificar se contato já existe
+
 		existingContact, err := s.repository.GetByJID(ctx, sessionUUID, whatsappContact.JID)
 		if err != nil && err.Error() != "contact not found" {
 			s.logger.WarnWithFields("Error checking existing contact", map[string]interface{}{
@@ -354,7 +354,7 @@ func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *contr
 		}
 
 		if existingContact == nil {
-			// Criar novo contato
+
 			newContact := &Contact{
 				ID:          uuid.New(),
 				SessionID:   sessionUUID,
@@ -379,7 +379,7 @@ func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *contr
 
 			newCount++
 		} else {
-			// Atualizar contato existente
+
 			existingContact.ZpName = whatsappContact.Name
 			existingContact.ZpPushName = whatsappContact.Name
 			existingContact.IsBusiness = whatsappContact.IsBusiness
@@ -420,14 +420,14 @@ func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *contr
 	return response, nil
 }
 
-// GetBusinessProfile obtém perfil de negócio
+
 func (s *Service) GetBusinessProfile(ctx context.Context, sessionID string, req *contracts.GetBusinessProfileRequest) (*contracts.GetBusinessProfileResponse, error) {
 	s.logger.InfoWithFields("Getting business profile", map[string]interface{}{
 		"session_id": sessionID,
 		"jid":        req.JID,
 	})
 
-	// Obter via gateway
+
 	profile, err := s.gateway.GetBusinessProfile(ctx, sessionID, req.JID)
 	if err != nil {
 		s.logger.ErrorWithFields("Failed to get business profile", map[string]interface{}{
@@ -454,7 +454,7 @@ func (s *Service) GetBusinessProfile(ctx context.Context, sessionID string, req 
 	return response, nil
 }
 
-// cleanPhoneNumber remove caracteres especiais do número de telefone
+
 func (s *Service) cleanPhoneNumber(phone string) string {
 	cleaned := strings.ReplaceAll(phone, "+", "")
 	cleaned = strings.ReplaceAll(cleaned, "-", "")

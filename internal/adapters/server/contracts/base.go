@@ -4,15 +4,15 @@ import (
 	"time"
 )
 
-// ===== BASE TYPES =====
 
-// BaseRequest estrutura base para todos os requests
+
+
 type BaseRequest struct {
 	RequestID string    `json:"request_id,omitempty" example:"req-123"`
 	Timestamp time.Time `json:"timestamp,omitempty" example:"2024-01-01T12:00:00Z"`
 }
 
-// BaseResponse estrutura base para todos os responses
+
 type BaseResponse struct {
 	Success   bool        `json:"success" example:"true"`
 	Message   string      `json:"message,omitempty" example:"Operation completed successfully"`
@@ -21,7 +21,7 @@ type BaseResponse struct {
 	Timestamp time.Time   `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 }
 
-// ErrorResponse estrutura para respostas de erro
+
 type ErrorResponse struct {
 	Success   bool        `json:"success" example:"false"`
 	Error     string      `json:"error" example:"Invalid request"`
@@ -31,7 +31,7 @@ type ErrorResponse struct {
 	Timestamp time.Time   `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 }
 
-// ValidationError representa um erro de validação específico
+
 type ValidationError struct {
 	Field   string `json:"field" example:"name"`
 	Message string `json:"message" example:"Name is required"`
@@ -39,7 +39,7 @@ type ValidationError struct {
 	Code    string `json:"code,omitempty" example:"REQUIRED"`
 }
 
-// ValidationErrorResponse resposta para erros de validação
+
 type ValidationErrorResponse struct {
 	Success   bool              `json:"success" example:"false"`
 	Error     string            `json:"error" example:"Validation failed"`
@@ -49,14 +49,14 @@ type ValidationErrorResponse struct {
 	Timestamp time.Time         `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 }
 
-// PaginationRequest estrutura base para requests com paginação
+
 type PaginationRequest struct {
 	Limit  int `json:"limit" validate:"omitempty,min=1,max=100" example:"20"`
 	Offset int `json:"offset" validate:"omitempty,min=0" example:"0"`
 	Page   int `json:"page" validate:"omitempty,min=1" example:"1"`
 }
 
-// PaginationResponse informações de paginação
+
 type PaginationResponse struct {
 	Total   int  `json:"total" example:"100"`
 	Limit   int  `json:"limit" example:"20"`
@@ -67,35 +67,35 @@ type PaginationResponse struct {
 	HasPrev bool `json:"has_prev" example:"false"`
 }
 
-// ListResponse estrutura base para responses de listagem
+
 type ListResponse struct {
 	BaseResponse
 	Pagination *PaginationResponse `json:"pagination,omitempty"`
 }
 
-// ===== COMMON FIELD TYPES =====
 
-// SessionID tipo para IDs de sessão
+
+
 type SessionID string
 
-// MessageID tipo para IDs de mensagem
+
 type MessageID string
 
-// GroupID tipo para IDs de grupo
+
 type GroupID string
 
-// ContactID tipo para IDs de contato
+
 type ContactID string
 
-// PhoneNumber tipo para números de telefone
+
 type PhoneNumber string
 
-// JID tipo para identificadores WhatsApp
+
 type JID string
 
-// ===== COMMON ENUMS =====
 
-// Status tipos de status genéricos
+
+
 type Status string
 
 const (
@@ -107,7 +107,7 @@ const (
 	StatusCancelled Status = "cancelled"
 )
 
-// MessageType tipos de mensagem
+
 type MessageType string
 
 const (
@@ -124,7 +124,7 @@ const (
 	MessageTypePoll     MessageType = "poll"
 )
 
-// ConnectionStatus status de conexão
+
 type ConnectionStatus string
 
 const (
@@ -135,9 +135,9 @@ const (
 	ConnectionStatusFailed       ConnectionStatus = "failed"
 )
 
-// ===== HELPER FUNCTIONS =====
 
-// NewBaseResponse cria uma nova resposta base
+
+
 func NewBaseResponse(success bool, message string, data interface{}) *BaseResponse {
 	return &BaseResponse{
 		Success:   success,
@@ -147,7 +147,7 @@ func NewBaseResponse(success bool, message string, data interface{}) *BaseRespon
 	}
 }
 
-// NewErrorResponse cria uma nova resposta de erro
+
 func NewErrorResponse(error, code string, details interface{}) *ErrorResponse {
 	return &ErrorResponse{
 		Success:   false,
@@ -158,7 +158,7 @@ func NewErrorResponse(error, code string, details interface{}) *ErrorResponse {
 	}
 }
 
-// NewValidationErrorResponse cria uma nova resposta de erro de validação
+
 func NewValidationErrorResponse(errors []ValidationError) *ValidationErrorResponse {
 	return &ValidationErrorResponse{
 		Success:   false,
@@ -169,7 +169,7 @@ func NewValidationErrorResponse(errors []ValidationError) *ValidationErrorRespon
 	}
 }
 
-// NewPaginationResponse cria uma nova resposta de paginação
+
 func NewPaginationResponse(total, limit, offset int) *PaginationResponse {
 	page := 1
 	if limit > 0 {
@@ -192,9 +192,9 @@ func NewPaginationResponse(total, limit, offset int) *PaginationResponse {
 	}
 }
 
-// ===== VALIDATION HELPERS =====
 
-// IsValidMessageType verifica se o tipo de mensagem é válido
+
+
 func IsValidMessageType(msgType string) bool {
 	switch MessageType(msgType) {
 	case MessageTypeText, MessageTypeImage, MessageTypeAudio, MessageTypeVideo,
@@ -206,7 +206,7 @@ func IsValidMessageType(msgType string) bool {
 	}
 }
 
-// IsValidConnectionStatus verifica se o status de conexão é válido
+
 func IsValidConnectionStatus(status string) bool {
 	switch ConnectionStatus(status) {
 	case ConnectionStatusConnected, ConnectionStatusDisconnected, ConnectionStatusConnecting,
@@ -217,7 +217,7 @@ func IsValidConnectionStatus(status string) bool {
 	}
 }
 
-// IsValidStatus verifica se o status é válido
+
 func IsValidStatus(status string) bool {
 	switch Status(status) {
 	case StatusActive, StatusInactive, StatusPending, StatusCompleted, StatusFailed, StatusCancelled:

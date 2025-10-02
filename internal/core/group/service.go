@@ -6,21 +6,21 @@ import (
 	"strings"
 )
 
-// service implementa a interface Service
+
 type service struct {
 	validator Validator
 }
 
-// NewService cria uma nova instância do service de grupos
+
 func NewService(validator Validator) Service {
 	return &service{
 		validator: validator,
 	}
 }
 
-// ===== VALIDAÇÕES =====
 
-// ValidateGroupCreation valida uma solicitação de criação de grupo
+
+
 func (s *service) ValidateGroupCreation(req *CreateGroupRequest) error {
 	if req == nil {
 		return fmt.Errorf("request cannot be nil")
@@ -41,7 +41,7 @@ func (s *service) ValidateGroupCreation(req *CreateGroupRequest) error {
 	return nil
 }
 
-// ValidateGroupName valida o nome do grupo
+
 func (s *service) ValidateGroupName(name string) error {
 	if name == "" {
 		return fmt.Errorf("group name cannot be empty")
@@ -51,7 +51,7 @@ func (s *service) ValidateGroupName(name string) error {
 		return fmt.Errorf("group name cannot exceed 25 characters")
 	}
 
-	// Verificar caracteres inválidos
+
 	if strings.Contains(name, "\n") || strings.Contains(name, "\r") {
 		return fmt.Errorf("group name cannot contain line breaks")
 	}
@@ -59,7 +59,7 @@ func (s *service) ValidateGroupName(name string) error {
 	return nil
 }
 
-// ValidateGroupDescription valida a descrição do grupo
+
 func (s *service) ValidateGroupDescription(description string) error {
 	if len(description) > 512 {
 		return fmt.Errorf("group description cannot exceed 512 characters")
@@ -68,7 +68,7 @@ func (s *service) ValidateGroupDescription(description string) error {
 	return nil
 }
 
-// ValidateParticipants valida a lista de participantes
+
 func (s *service) ValidateParticipants(participants []string) error {
 	if len(participants) == 0 {
 		return fmt.Errorf("at least one participant is required")
@@ -78,7 +78,7 @@ func (s *service) ValidateParticipants(participants []string) error {
 		return fmt.Errorf("too many participants (max 256)")
 	}
 
-	// Verificar duplicatas
+
 	seen := make(map[string]bool)
 	for _, participant := range participants {
 		if err := s.ValidateJID(participant); err != nil {
@@ -95,13 +95,13 @@ func (s *service) ValidateParticipants(participants []string) error {
 	return nil
 }
 
-// ValidateInviteLink valida um link de convite
+
 func (s *service) ValidateInviteLink(inviteLink string) error {
 	if inviteLink == "" {
 		return fmt.Errorf("invite link cannot be empty")
 	}
 
-	// Verificar formato do link do WhatsApp
+
 	whatsappLinkPattern := `^https://chat\.whatsapp\.com/[A-Za-z0-9]+$`
 	matched, err := regexp.MatchString(whatsappLinkPattern, inviteLink)
 	if err != nil {
@@ -115,13 +115,13 @@ func (s *service) ValidateInviteLink(inviteLink string) error {
 	return nil
 }
 
-// ValidateJID valida um JID do WhatsApp
+
 func (s *service) ValidateJID(jid string) error {
 	if jid == "" {
 		return fmt.Errorf("JID cannot be empty")
 	}
 
-	// Formato básico: número@s.whatsapp.net ou número@g.us
+
 	jidPattern := `^[0-9]+@(s\.whatsapp\.net|g\.us)$`
 	matched, err := regexp.MatchString(jidPattern, jid)
 	if err != nil {
@@ -135,9 +135,9 @@ func (s *service) ValidateJID(jid string) error {
 	return nil
 }
 
-// ===== PERMISSÕES =====
 
-// CanPerformAction verifica se um usuário pode realizar uma ação
+
+
 func (s *service) CanPerformAction(userJID, groupJID string, action GroupAction, groupInfo *GroupInfo) error {
 	if groupInfo == nil {
 		return fmt.Errorf("group not found")
@@ -159,7 +159,7 @@ func (s *service) CanPerformAction(userJID, groupJID string, action GroupAction,
 		if !groupInfo.IsParticipantAdmin(userJID) {
 			return fmt.Errorf("only group admins can perform this action")
 		}
-		// Verificar se está tentando remover o owner
+
 		for _, participant := range groupInfo.Participants {
 			if participant.JID == userJID && userJID == groupInfo.Owner {
 				return fmt.Errorf("cannot remove group owner")
@@ -178,7 +178,7 @@ func (s *service) CanPerformAction(userJID, groupJID string, action GroupAction,
 	return nil
 }
 
-// IsGroupAdmin verifica se um usuário é admin do grupo
+
 func (s *service) IsGroupAdmin(userJID, groupJID string, groupInfo *GroupInfo) bool {
 	if groupInfo == nil {
 		return false
@@ -186,7 +186,7 @@ func (s *service) IsGroupAdmin(userJID, groupJID string, groupInfo *GroupInfo) b
 	return groupInfo.IsParticipantAdmin(userJID)
 }
 
-// IsGroupOwner verifica se um usuário é o dono do grupo
+
 func (s *service) IsGroupOwner(userJID, groupJID string, groupInfo *GroupInfo) bool {
 	if groupInfo == nil {
 		return false
@@ -194,9 +194,9 @@ func (s *service) IsGroupOwner(userJID, groupJID string, groupInfo *GroupInfo) b
 	return groupInfo.Owner == userJID
 }
 
-// ===== PROCESSAMENTO DE MUDANÇAS =====
 
-// ProcessParticipantChanges processa mudanças de participantes
+
+
 func (s *service) ProcessParticipantChanges(req *UpdateParticipantsRequest, currentGroup *GroupInfo) error {
 	if req == nil || currentGroup == nil {
 		return fmt.Errorf("invalid request or group info")
@@ -253,20 +253,20 @@ func (s *service) ProcessParticipantChanges(req *UpdateParticipantsRequest, curr
 	return nil
 }
 
-// ProcessSettingsChanges processa mudanças de configurações
+
 func (s *service) ProcessSettingsChanges(req *UpdateGroupSettingsRequest, currentGroup *GroupInfo) error {
 	if req == nil || currentGroup == nil {
 		return fmt.Errorf("invalid request or group info")
 	}
 
-	// Validar join approval mode
+
 	if req.JoinApprovalMode != "" {
 		if req.JoinApprovalMode != "auto" && req.JoinApprovalMode != "admin_approval" {
 			return fmt.Errorf("invalid join approval mode: %s", req.JoinApprovalMode)
 		}
 	}
 
-	// Validar member add mode
+
 	if req.MemberAddMode != "" {
 		if req.MemberAddMode != "all_members" && req.MemberAddMode != "only_admins" {
 			return fmt.Errorf("invalid member add mode: %s", req.MemberAddMode)
@@ -276,14 +276,14 @@ func (s *service) ProcessSettingsChanges(req *UpdateGroupSettingsRequest, curren
 	return nil
 }
 
-// ===== UTILITÁRIOS =====
 
-// NormalizeJID normaliza um JID
+
+
 func (s *service) NormalizeJID(jid string) string {
-	// Remove espaços e converte para minúsculas
+
 	normalized := strings.ToLower(strings.TrimSpace(jid))
 
-	// Se não tem domínio, adiciona o domínio padrão
+
 	if !strings.Contains(normalized, "@") {
 		normalized += "@s.whatsapp.net"
 	}
@@ -291,7 +291,7 @@ func (s *service) NormalizeJID(jid string) string {
 	return normalized
 }
 
-// ExtractPhoneNumber extrai o número de telefone de um JID
+
 func (s *service) ExtractPhoneNumber(jid string) string {
 	parts := strings.Split(jid, "@")
 	if len(parts) > 0 {
@@ -300,7 +300,7 @@ func (s *service) ExtractPhoneNumber(jid string) string {
 	return jid
 }
 
-// FormatGroupJID formata um ID de grupo para JID
+
 func (s *service) FormatGroupJID(groupID string) string {
 	if strings.Contains(groupID, "@") {
 		return groupID
@@ -308,12 +308,12 @@ func (s *service) FormatGroupJID(groupID string) string {
 	return groupID + "@g.us"
 }
 
-// ===== VALIDADOR PADRÃO =====
 
-// defaultValidator implementa validações básicas
+
+
 type defaultValidator struct{}
 
-// NewDefaultValidator cria um validador padrão
+
 func NewDefaultValidator() Validator {
 	return &defaultValidator{}
 }

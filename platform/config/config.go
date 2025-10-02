@@ -9,41 +9,41 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config estrutura principal de configuração da aplicação
+
 type Config struct {
-	// Aplicação
+
 	App AppConfig `json:"app"`
 
-	// Servidor HTTP
+
 	Server ServerConfig `json:"server"`
 
-	// Logging
+
 	Log LogConfig `json:"log"`
 
-	// Banco de dados
+
 	Database DatabaseConfig `json:"database"`
 
-	// WhatsApp/Wameow
+
 	WhatsApp WhatsAppConfig `json:"whatsapp"`
 
-	// Webhooks
+
 	Webhook WebhookConfig `json:"webhook"`
 
-	// Segurança
+
 	Security SecurityConfig `json:"security"`
 
-	// Ambiente
+
 	Environment string `json:"environment"`
 }
 
-// AppConfig configurações da aplicação
+
 type AppConfig struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 	Debug   bool   `json:"debug"`
 }
 
-// ServerConfig configurações do servidor HTTP
+
 type ServerConfig struct {
 	Host         string `json:"host"`
 	Port         int    `json:"port"`
@@ -53,7 +53,7 @@ type ServerConfig struct {
 	BaseURL      string `json:"base_url"`
 }
 
-// LogConfig configurações de logging
+
 type LogConfig struct {
 	Level  string `json:"level"`
 	Format string `json:"format"`
@@ -61,7 +61,7 @@ type LogConfig struct {
 	Caller bool   `json:"caller"`
 }
 
-// DatabaseConfig configurações do banco de dados
+
 type DatabaseConfig struct {
 	URL             string `json:"url"`
 	MaxOpenConns    int    `json:"max_open_conns"`
@@ -71,7 +71,7 @@ type DatabaseConfig struct {
 	AutoMigrate     bool   `json:"auto_migrate"`
 }
 
-// WhatsAppConfig configurações do WhatsApp/Wameow
+
 type WhatsAppConfig struct {
 	LogLevel     string `json:"log_level"`
 	StoreDir     string `json:"store_dir"`
@@ -81,7 +81,7 @@ type WhatsAppConfig struct {
 	ReconnectMax int    `json:"reconnect_max"`
 }
 
-// WebhookConfig configurações de webhooks
+
 type WebhookConfig struct {
 	GlobalURL    string `json:"global_url"`
 	Secret       string `json:"secret"`
@@ -92,7 +92,7 @@ type WebhookConfig struct {
 	UserAgent    string `json:"user_agent"`
 }
 
-// SecurityConfig configurações de segurança
+
 type SecurityConfig struct {
 	APIKey         string   `json:"api_key"`
 	AllowedOrigins []string `json:"allowed_origins"`
@@ -100,11 +100,11 @@ type SecurityConfig struct {
 	RateLimitBurst int      `json:"rate_limit_burst"`
 }
 
-// Load carrega configurações das variáveis de ambiente
+
 func Load() (*Config, error) {
-	// Tentar carregar .env se existir
+
 	if err := godotenv.Load(); err != nil {
-		// Não é um erro crítico se .env não existir
+
 	}
 
 	config := &Config{
@@ -168,7 +168,7 @@ func Load() (*Config, error) {
 		Environment: getEnv("NODE_ENV", "development"),
 	}
 
-	// Validar configuração
+
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
@@ -176,7 +176,7 @@ func Load() (*Config, error) {
 	return config, nil
 }
 
-// Validate valida a configuração
+
 func (c *Config) Validate() error {
 	if c.Server.Port <= 0 || c.Server.Port > 65535 {
 		return fmt.Errorf("invalid server port: %d", c.Server.Port)
@@ -193,34 +193,34 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// IsProduction verifica se está em produção
+
 func (c *Config) IsProduction() bool {
 	return c.Environment == "production"
 }
 
-// IsDevelopment verifica se está em desenvolvimento
+
 func (c *Config) IsDevelopment() bool {
 	return c.Environment == "development"
 }
 
-// IsTest verifica se está em teste
+
 func (c *Config) IsTest() bool {
 	return c.Environment == "test"
 }
 
-// GetServerAddress retorna endereço completo do servidor
+
 func (c *Config) GetServerAddress() string {
 	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
 }
 
-// HasWebhookSecret verifica se tem secret de webhook
+
 func (c *Config) HasWebhookSecret() bool {
 	return c.Webhook.Secret != ""
 }
 
-// ===== FUNÇÕES AUXILIARES =====
 
-// getEnv obtém variável de ambiente com valor padrão
+
+
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -228,7 +228,7 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-// getEnvInt obtém variável de ambiente como inteiro
+
 func getEnvInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if intValue, err := strconv.Atoi(value); err == nil {
@@ -238,7 +238,7 @@ func getEnvInt(key string, defaultValue int) int {
 	return defaultValue
 }
 
-// getEnvBool obtém variável de ambiente como boolean
+
 func getEnvBool(key string, defaultValue bool) bool {
 	if value := os.Getenv(key); value != "" {
 		if boolValue, err := strconv.ParseBool(value); err == nil {
@@ -248,7 +248,7 @@ func getEnvBool(key string, defaultValue bool) bool {
 	return defaultValue
 }
 
-// getEnvSlice obtém variável de ambiente como slice
+
 func getEnvSlice(key string, defaultValue []string) []string {
 	if value := os.Getenv(key); value != "" {
 		return strings.Split(value, ",")

@@ -36,7 +36,7 @@ import (
 	"zpwoot/platform/database"
 	"zpwoot/platform/logger"
 
-	_ "zpwoot/docs/swagger" // Import docs for swagger
+	_ "zpwoot/docs/swagger"
 )
 
 const (
@@ -45,42 +45,42 @@ const (
 )
 
 func main() {
-	// Carregar configuração primeiro
+
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Exibir banner com configuração
+
 	printBanner(cfg)
 
-	// Criar contexto principal da aplicação
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Inicializar logger
+
 	log := logger.NewFromAppConfig(cfg)
 	log.InfoWithFields("Starting zpwoot", map[string]interface{}{
 		"module":  "main",
 		"version": appVersion,
 	})
 
-	// Inicializar banco de dados
+
 	db, err := database.NewFromAppConfig(cfg, log)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Failed to initialize database: %v", err))
 	}
 	defer db.Close()
 
-	// Executar migrações se habilitado
+
 	if cfg.Database.AutoMigrate {
 		if err := runMigrations(db, log); err != nil {
 			log.Fatal(fmt.Sprintf("Failed to run migrations: %v", err))
 		}
 	}
 
-	// Inicializar container de DI
+
 	containerConfig := &container.Config{
 		AppConfig: cfg,
 		Logger:    log,
@@ -92,12 +92,12 @@ func main() {
 		log.Fatal(fmt.Sprintf("Failed to initialize DI container: %v", err))
 	}
 
-	// Iniciar componentes do container
+
 	if err := diContainer.Start(ctx); err != nil {
 		log.Fatal(fmt.Sprintf("Failed to start container components: %v", err))
 	}
 
-	// Configurar servidor HTTP
+
 	server := &http.Server{
 		Addr:         cfg.GetServerAddress(),
 		Handler:      diContainer.Handler(),
@@ -106,14 +106,14 @@ func main() {
 		IdleTimeout:  time.Duration(cfg.Server.IdleTimeout) * time.Second,
 	}
 
-	// Canal para capturar sinais do sistema
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Canal para erros da aplicação
+
 	errChan := make(chan error, 1)
 
-	// Iniciar servidor HTTP em goroutine
+
 	go func() {
 		log.InfoWithFields("Server started", map[string]interface{}{
 			"module": "server",
@@ -125,10 +125,10 @@ func main() {
 		}
 	}()
 
-	// Iniciar reconexão automática em goroutine separada
+
 	go connectOnStartup(diContainer, log)
 
-	// Aguardar sinal de parada ou erro
+
 	select {
 	case sig := <-sigChan:
 		log.InfoWithFields("Received shutdown signal", map[string]interface{}{
@@ -140,19 +140,19 @@ func main() {
 		})
 	}
 
-	// Graceful shutdown
+
 	log.Info("Initiating graceful shutdown...")
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
-	// Parar servidor HTTP
+
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.ErrorWithFields("Error shutting down HTTP server", map[string]interface{}{
 			"error": err.Error(),
 		})
 	}
 
-	// Parar componentes do container
+
 	if err := diContainer.Stop(shutdownCtx); err != nil {
 		log.ErrorWithFields("Error stopping container components", map[string]interface{}{
 			"error": err.Error(),
@@ -162,7 +162,7 @@ func main() {
 	log.Info("Application shutdown completed successfully")
 }
 
-// connectOnStartup reconnects existing sessions automatically on startup
+
 func connectOnStartup(container *container.Container, logger *logger.Logger) {
 	const (
 		startupDelay     = 3 * time.Second
@@ -196,7 +196,7 @@ func connectOnStartup(container *container.Container, logger *logger.Logger) {
 	}
 }
 
-// getExistingSessions returns sessions that have saved credentials
+
 func getExistingSessions(ctx context.Context, sessionService *services.SessionService, limit int, logger *logger.Logger) []sessionInfo {
 	req := &contracts.ListSessionsRequest{
 		Limit:  limit,
@@ -226,7 +226,7 @@ func getExistingSessions(ctx context.Context, sessionService *services.SessionSe
 	return sessionsWithCredentials
 }
 
-// reconnectSessions attempts to reconnect existing sessions
+
 func reconnectSessions(ctx context.Context, sessions []sessionInfo, sessionService *services.SessionService, logger *logger.Logger, delay time.Duration) reconnectStats {
 	stats := reconnectStats{}
 
@@ -271,13 +271,13 @@ type reconnectStats struct {
 	failed    int
 }
 
-// runMigrations executa as migrações do banco de dados
+
 func runMigrations(db *database.Database, log *logger.Logger) error {
 	migrator := database.NewMigrator(db, log)
 	return migrator.RunMigrations()
 }
 
-// printBanner exibe o banner da aplicação
+
 func printBanner(cfg *config.Config) {
 	fmt.Printf(`
     ███████╗██████╗ ██╗    ██╗ ██████╗  ██████╗ ████████╗

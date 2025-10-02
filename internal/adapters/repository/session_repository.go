@@ -15,19 +15,19 @@ import (
 	"zpwoot/internal/core/shared/errors"
 )
 
-// SessionRepository implementa a interface session.Repository para PostgreSQL
+
 type SessionRepository struct {
 	db *sqlx.DB
 }
 
-// NewSessionRepository cria uma nova instância do repositório de sessões
+
 func NewSessionRepository(db *sqlx.DB) session.Repository {
 	return &SessionRepository{
 		db: db,
 	}
 }
 
-// sessionModel representa o modelo de dados para PostgreSQL
+
 type sessionModel struct {
 	ID              string         `db:"id"`
 	Name            string         `db:"name"`
@@ -43,7 +43,7 @@ type sessionModel struct {
 	LastSeen        sql.NullTime   `db:"lastSeen"`
 }
 
-// Create cria uma nova sessão no banco de dados
+
 func (r *SessionRepository) Create(ctx context.Context, sess *session.Session) error {
 	model, err := r.toModel(sess)
 	if err != nil {
@@ -66,7 +66,7 @@ func (r *SessionRepository) Create(ctx context.Context, sess *session.Session) e
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code {
-			case "23505": // unique_violation
+			case "23505": 
 				if pqErr.Constraint == "zpSessions_name_key" {
 					return errors.ErrSessionNameAlreadyExists
 				}
@@ -78,7 +78,7 @@ func (r *SessionRepository) Create(ctx context.Context, sess *session.Session) e
 	return nil
 }
 
-// GetByID busca uma sessão pelo ID
+
 func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*session.Session, error) {
 	var model sessionModel
 	query := `SELECT * FROM "zpSessions" WHERE id = $1`
@@ -94,7 +94,7 @@ func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*session
 	return r.fromModel(&model)
 }
 
-// GetByName busca uma sessão pelo nome
+
 func (r *SessionRepository) GetByName(ctx context.Context, name string) (*session.Session, error) {
 	var model sessionModel
 	query := `SELECT * FROM "zpSessions" WHERE name = $1`
@@ -110,7 +110,7 @@ func (r *SessionRepository) GetByName(ctx context.Context, name string) (*sessio
 	return r.fromModel(&model)
 }
 
-// Update atualiza uma sessão existente
+
 func (r *SessionRepository) Update(ctx context.Context, sess *session.Session) error {
 	model, err := r.toModel(sess)
 	if err != nil {
@@ -136,7 +136,7 @@ func (r *SessionRepository) Update(ctx context.Context, sess *session.Session) e
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code {
-			case "23505": // unique_violation
+			case "23505": 
 				if pqErr.Constraint == "zpSessions_name_key" {
 					return errors.ErrSessionNameAlreadyExists
 				}
@@ -157,7 +157,7 @@ func (r *SessionRepository) Update(ctx context.Context, sess *session.Session) e
 	return nil
 }
 
-// Delete remove uma sessão do banco de dados
+
 func (r *SessionRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM "zpSessions" WHERE id = $1`
 
@@ -178,7 +178,7 @@ func (r *SessionRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// List retorna uma lista paginada de sessões
+
 func (r *SessionRepository) List(ctx context.Context, limit, offset int) ([]*session.Session, error) {
 	var models []sessionModel
 	query := `
@@ -204,7 +204,7 @@ func (r *SessionRepository) List(ctx context.Context, limit, offset int) ([]*ses
 	return sessions, nil
 }
 
-// ListConnected retorna todas as sessões conectadas
+
 func (r *SessionRepository) ListConnected(ctx context.Context) ([]*session.Session, error) {
 	var models []sessionModel
 	query := `SELECT * FROM "zpSessions" WHERE "isConnected" = true ORDER BY "connectedAt" DESC`
@@ -226,7 +226,7 @@ func (r *SessionRepository) ListConnected(ctx context.Context) ([]*session.Sessi
 	return sessions, nil
 }
 
-// ListByStatus retorna sessões filtradas por status de conexão
+
 func (r *SessionRepository) ListByStatus(ctx context.Context, connected bool) ([]*session.Session, error) {
 	var models []sessionModel
 	query := `SELECT * FROM "zpSessions" WHERE "isConnected" = $1 ORDER BY "updatedAt" DESC`
@@ -248,7 +248,7 @@ func (r *SessionRepository) ListByStatus(ctx context.Context, connected bool) ([
 	return sessions, nil
 }
 
-// UpdateConnectionStatus atualiza apenas o status de conexão
+
 func (r *SessionRepository) UpdateConnectionStatus(ctx context.Context, id uuid.UUID, connected bool) error {
 	query := `
 		UPDATE "zpSessions" SET
@@ -276,7 +276,7 @@ func (r *SessionRepository) UpdateConnectionStatus(ctx context.Context, id uuid.
 	return nil
 }
 
-// UpdateLastSeen atualiza o timestamp de último acesso
+
 func (r *SessionRepository) UpdateLastSeen(ctx context.Context, id uuid.UUID, lastSeen time.Time) error {
 	query := `UPDATE "zpSessions" SET "lastSeen" = $2, "updatedAt" = NOW() WHERE id = $1`
 
@@ -297,7 +297,7 @@ func (r *SessionRepository) UpdateLastSeen(ctx context.Context, id uuid.UUID, la
 	return nil
 }
 
-// UpdateQRCode atualiza o QR code da sessão
+
 func (r *SessionRepository) UpdateQRCode(ctx context.Context, id uuid.UUID, qrCode string, expiresAt time.Time) error {
 	query := `
 		UPDATE "zpSessions" SET
@@ -324,7 +324,7 @@ func (r *SessionRepository) UpdateQRCode(ctx context.Context, id uuid.UUID, qrCo
 	return nil
 }
 
-// UpdateDeviceJID atualiza o device JID da sessão após pareamento
+
 func (r *SessionRepository) UpdateDeviceJID(ctx context.Context, id uuid.UUID, deviceJID string) error {
 	query := `
 		UPDATE "zpSessions" SET
@@ -355,7 +355,7 @@ func (r *SessionRepository) UpdateDeviceJID(ctx context.Context, id uuid.UUID, d
 	return nil
 }
 
-// ClearQRCode limpa o QR code da sessão
+
 func (r *SessionRepository) ClearQRCode(ctx context.Context, id uuid.UUID) error {
 	query := `
 		UPDATE "zpSessions" SET
@@ -382,7 +382,7 @@ func (r *SessionRepository) ClearQRCode(ctx context.Context, id uuid.UUID) error
 	return nil
 }
 
-// ExistsByName verifica se existe uma sessão com o nome especificado
+
 func (r *SessionRepository) ExistsByName(ctx context.Context, name string) (bool, error) {
 	var exists bool
 	query := `SELECT EXISTS(SELECT 1 FROM "zpSessions" WHERE name = $1)`
@@ -395,7 +395,7 @@ func (r *SessionRepository) ExistsByName(ctx context.Context, name string) (bool
 	return exists, nil
 }
 
-// Count retorna o número total de sessões
+
 func (r *SessionRepository) Count(ctx context.Context) (int64, error) {
 	var count int64
 	query := `SELECT COUNT(*) FROM "zpSessions"`
@@ -408,7 +408,7 @@ func (r *SessionRepository) Count(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
-// toModel converte uma entidade Session para o modelo de banco de dados
+
 func (r *SessionRepository) toModel(sess *session.Session) (*sessionModel, error) {
 	model := &sessionModel{
 		ID:          sess.ID.String(),
@@ -418,27 +418,27 @@ func (r *SessionRepository) toModel(sess *session.Session) (*sessionModel, error
 		UpdatedAt:   sess.UpdatedAt,
 	}
 
-	// DeviceJID
+
 	if sess.DeviceJID != nil {
 		model.DeviceJID = sql.NullString{String: *sess.DeviceJID, Valid: true}
 	}
 
-	// ConnectionError
+
 	if sess.ConnectionError != nil {
 		model.ConnectionError = sql.NullString{String: *sess.ConnectionError, Valid: true}
 	}
 
-	// QRCode
+
 	if sess.QRCode != nil {
 		model.QRCode = sql.NullString{String: *sess.QRCode, Valid: true}
 	}
 
-	// QRCodeExpiresAt
+
 	if sess.QRCodeExpiresAt != nil {
 		model.QRCodeExpiresAt = sql.NullTime{Time: *sess.QRCodeExpiresAt, Valid: true}
 	}
 
-	// ProxyConfig
+
 	if sess.ProxyConfig != nil {
 		proxyJSON, err := json.Marshal(sess.ProxyConfig)
 		if err != nil {
@@ -447,12 +447,12 @@ func (r *SessionRepository) toModel(sess *session.Session) (*sessionModel, error
 		model.ProxyConfig = sql.NullString{String: string(proxyJSON), Valid: true}
 	}
 
-	// ConnectedAt
+
 	if sess.ConnectedAt != nil {
 		model.ConnectedAt = sql.NullTime{Time: *sess.ConnectedAt, Valid: true}
 	}
 
-	// LastSeen
+
 	if sess.LastSeen != nil {
 		model.LastSeen = sql.NullTime{Time: *sess.LastSeen, Valid: true}
 	}
@@ -460,7 +460,7 @@ func (r *SessionRepository) toModel(sess *session.Session) (*sessionModel, error
 	return model, nil
 }
 
-// fromModel converte um modelo de banco de dados para uma entidade Session
+
 func (r *SessionRepository) fromModel(model *sessionModel) (*session.Session, error) {
 	id, err := uuid.Parse(model.ID)
 	if err != nil {
@@ -475,27 +475,27 @@ func (r *SessionRepository) fromModel(model *sessionModel) (*session.Session, er
 		UpdatedAt:   model.UpdatedAt,
 	}
 
-	// DeviceJID
+
 	if model.DeviceJID.Valid {
 		sess.DeviceJID = &model.DeviceJID.String
 	}
 
-	// ConnectionError
+
 	if model.ConnectionError.Valid {
 		sess.ConnectionError = &model.ConnectionError.String
 	}
 
-	// QRCode
+
 	if model.QRCode.Valid {
 		sess.QRCode = &model.QRCode.String
 	}
 
-	// QRCodeExpiresAt
+
 	if model.QRCodeExpiresAt.Valid {
 		sess.QRCodeExpiresAt = &model.QRCodeExpiresAt.Time
 	}
 
-	// ProxyConfig
+
 	if model.ProxyConfig.Valid {
 		var proxyConfig session.ProxyConfig
 		if err := json.Unmarshal([]byte(model.ProxyConfig.String), &proxyConfig); err != nil {
@@ -504,12 +504,12 @@ func (r *SessionRepository) fromModel(model *sessionModel) (*session.Session, er
 		sess.ProxyConfig = &proxyConfig
 	}
 
-	// ConnectedAt
+
 	if model.ConnectedAt.Valid {
 		sess.ConnectedAt = &model.ConnectedAt.Time
 	}
 
-	// LastSeen
+
 	if model.LastSeen.Valid {
 		sess.LastSeen = &model.LastSeen.Time
 	}

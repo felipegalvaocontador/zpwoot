@@ -12,55 +12,55 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// SetupRoutes configura todas as rotas da aplicação
+
 func SetupRoutes(cfg *config.Config, logger *logger.Logger, sessionService *services.SessionService, messageService *services.MessageService, groupService *services.GroupService) http.Handler {
 	r := chi.NewRouter()
 
-	// Configurar middlewares globais
+
 	setupMiddlewares(r, cfg, logger)
 
-	// Swagger documentation
+
 	setupSwaggerRoutes(r)
 
-	// Health check
+
 	setupHealthRoutes(r)
 
-	// Setup all route groups
+
 	setupAllRoutes(r, logger, sessionService, messageService, groupService)
 
 	return r
 }
 
-// setupAllRoutes configura todos os grupos de rotas
+
 func setupAllRoutes(r *chi.Mux, appLogger *logger.Logger, sessionService *services.SessionService, messageService *services.MessageService, groupService *services.GroupService) {
 	r.Route("/sessions", func(r chi.Router) {
-		// Session management routes
+
 		setupSessionRoutes(r, sessionService, appLogger)
 
-		// Message routes
+
 		setupMessageRoutes(r, messageService, sessionService, appLogger)
 
-		// Group routes
+
 		setupGroupRoutes(r, groupService, sessionService, appLogger)
 
-		// Contact routes
+
 		setupContactRoutes(r, sessionService, appLogger)
 
-		// Webhook routes
+
 		setupWebhookRoutes(r, sessionService, appLogger)
 
-		// Media routes
+
 		setupMediaRoutes(r, sessionService, appLogger)
 
-		// Chatwoot routes
+
 		setupChatwootRoutes(r, messageService, sessionService, appLogger)
 	})
 
-	// Global routes
+
 	setupGlobalRoutes(r, appLogger)
 }
 
-// setupHealthRoutes configura rotas de health check
+
 func setupHealthRoutes(r *chi.Mux) {
 	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -69,28 +69,28 @@ func setupHealthRoutes(r *chi.Mux) {
 	})
 }
 
-// setupGlobalRoutes configura rotas globais
+
 func setupGlobalRoutes(r *chi.Mux, appLogger *logger.Logger) {
-	// Global webhook events endpoint
+
 	r.Get("/webhook/events", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"events":["message","session","contact","group"]}`))
 	})
 
-	// Chatwoot webhook endpoint (interno - não documentado no Swagger)
-	// Movido para rotas internas se necessário
+
+
 }
 
-// setupMiddlewares configura todos os middlewares globais da aplicação
+
 func setupMiddlewares(r *chi.Mux, cfg *config.Config, logger *logger.Logger) {
-	// Panic recovery middleware
+
 	r.Use(middleware.ErrorLogger(logger))
 
-	// HTTP logging middleware
+
 	r.Use(middleware.HTTPLogger(logger))
 
-	// CORS middleware
+
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -100,6 +100,6 @@ func setupMiddlewares(r *chi.Mux, cfg *config.Config, logger *logger.Logger) {
 		MaxAge:           300,
 	}))
 
-	// API Key authentication middleware
+
 	r.Use(middleware.APIKeyAuth(cfg, logger))
 }

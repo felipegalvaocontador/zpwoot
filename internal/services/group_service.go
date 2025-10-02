@@ -10,7 +10,7 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// GroupService implementa a lógica de aplicação para grupos
+
 type GroupService struct {
 	groupCore       group.Service
 	groupRepo       group.Repository
@@ -19,7 +19,7 @@ type GroupService struct {
 	validator       *validation.Validator
 }
 
-// NewGroupService cria uma nova instância do GroupService
+
 func NewGroupService(
 	groupCore group.Service,
 	groupRepo group.Repository,
@@ -36,7 +36,7 @@ func NewGroupService(
 	}
 }
 
-// CreateGroup cria um novo grupo WhatsApp
+
 func (s *GroupService) CreateGroup(ctx context.Context, sessionID string, req *contracts.CreateGroupRequest) (*contracts.CreateGroupResponse, error) {
 	s.logger.InfoWithFields("Creating group", map[string]interface{}{
 		"session_id":      sessionID,
@@ -45,30 +45,30 @@ func (s *GroupService) CreateGroup(ctx context.Context, sessionID string, req *c
 		"has_description": req.Description != "",
 	})
 
-	// Validar request
+
 	if err := s.validator.ValidateStruct(req); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Converter para domain request
+
 	domainReq := &group.CreateGroupRequest{
 		Name:         req.Name,
 		Description:  req.Description,
 		Participants: req.Participants,
 	}
 
-	// Validar no core domain
+
 	if err := s.groupCore.ValidateGroupCreation(domainReq); err != nil {
 		return nil, fmt.Errorf("group validation failed: %w", err)
 	}
 
-	// Criar grupo via WhatsApp Gateway
+
 	groupInfo, err := s.whatsappGateway.CreateGroup(ctx, sessionID, req.Name, req.Participants, req.Description)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create group in WhatsApp: %w", err)
 	}
 
-	// Salvar no banco de dados
+
 	groupModel := s.convertGroupInfoToModel(groupInfo, sessionID)
 	if err := s.groupRepo.Create(ctx, groupModel); err != nil {
 		s.logger.ErrorWithFields("Failed to save group to database", map[string]interface{}{
@@ -76,7 +76,7 @@ func (s *GroupService) CreateGroup(ctx context.Context, sessionID string, req *c
 			"group_jid":  groupInfo.GroupJID,
 			"error":      err.Error(),
 		})
-		// Não retornar erro aqui pois o grupo foi criado no WhatsApp
+
 	}
 
 	response := &contracts.CreateGroupResponse{
@@ -98,19 +98,19 @@ func (s *GroupService) CreateGroup(ctx context.Context, sessionID string, req *c
 	return response, nil
 }
 
-// ListGroups lista todos os grupos de uma sessão
+
 func (s *GroupService) ListGroups(ctx context.Context, sessionID string) (*contracts.ListGroupsResponse, error) {
 	s.logger.InfoWithFields("Listing groups", map[string]interface{}{
 		"session_id": sessionID,
 	})
 
-	// Buscar grupos via WhatsApp Gateway
+
 	groupInfos, err := s.whatsappGateway.ListJoinedGroups(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list groups from WhatsApp: %w", err)
 	}
 
-	// Converter para response
+
 	groups := make([]contracts.GroupInfo, len(groupInfos))
 	for i, groupInfo := range groupInfos {
 		groups[i] = contracts.GroupInfo{
@@ -138,20 +138,20 @@ func (s *GroupService) ListGroups(ctx context.Context, sessionID string) (*contr
 	return response, nil
 }
 
-// GetGroupInfo obtém informações detalhadas de um grupo
+
 func (s *GroupService) GetGroupInfo(ctx context.Context, sessionID, groupJID string) (*contracts.GetGroupInfoResponse, error) {
 	s.logger.InfoWithFields("Getting group info", map[string]interface{}{
 		"session_id": sessionID,
 		"group_jid":  groupJID,
 	})
 
-	// Buscar informações via WhatsApp Gateway
+
 	groupInfo, err := s.whatsappGateway.GetGroupInfo(ctx, sessionID, groupJID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get group info from WhatsApp: %w", err)
 	}
 
-	// Converter participantes
+
 	participants := make([]contracts.ParticipantInfo, len(groupInfo.Participants))
 	for i, p := range groupInfo.Participants {
 		participants[i] = contracts.ParticipantInfo{
@@ -191,7 +191,7 @@ func (s *GroupService) GetGroupInfo(ctx context.Context, sessionID, groupJID str
 	return response, nil
 }
 
-// UpdateGroupParticipants gerencia participantes do grupo
+
 func (s *GroupService) UpdateGroupParticipants(ctx context.Context, sessionID string, req *contracts.UpdateParticipantsRequest) (*contracts.UpdateParticipantsResponse, error) {
 	s.logger.InfoWithFields("Updating group participants", map[string]interface{}{
 		"session_id":   sessionID,
@@ -200,18 +200,18 @@ func (s *GroupService) UpdateGroupParticipants(ctx context.Context, sessionID st
 		"participants": len(req.Participants),
 	})
 
-	// Validar request
+
 	if err := s.validator.ValidateStruct(req); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Buscar informações do grupo para validação
+
 	groupInfo, err := s.whatsappGateway.GetGroupInfo(ctx, sessionID, req.GroupJID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get group info: %w", err)
 	}
 
-	// Validar mudanças no core domain
+
 	domainReq := &group.UpdateParticipantsRequest{
 		GroupJID:     req.GroupJID,
 		Action:       req.Action,
@@ -222,7 +222,7 @@ func (s *GroupService) UpdateGroupParticipants(ctx context.Context, sessionID st
 		return nil, fmt.Errorf("participant changes validation failed: %w", err)
 	}
 
-	// Executar ação via WhatsApp Gateway
+
 	switch req.Action {
 	case "add":
 		err = s.whatsappGateway.AddParticipants(ctx, sessionID, req.GroupJID, req.Participants)
@@ -258,7 +258,7 @@ func (s *GroupService) UpdateGroupParticipants(ctx context.Context, sessionID st
 	return response, nil
 }
 
-// SetGroupName altera o nome do grupo
+
 func (s *GroupService) SetGroupName(ctx context.Context, sessionID string, req *contracts.SetGroupNameRequest) (*contracts.SetGroupNameResponse, error) {
 	s.logger.InfoWithFields("Setting group name", map[string]interface{}{
 		"session_id": sessionID,
@@ -266,17 +266,17 @@ func (s *GroupService) SetGroupName(ctx context.Context, sessionID string, req *
 		"new_name":   req.Name,
 	})
 
-	// Validar request
+
 	if err := s.validator.ValidateStruct(req); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Validar nome no core domain
+
 	if err := s.groupCore.ValidateGroupName(req.Name); err != nil {
 		return nil, fmt.Errorf("group name validation failed: %w", err)
 	}
 
-	// Alterar nome via WhatsApp Gateway
+
 	if err := s.whatsappGateway.SetGroupName(ctx, sessionID, req.GroupJID, req.Name); err != nil {
 		return nil, fmt.Errorf("failed to set group name: %w", err)
 	}
@@ -297,10 +297,10 @@ func (s *GroupService) SetGroupName(ctx context.Context, sessionID string, req *
 	return response, nil
 }
 
-// convertGroupInfoToModel converte GroupInfo para modelo de domínio
+
 func (s *GroupService) convertGroupInfoToModel(groupInfo *group.GroupInfo, sessionID string) *group.Group {
-	// TODO: Implementar conversão completa
-	// Por enquanto, retorna um modelo básico
+
+
 	return &group.Group{
 		GroupJID:     groupInfo.GroupJID,
 		Name:         groupInfo.Name,

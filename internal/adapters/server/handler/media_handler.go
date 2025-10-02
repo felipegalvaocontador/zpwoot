@@ -10,13 +10,13 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// MediaHandler implementa handlers REST para gerenciamento de mídia
+
 type MediaHandler struct {
 	*shared.BaseHandler
 	sessionService *services.SessionService
 }
 
-// NewMediaHandler cria nova instância do handler de mídia
+
 func NewMediaHandler(
 	sessionService *services.SessionService,
 	logger *logger.Logger,
@@ -27,7 +27,7 @@ func NewMediaHandler(
 	}
 }
 
-// DownloadMedia faz download de mídia do WhatsApp
+
 // @Summary Download media from WhatsApp
 // @Description Download media file from WhatsApp message
 // @Tags Media
@@ -48,14 +48,14 @@ func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar se sessão existe
+
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
 
-	// TODO: Implementar download de mídia
+
 	h.LogSuccess("download media", map[string]interface{}{
 		"session_id": sessionID,
 	})
@@ -63,7 +63,7 @@ func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Media download initiated successfully")
 }
 
-// GetMediaInfo obtém informações sobre mídia
+
 // @Summary Get media information
 // @Description Get information about media files
 // @Tags Media
@@ -82,14 +82,14 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar se sessão existe
+
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
 
-	// TODO: Implementar busca de informações de mídia
+
 	h.LogSuccess("get media info", map[string]interface{}{
 		"session_id": sessionID,
 	})
@@ -97,7 +97,7 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Media information retrieved successfully")
 }
 
-// ListCachedMedia lista mídia em cache
+
 // @Summary List cached media files
 // @Description List all cached media files for the session
 // @Tags Media
@@ -116,14 +116,14 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar se sessão existe
+
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
 
-	// TODO: Implementar listagem de mídia em cache
+
 	h.LogSuccess("list cached media", map[string]interface{}{
 		"session_id": sessionID,
 	})
@@ -131,7 +131,7 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Cached media listed successfully")
 }
 
-// ClearCache limpa o cache de mídia
+
 // @Summary Clear media cache
 // @Description Clear all cached media files for the session
 // @Tags Media
@@ -151,14 +151,14 @@ func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar se sessão existe
+
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
 
-	// TODO: Implementar limpeza de cache de mídia
+
 	h.LogSuccess("clear media cache", map[string]interface{}{
 		"session_id": sessionID,
 	})
@@ -166,7 +166,7 @@ func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Media cache cleared successfully")
 }
 
-// GetStats obtém estatísticas de mídia
+
 // @Summary Get media statistics
 // @Description Get statistics about media usage for the session
 // @Tags Media
@@ -185,14 +185,14 @@ func (h *MediaHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verificar se sessão existe
+
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
 
-	// TODO: Implementar busca de estatísticas de mídia
+
 	h.LogSuccess("get media stats", map[string]interface{}{
 		"session_id": sessionID,
 	})

@@ -18,12 +18,12 @@ import (
 	"zpwoot/platform/logger"
 )
 
-// WhatsmeowLogger adapta logger para whatsmeow
+
 type WhatsmeowLogger struct {
 	logger *logger.Logger
 }
 
-// NewWhatsmeowLogger cria novo logger para whatsmeow
+
 func NewWhatsmeowLogger(logger *logger.Logger) waLog.Logger {
 	return &WhatsmeowLogger{logger: logger}
 }
@@ -56,53 +56,53 @@ func (w *WhatsmeowLogger) Sub(module string) waLog.Logger {
 	return &WhatsmeowLogger{logger: w.logger}
 }
 
-// QRCodeEvent representa evento de QR code
+
 type QRCodeEvent struct {
 	SessionName string
 	QRCode      string
 	ExpiresAt   time.Time
 }
 
-// Client encapsula um cliente whatsmeow para uma sessão específica
+
 type Client struct {
-	// Identificação
+
 	sessionName string
 
-	// WhatsApp client
+
 	client *whatsmeow.Client
 	device *store.Device
 
-	// Dependencies
+
 	logger      *logger.Logger
 	qrGenerator *QRGenerator
 
-	// State management
+
 	mu            sync.RWMutex
 	isConnected   bool
 	isLoggedIn    bool
 	status        string
 	lastActivity  time.Time
 
-	// QR Code management
+
 	qrCode        string
 	qrCodeExpires time.Time
 	qrChannel     <-chan whatsmeow.QRChannelItem
 	qrContext     context.Context
 	qrCancel      context.CancelFunc
 
-	// Event handling
+
 	eventHandler  func(interface{})
 	eventHandlers []func(interface{})
 
-	// Configuration
+
 	proxyConfig *session.ProxyConfig
 
-	// Connection management
+
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-// NewClient cria novo cliente WhatsApp baseado no legacy funcional
+
 func NewClient(sessionName string, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
 	if sessionName == "" {
 		return nil, fmt.Errorf("session name cannot be empty")
@@ -112,19 +112,19 @@ func NewClient(sessionName string, container *sqlstore.Container, logger *logger
 		return nil, fmt.Errorf("sqlstore container cannot be nil")
 	}
 
-	// Criar novo device store para esta sessão (baseado no legacy)
+
 	deviceStore := container.NewDevice()
 	if deviceStore == nil {
 		return nil, fmt.Errorf("failed to create device store")
 	}
 
-	// Criar logger compatível com whatsmeow
+
 	waLogger := NewWhatsmeowLogger(logger)
 
-	// Criar cliente whatsmeow
+
 	whatsmeowClient := whatsmeow.NewClient(deviceStore, waLogger)
 
-	// Criar contexto para gerenciamento de lifecycle
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	client := &Client{
@@ -140,15 +140,15 @@ func NewClient(sessionName string, container *sqlstore.Container, logger *logger
 		cancel:        cancel,
 	}
 
-	// Configurar event handlers
+
 	client.setupEventHandlers()
 
-	// WhatsApp client created
+
 
 	return client, nil
 }
 
-// NewClientWithDevice cria cliente WhatsApp com device existente
+
 func NewClientWithDevice(sessionName string, deviceStore *store.Device, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
 	if sessionName == "" {
 		return nil, fmt.Errorf("session name cannot be empty")
@@ -162,13 +162,13 @@ func NewClientWithDevice(sessionName string, deviceStore *store.Device, containe
 		return nil, fmt.Errorf("sqlstore container cannot be nil")
 	}
 
-	// Criar logger compatível com whatsmeow
+
 	waLogger := NewWhatsmeowLogger(logger)
 
-	// Criar cliente whatsmeow com device existente
+
 	whatsmeowClient := whatsmeow.NewClient(deviceStore, waLogger)
 
-	// Criar contexto para gerenciamento de lifecycle
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	client := &Client{
@@ -184,7 +184,7 @@ func NewClientWithDevice(sessionName string, deviceStore *store.Device, containe
 		cancel:        cancel,
 	}
 
-	// Configurar event handlers
+
 	client.setupEventHandlers()
 
 	logger.InfoWithFields("WhatsApp client created with existing device", map[string]interface{}{
@@ -195,19 +195,19 @@ func NewClientWithDevice(sessionName string, deviceStore *store.Device, containe
 	return client, nil
 }
 
-// Connect conecta o cliente ao WhatsApp baseado no legacy
-func (c *Client) Connect() error {
-	// Starting connection process
 
-	// Parar qualquer processo de QR code ativo
+func (c *Client) Connect() error {
+
+
+
 	c.stopQRProcess()
 
-	// Se já conectado, desconectar primeiro
+
 	if c.client.IsConnected() {
 		c.client.Disconnect()
 	}
 
-	// Resetar contexto
+
 	c.mu.Lock()
 	if c.cancel != nil {
 		c.cancel()
@@ -217,13 +217,13 @@ func (c *Client) Connect() error {
 
 	c.setStatus("connecting")
 
-	// Iniciar processo de conexão em goroutine
+
 	go c.startConnectionLoop()
 
 	return nil
 }
 
-// startConnectionLoop inicia o loop de conexão baseado no legacy
+
 func (c *Client) startConnectionLoop() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -234,7 +234,7 @@ func (c *Client) startConnectionLoop() {
 		}
 	}()
 
-	// Verificar se device está registrado
+
 	isRegistered := c.isDeviceRegistered()
 
 	if !isRegistered {
@@ -244,12 +244,12 @@ func (c *Client) startConnectionLoop() {
 	}
 }
 
-// isDeviceRegistered verifica se o device está registrado
+
 func (c *Client) isDeviceRegistered() bool {
 	return c.device.ID != nil
 }
 
-// handleNewDeviceRegistration lida com registro de novo device
+
 func (c *Client) handleNewDeviceRegistration() {
 	qrChan, err := c.client.GetQRChannel(c.ctx)
 	if err != nil {
@@ -274,7 +274,7 @@ func (c *Client) handleNewDeviceRegistration() {
 	c.handleQRLoop(qrChan)
 }
 
-// handleExistingDeviceConnection lida com conexão de device existente
+
 func (c *Client) handleExistingDeviceConnection() {
 	err := c.client.Connect()
 	if err != nil {
@@ -286,10 +286,10 @@ func (c *Client) handleExistingDeviceConnection() {
 		return
 	}
 
-	// Existing device connected successfully
+
 }
 
-// handleQRLoop processa o loop de QR code
+
 func (c *Client) handleQRLoop(qrChan <-chan whatsmeow.QRChannelItem) {
 	c.mu.Lock()
 	c.qrChannel = qrChan
@@ -326,14 +326,14 @@ func (c *Client) handleQRLoop(qrChan <-chan whatsmeow.QRChannelItem) {
 	}
 }
 
-// handleQRCodeEvent processa evento de QR code
-// handleQRCodeEvent removed - unused method
 
-// handleQRCode processa novo QR code
+
+
+
 func (c *Client) handleQRCode(qrCode string) {
 	c.mu.Lock()
 	c.qrCode = qrCode
-	c.qrCodeExpires = time.Now().Add(30 * time.Second) // QR codes expiram em 30s
+	c.qrCodeExpires = time.Now().Add(30 * time.Second)
 	c.mu.Unlock()
 
 	c.logger.InfoWithFields("QR code generated", map[string]interface{}{
@@ -341,8 +341,8 @@ func (c *Client) handleQRCode(qrCode string) {
 		"qr_code":      qrCode,
 	})
 
-	// Notificar event handlers sobre novo QR code
-	// A exibição do QR code será feita pelo EventHandler
+
+
 	c.notifyEventHandlers(&QRCodeEvent{
 		SessionName: c.sessionName,
 		QRCode:      qrCode,
@@ -350,7 +350,7 @@ func (c *Client) handleQRCode(qrCode string) {
 	})
 }
 
-// stopQRProcess para o processo de QR code
+
 func (c *Client) stopQRProcess() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -364,7 +364,7 @@ func (c *Client) stopQRProcess() {
 	c.qrCodeExpires = time.Time{}
 }
 
-// setStatus atualiza o status do cliente
+
 func (c *Client) setStatus(status string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -378,19 +378,19 @@ func (c *Client) setStatus(status string) {
 	})
 }
 
-// setupEventHandlers configura os event handlers do whatsmeow
+
 func (c *Client) setupEventHandlers() {
 	c.client.AddEventHandler(c.handleEvent)
 }
 
-// handleEvent processa eventos do whatsmeow
+
 func (c *Client) handleEvent(evt interface{}) {
-	// Atualizar última atividade
+
 	c.mu.Lock()
 	c.lastActivity = time.Now()
 	c.mu.Unlock()
 
-	// Processar eventos específicos
+
 	switch v := evt.(type) {
 	case *events.Connected:
 		c.handleConnectedEvent(v)
@@ -399,24 +399,24 @@ func (c *Client) handleEvent(evt interface{}) {
 	case *events.LoggedOut:
 		c.handleLoggedOutEvent(v)
 	case *events.QR:
-		// QR code já é tratado pelo loop de QR code, não processar aqui
+
 	case *events.PairSuccess:
 		c.handlePairSuccessEvent(v)
 	case *events.PairError:
 		c.handlePairErrorEvent(v)
 	default:
-		// Log outros eventos para debug
+
 		c.logger.DebugWithFields("WhatsApp event received", map[string]interface{}{
 			"session_name": c.sessionName,
 			"event_type":   fmt.Sprintf("%T", evt),
 		})
 	}
 
-	// Notificar event handlers externos
+
 	c.notifyEventHandlers(evt)
 }
 
-// notifyEventHandlers notifica todos os event handlers registrados
+
 func (c *Client) notifyEventHandlers(evt interface{}) {
 	c.mu.RLock()
 	handlers := make([]func(interface{}), len(c.eventHandlers))
@@ -438,7 +438,7 @@ func (c *Client) notifyEventHandlers(evt interface{}) {
 	}
 }
 
-// handleConnectedEvent processa evento de conexão
+
 func (c *Client) handleConnectedEvent(_ *events.Connected) {
 	c.mu.Lock()
 	c.isConnected = true
@@ -452,7 +452,7 @@ func (c *Client) handleConnectedEvent(_ *events.Connected) {
 	})
 }
 
-// handleDisconnectedEvent processa evento de desconexão
+
 func (c *Client) handleDisconnectedEvent(_ *events.Disconnected) {
 	c.mu.Lock()
 	c.isConnected = false
@@ -466,7 +466,7 @@ func (c *Client) handleDisconnectedEvent(_ *events.Disconnected) {
 	})
 }
 
-// handleLoggedOutEvent processa evento de logout
+
 func (c *Client) handleLoggedOutEvent(evt *events.LoggedOut) {
 	c.mu.Lock()
 	c.isLoggedIn = false
@@ -480,7 +480,7 @@ func (c *Client) handleLoggedOutEvent(evt *events.LoggedOut) {
 	})
 }
 
-// handlePairSuccessEvent processa evento de pareamento bem-sucedido
+
 func (c *Client) handlePairSuccessEvent(evt *events.PairSuccess) {
 	c.mu.Lock()
 	c.isLoggedIn = true
@@ -495,7 +495,7 @@ func (c *Client) handlePairSuccessEvent(evt *events.PairSuccess) {
 	})
 }
 
-// handlePairErrorEvent processa evento de erro de pareamento
+
 func (c *Client) handlePairErrorEvent(evt *events.PairError) {
 	c.setStatus("pair_error")
 
@@ -505,7 +505,7 @@ func (c *Client) handlePairErrorEvent(evt *events.PairError) {
 	})
 }
 
-// Disconnect desconecta o cliente baseado no legacy
+
 func (c *Client) Disconnect() error {
 	c.logger.InfoWithFields("Starting client disconnection", map[string]interface{}{
 		"session_name": c.sessionName,
@@ -514,10 +514,10 @@ func (c *Client) Disconnect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Parar processo de QR code
+
 	c.stopQRProcess()
 
-	// Desconectar cliente whatsmeow
+
 	if c.client.IsConnected() {
 		c.logger.InfoWithFields("Disconnecting whatsmeow client", map[string]interface{}{
 			"session_name": c.sessionName,
@@ -525,7 +525,7 @@ func (c *Client) Disconnect() error {
 		c.client.Disconnect()
 	}
 
-	// Cancelar contexto
+
 	if c.cancel != nil {
 		c.logger.InfoWithFields("Canceling client context", map[string]interface{}{
 			"session_name": c.sessionName,
@@ -542,7 +542,7 @@ func (c *Client) Disconnect() error {
 	return nil
 }
 
-// Logout faz logout da sessão
+
 func (c *Client) Logout() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -566,21 +566,21 @@ func (c *Client) Logout() error {
 	return nil
 }
 
-// IsConnected verifica se cliente está conectado
+
 func (c *Client) IsConnected() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.isConnected
 }
 
-// IsLoggedIn verifica se cliente está logado
+
 func (c *Client) IsLoggedIn() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.isLoggedIn
 }
 
-// GetQRCode obtém QR code para pareamento
+
 func (c *Client) GetQRCode() (string, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -593,7 +593,7 @@ func (c *Client) GetQRCode() (string, error) {
 		return "", fmt.Errorf("client is not connected")
 	}
 
-	// Se já temos QR code válido, retornar
+
 	if c.qrCode != "" && time.Now().Before(c.qrCodeExpires) {
 		return c.qrCode, nil
 	}
@@ -605,14 +605,14 @@ func (c *Client) GetQRCode() (string, error) {
 	return c.qrCode, nil
 }
 
-// SetProxy configura proxy para o cliente
+
 func (c *Client) SetProxy(proxy *session.ProxyConfig) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.proxyConfig = proxy
 
-	// Se já conectado, aplicar proxy imediatamente
+
 	if c.isConnected {
 		if err := c.configureProxy(); err != nil {
 			return fmt.Errorf("failed to apply proxy configuration: %w", err)
@@ -622,14 +622,14 @@ func (c *Client) SetProxy(proxy *session.ProxyConfig) error {
 	return nil
 }
 
-// SetEventHandler configura handler de eventos
+
 func (c *Client) SetEventHandler(handler func(interface{})) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.eventHandler = handler
 }
 
-// GetJID retorna JID do cliente
+
 func (c *Client) GetJID() types.JID {
 	if c.client.Store.ID == nil {
 		return types.EmptyJID
@@ -637,20 +637,20 @@ func (c *Client) GetJID() types.JID {
 	return *c.client.Store.ID
 }
 
-// GetClient retorna cliente whatsmeow subjacente
+
 func (c *Client) GetClient() *whatsmeow.Client {
 	return c.client
 }
 
-// ===== MÉTODOS PRIVADOS =====
 
-// configureProxy configura proxy HTTP para o cliente
+
+
 func (c *Client) configureProxy() error {
 	if c.proxyConfig == nil {
 		return nil
 	}
 
-	// Construir URL do proxy
+
 	var proxyURL *url.URL
 	var err error
 
@@ -681,7 +681,7 @@ func (c *Client) configureProxy() error {
 		return fmt.Errorf("failed to parse proxy URL: %w", err)
 	}
 
-	// Configurar proxy no cliente HTTP
+
 	c.client.SetProxyAddress(proxyURL.String())
 
 	c.logger.InfoWithFields("Proxy configured", map[string]interface{}{
@@ -696,18 +696,18 @@ func (c *Client) configureProxy() error {
 
 
 
-// Unused methods removed for code cleanliness
 
 
 
-// GetStatus retorna status atual do cliente
+
+
 func (c *Client) GetStatus() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.status
 }
 
-// AddEventHandler adiciona um event handler
+
 func (c *Client) AddEventHandler(handler func(interface{})) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

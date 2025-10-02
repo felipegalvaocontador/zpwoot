@@ -18,19 +18,19 @@ const (
 	authenticatedContextKey contextKey = "authenticated"
 )
 
-// APIKeyAuth middleware para autenticação via API key
+
 func APIKeyAuth(cfg *config.Config, log *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
 
-			// Pular autenticação para rotas públicas
+
 			if isPublicRoute(path) {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			// Extrair API key dos headers
+
 			apiKey := extractAPIKey(r)
 			if apiKey == "" {
 				log.WarnWithFields("Missing API key", map[string]interface{}{
@@ -43,7 +43,7 @@ func APIKeyAuth(cfg *config.Config, log *logger.Logger) func(http.Handler) http.
 				return
 			}
 
-			// Validar API key
+
 			if !isValidAPIKey(apiKey, cfg) {
 				log.WarnWithFields("Invalid API key", map[string]interface{}{
 					"path":    path,
@@ -56,7 +56,7 @@ func APIKeyAuth(cfg *config.Config, log *logger.Logger) func(http.Handler) http.
 				return
 			}
 
-			// Log autenticação bem-sucedida
+
 			log.DebugWithFields("API key authenticated", map[string]interface{}{
 				"path":    path,
 				"method":  r.Method,
@@ -64,17 +64,17 @@ func APIKeyAuth(cfg *config.Config, log *logger.Logger) func(http.Handler) http.
 				"api_key": maskAPIKey(apiKey),
 			})
 
-			// Adicionar informações ao contexto
+
 			ctx := context.WithValue(r.Context(), apiKeyContextKey, apiKey)
 			ctx = context.WithValue(ctx, authenticatedContextKey, true)
 
-			// Continuar para próximo handler
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-// isPublicRoute verifica se a rota é pública (não requer autenticação)
+
 func isPublicRoute(path string) bool {
 	publicRoutes := []string{
 		"/health",
@@ -91,36 +91,36 @@ func isPublicRoute(path string) bool {
 	return false
 }
 
-// extractAPIKey extrai API key dos headers da requisição
+
 func extractAPIKey(r *http.Request) string {
-	// Tentar Authorization header primeiro
+
 	authHeader := r.Header.Get("Authorization")
 	if authHeader != "" {
-		// Suportar formato "Bearer <token>" e token direto
+
 		if strings.HasPrefix(authHeader, "Bearer ") {
 			return strings.TrimPrefix(authHeader, "Bearer ")
 		}
 		return authHeader
 	}
 
-	// Tentar X-API-Key header
+
 	return r.Header.Get("X-API-Key")
 }
 
-// isValidAPIKey valida se API key é válida
+
 func isValidAPIKey(apiKey string, cfg *config.Config) bool {
-	// Validar contra API key global
+
 	if cfg.Security.APIKey != "" && apiKey == cfg.Security.APIKey {
 		return true
 	}
 
-	// TODO: Implementar validação de múltiplas API keys se necessário
-	// Por enquanto, apenas validar contra a global
+
+
 
 	return false
 }
 
-// writeUnauthorizedResponse escreve resposta de não autorizado
+
 func writeUnauthorizedResponse(w http.ResponseWriter, message, code string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
@@ -135,7 +135,7 @@ func writeUnauthorizedResponse(w http.ResponseWriter, message, code string) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// maskAPIKey mascara API key para logs (mostra apenas primeiros e últimos caracteres)
+
 func maskAPIKey(apiKey string) string {
 	if len(apiKey) <= 8 {
 		return strings.Repeat("*", len(apiKey))

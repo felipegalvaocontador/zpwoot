@@ -7,20 +7,22 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"zpwoot/internal/adapters/http/shared"
+	"zpwoot/internal/core/contact"
 	"zpwoot/internal/services"
+	"zpwoot/internal/services/shared/dto"
 	"zpwoot/platform/logger"
 )
 
 // ContactHandler implementa handlers REST para contatos integrados ao WhatsApp
 type ContactHandler struct {
 	*shared.BaseHandler
-	contactService *services.ContactService
+	contactService *contact.Service
 	sessionService *services.SessionService
 }
 
 // NewContactHandler cria nova instância do handler de contatos
 func NewContactHandler(
-	contactService *services.ContactService,
+	contactService *contact.Service,
 	sessionService *services.SessionService,
 	logger *logger.Logger,
 ) *ContactHandler {
@@ -149,7 +151,7 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request body
-	var req CheckWhatsAppRequest
+	var req dto.CheckWhatsAppRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -168,30 +170,25 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implementar integração com wameow para verificar números
-	// Por enquanto, simular resposta baseada no legacy
-	results := make([]CheckWhatsAppResult, len(req.PhoneNumbers))
-	for i, phone := range req.PhoneNumbers {
-		results[i] = CheckWhatsAppResult{
-			PhoneNumber:  phone,
-			IsOnWhatsApp: true, // Simular que todos estão no WhatsApp
-			JID:          phone + "@s.whatsapp.net",
-		}
-	}
-
-	response := CheckWhatsAppResponse{
-		Results: results,
-		Total:   len(results),
+	// Chamar service
+	response, err := h.contactService.CheckWhatsApp(r.Context(), sessionID, &req)
+	if err != nil {
+		h.GetLogger().ErrorWithFields("Failed to check WhatsApp numbers", map[string]interface{}{
+			"session_id": sessionID,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to check WhatsApp numbers")
+		return
 	}
 
 	h.LogSuccess("check WhatsApp numbers", map[string]interface{}{
 		"session_id":    sessionID,
 		"session_name":  session.Session.Name,
 		"phone_count":   len(req.PhoneNumbers),
-		"results_count": len(results),
+		"results_count": len(response.Results),
 	})
 
-	h.GetWriter().WriteSuccess(w, response, "Phone numbers checked successfully")
+	h.GetWriter().WriteSuccess(w, response, response.Message)
 }
 
 // GetProfilePicture busca foto de perfil de um contato
@@ -272,7 +269,7 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request body
-	var req GetUserInfoRequest
+	var req dto.GetUserInfoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -291,33 +288,25 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implementar integração com wameow para buscar informações de usuários
-	// Por enquanto, simular resposta
-	results := make([]UserInfoResult, len(req.JIDs))
-	for i, jid := range req.JIDs {
-		results[i] = UserInfoResult{
-			JID:          jid,
-			Name:         "Placeholder Name",
-			Status:       "Available",
-			PictureID:    "placeholder-pic-id",
-			IsOnWhatsApp: true,
-			IsBusiness:   false,
-		}
-	}
-
-	response := GetUserInfoResponse{
-		Results: results,
-		Total:   len(results),
+	// Chamar service
+	response, err := h.contactService.GetUserInfo(r.Context(), sessionID, &req)
+	if err != nil {
+		h.GetLogger().ErrorWithFields("Failed to get user info", map[string]interface{}{
+			"session_id": sessionID,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to get user info")
+		return
 	}
 
 	h.LogSuccess("get user info", map[string]interface{}{
 		"session_id":    sessionID,
 		"session_name":  session.Session.Name,
 		"jid_count":     len(req.JIDs),
-		"results_count": len(results),
+		"results_count": len(response.Users),
 	})
 
-	h.GetWriter().WriteSuccess(w, response, "User information retrieved successfully")
+	h.GetWriter().WriteSuccess(w, response, response.Message)
 }
 
 // ListContacts lista contatos com paginação e filtros
@@ -367,47 +356,34 @@ func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implementar integração com wameow para listar contatos
-	// Por enquanto, simular resposta
-	contacts := []ContactInfo{
-		{
-			JID:          "5511999999999@s.whatsapp.net",
-			Name:         "João Silva",
-			PushName:     "João",
-			PhoneNumber:  "5511999999999",
-			IsBusiness:   false,
-			IsMyContact:  true,
-			IsOnWhatsApp: true,
-		},
-		{
-			JID:          "5511888888888@s.whatsapp.net",
-			Name:         "Maria Santos",
-			PushName:     "Maria",
-			PhoneNumber:  "5511888888888",
-			IsBusiness:   true,
-			IsMyContact:  true,
-			IsOnWhatsApp: true,
-		},
+	// Criar request para o service
+	req := &dto.ListContactsRequest{
+		Limit:  limit,
+		Offset: offset,
 	}
 
-	response := ListContactsResponse{
-		Contacts: contacts,
-		Total:    len(contacts),
-		Limit:    limit,
-		Offset:   offset,
+	// Chamar service
+	response, err := h.contactService.ListContacts(r.Context(), sessionID, req)
+	if err != nil {
+		h.GetLogger().ErrorWithFields("Failed to list contacts", map[string]interface{}{
+			"session_id": sessionID,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to list contacts")
+		return
 	}
 
 	h.LogSuccess("list contacts", map[string]interface{}{
 		"session_id":   sessionID,
 		"session_name": session.Session.Name,
 		"total":        response.Total,
-		"returned":     len(contacts),
+		"returned":     len(response.Contacts),
 		"limit":        limit,
 		"offset":       offset,
 		"search":       search,
 	})
 
-	h.GetWriter().WriteSuccess(w, response, "Contacts retrieved successfully")
+	h.GetWriter().WriteSuccess(w, response, response.Message)
 }
 
 // SyncContacts sincroniza contatos do dispositivo
@@ -438,23 +414,30 @@ func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implementar integração com wameow para sincronizar contatos
-	// Por enquanto, simular resposta
-	response := SyncContactsResponse{
-		SyncedContacts: 150,
-		TotalContacts:  150,
-		Status:         "completed",
-		Message:        "Contacts synchronized successfully",
+	// Criar request para o service
+	req := &dto.SyncContactsRequest{
+		Force: false, // Por padrão, não forçar
+	}
+
+	// Chamar service
+	response, err := h.contactService.SyncContacts(r.Context(), sessionID, req)
+	if err != nil {
+		h.GetLogger().ErrorWithFields("Failed to sync contacts", map[string]interface{}{
+			"session_id": sessionID,
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to sync contacts")
+		return
 	}
 
 	h.LogSuccess("sync contacts", map[string]interface{}{
 		"session_id":      sessionID,
 		"session_name":    session.Session.Name,
-		"synced_contacts": response.SyncedContacts,
+		"synced_contacts": response.SyncedCount,
 		"total_contacts":  response.TotalContacts,
 	})
 
-	h.GetWriter().WriteSuccess(w, response, "Contacts synchronized successfully")
+	h.GetWriter().WriteSuccess(w, response, response.Message)
 }
 
 // GetBusinessProfile busca perfil business de um contato

@@ -41,6 +41,7 @@ type WhatsAppGateway interface {
 	ConnectSession(ctx context.Context, sessionName string) error
 	DisconnectSession(ctx context.Context, sessionName string) error
 	DeleteSession(ctx context.Context, sessionName string) error
+	RestoreAllSessions(ctx context.Context, sessionNames []string) error
 
 	// Status e informações
 	IsSessionConnected(ctx context.Context, sessionName string) (bool, error)

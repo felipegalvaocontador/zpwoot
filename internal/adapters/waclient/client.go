@@ -73,7 +73,8 @@ type Client struct {
 	device *store.Device
 
 	// Dependencies
-	logger *logger.Logger
+	logger      *logger.Logger
+	qrGenerator *QRGenerator
 
 	// State management
 	mu            sync.RWMutex
@@ -131,6 +132,7 @@ func NewClient(sessionName string, container *sqlstore.Container, logger *logger
 		client:        whatsmeowClient,
 		device:        deviceStore,
 		logger:        logger,
+		qrGenerator:   NewQRGenerator(logger),
 		status:        "disconnected",
 		lastActivity:  time.Now(),
 		eventHandlers: make([]func(interface{}), 0),

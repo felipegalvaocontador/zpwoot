@@ -145,6 +145,21 @@ func (s *Service) ListConnectedSessions(ctx context.Context) ([]*Session, error)
 	return sessions, nil
 }
 
+// GetAllSessionNames retorna nomes de todas as sessões para restauração
+func (s *Service) GetAllSessionNames(ctx context.Context) ([]string, error) {
+	sessions, err := s.repository.List(ctx, 1000, 0) // Buscar todas as sessões
+	if err != nil {
+		return nil, fmt.Errorf("failed to list sessions: %w", err)
+	}
+
+	names := make([]string, len(sessions))
+	for i, session := range sessions {
+		names[i] = session.Name
+	}
+
+	return names, nil
+}
+
 // ConnectSession inicia conexão de uma sessão
 func (s *Service) ConnectSession(ctx context.Context, id uuid.UUID) error {
 	session, err := s.repository.GetByID(ctx, id)

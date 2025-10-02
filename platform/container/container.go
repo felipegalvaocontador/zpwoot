@@ -173,6 +173,23 @@ func (c *Container) initialize() error {
 	return nil
 }
 
+// Start inicia os componentes do container
+func (c *Container) Start(ctx context.Context) error {
+	c.logger.Info("Starting container components...")
+
+	// Restaurar sessões existentes do banco de dados
+	if err := c.sessionService.RestoreAllSessions(ctx); err != nil {
+		c.logger.ErrorWithFields("Failed to restore sessions", map[string]interface{}{
+			"error": err.Error(),
+		})
+		// Não falhar a inicialização por causa disso
+		// As sessões podem ser restauradas individualmente quando necessário
+	}
+
+	c.logger.Info("Container components started successfully")
+	return nil
+}
+
 // ===== MÉTODOS PÚBLICOS =====
 
 // GetConfig retorna a configuração da aplicação
@@ -211,21 +228,6 @@ func (c *Container) GetWhatsAppGateway() session.WhatsAppGateway {
 }
 
 // ===== LIFECYCLE METHODS =====
-
-// Start inicia todos os componentes que precisam de inicialização
-func (c *Container) Start(ctx context.Context) error {
-	c.logger.Info("Starting container components...")
-
-	// Iniciar WhatsApp gateway se necessário
-	if starter, ok := c.whatsappGateway.(interface{ Start(context.Context) error }); ok {
-		if err := starter.Start(ctx); err != nil {
-			return fmt.Errorf("failed to start WhatsApp gateway: %w", err)
-		}
-	}
-
-	c.logger.Info("Container components started successfully")
-	return nil
-}
 
 // Stop para todos os componentes gracefully
 func (c *Container) Stop(ctx context.Context) error {

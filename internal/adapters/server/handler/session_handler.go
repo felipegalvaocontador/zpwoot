@@ -164,10 +164,10 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 func (h *SessionHandler) GetSessionInfo(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get session info")
 
-	// Extrair session ID da URL
-	sessionID, err := h.GetSessionIDFromURL(r)
+	// Resolver identificador da sessão
+	sessionID, sessionIdentifier, err := h.resolveSessionIdentifier(r)
 	if err != nil {
-		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
+		h.GetWriter().WriteBadRequest(w, "Session not found", err.Error())
 		return
 	}
 
@@ -180,7 +180,8 @@ func (h *SessionHandler) GetSessionInfo(w http.ResponseWriter, r *http.Request) 
 
 	// Log sucesso
 	h.LogSuccess("get session info", map[string]interface{}{
-		"session_id": sessionID.String(),
+		"session_identifier": sessionIdentifier,
+		"session_id":         sessionID.String(),
 	})
 
 	// Resposta de sucesso
@@ -238,10 +239,10 @@ func (h *SessionHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 func (h *SessionHandler) ConnectSession(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "connect session")
 
-	// Extrair session ID da URL
-	sessionID, err := h.GetSessionIDFromURL(r)
+	// Resolver identificador da sessão
+	sessionID, sessionIdentifier, err := h.resolveSessionIdentifier(r)
 	if err != nil {
-		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
+		h.GetWriter().WriteBadRequest(w, "Session not found", err.Error())
 		return
 	}
 
@@ -254,9 +255,10 @@ func (h *SessionHandler) ConnectSession(w http.ResponseWriter, r *http.Request) 
 
 	// Log sucesso
 	h.LogSuccess("connect session", map[string]interface{}{
-		"session_id": sessionID.String(),
-		"success":    response.Success,
-		"has_qr":     response.QRCode != "",
+		"session_identifier": sessionIdentifier,
+		"session_id":         sessionID.String(),
+		"success":            response.Success,
+		"has_qr":             response.QRCode != "",
 	})
 
 	// Resposta de sucesso

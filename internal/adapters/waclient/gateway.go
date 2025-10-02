@@ -134,12 +134,27 @@ func (g *Gateway) ConnectSession(ctx context.Context, sessionName string) error 
 
 	client := g.getClient(sessionName)
 	if client == nil {
-		// Criar sessão se não existe
-		err := g.CreateSession(ctx, sessionName)
+		g.logger.InfoWithFields("Client not found in memory, attempting to restore", map[string]interface{}{
+			"session_name": sessionName,
+		})
+
+		// Restaurar cliente para sessão existente
+		err := g.RestoreSession(ctx, sessionName)
 		if err != nil {
-			return fmt.Errorf("failed to create session %s: %w", sessionName, err)
+			g.logger.ErrorWithFields("Failed to restore session", map[string]interface{}{
+				"session_name": sessionName,
+				"error":        err.Error(),
+			})
+			return fmt.Errorf("failed to restore session %s: %w", sessionName, err)
 		}
 		client = g.getClient(sessionName)
+
+		if client == nil {
+			g.logger.ErrorWithFields("Client still not found after restore attempt", map[string]interface{}{
+				"session_name": sessionName,
+			})
+			return fmt.Errorf("failed to restore client for session %s", sessionName)
+		}
 	}
 
 	// Verificar se já está conectado
@@ -161,6 +176,67 @@ func (g *Gateway) ConnectSession(ctx context.Context, sessionName string) error 
 
 	g.logger.InfoWithFields("Session connection initiated", map[string]interface{}{
 		"session_name": sessionName,
+	})
+
+	return nil
+}
+
+// RestoreSession restaura um cliente WhatsApp para uma sessão existente
+func (g *Gateway) RestoreSession(ctx context.Context, sessionName string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	// Verificar se cliente já existe na memória
+	if _, exists := g.clients[sessionName]; exists {
+		g.logger.DebugWithFields("Session client already exists in memory", map[string]interface{}{
+			"session_name": sessionName,
+		})
+		return nil
+	}
+
+	g.logger.InfoWithFields("Restoring WhatsApp session client", map[string]interface{}{
+		"session_name": sessionName,
+	})
+
+	// Criar cliente WhatsApp (mesmo processo do CreateSession)
+	client, err := NewClient(sessionName, g.container, g.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create WhatsApp client: %w", err)
+	}
+
+	// Configurar event handlers
+	g.setupEventHandlers(client, sessionName)
+
+	// Armazenar cliente
+	g.clients[sessionName] = client
+
+	g.logger.InfoWithFields("WhatsApp session client restored successfully", map[string]interface{}{
+		"session_name": sessionName,
+	})
+
+	return nil
+}
+
+// RestoreAllSessions restaura clientes WhatsApp para todas as sessões do banco
+func (g *Gateway) RestoreAllSessions(ctx context.Context, sessionNames []string) error {
+	g.logger.InfoWithFields("Restoring WhatsApp clients for existing sessions", map[string]interface{}{
+		"session_count": len(sessionNames),
+	})
+
+	for _, sessionName := range sessionNames {
+		err := g.RestoreSession(ctx, sessionName)
+		if err != nil {
+			g.logger.ErrorWithFields("Failed to restore session", map[string]interface{}{
+				"session_name": sessionName,
+				"error":        err.Error(),
+			})
+			// Continuar com outras sessões mesmo se uma falhar
+			continue
+		}
+	}
+
+	g.logger.InfoWithFields("Session restoration completed", map[string]interface{}{
+		"session_count": len(sessionNames),
 	})
 
 	return nil

@@ -190,6 +190,41 @@ func (s *SessionService) ResolveSessionID(ctx context.Context, idOrName string) 
 	return sess.ID, nil
 }
 
+// RestoreAllSessions restaura clientes WhatsApp para todas as sessões do banco
+func (s *SessionService) RestoreAllSessions(ctx context.Context) error {
+	s.logger.Info("Starting session restoration process")
+
+	// Obter nomes de todas as sessões do banco
+	sessionNames, err := s.coreService.GetAllSessionNames(ctx)
+	if err != nil {
+		s.logger.ErrorWithFields("Failed to get session names for restoration", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return fmt.Errorf("failed to get session names: %w", err)
+	}
+
+	if len(sessionNames) == 0 {
+		s.logger.Info("No sessions found to restore")
+		return nil
+	}
+
+	// Restaurar clientes WhatsApp no gateway
+	err = s.gateway.RestoreAllSessions(ctx, sessionNames)
+	if err != nil {
+		s.logger.ErrorWithFields("Failed to restore sessions in gateway", map[string]interface{}{
+			"session_count": len(sessionNames),
+			"error":         err.Error(),
+		})
+		return fmt.Errorf("failed to restore sessions: %w", err)
+	}
+
+	s.logger.InfoWithFields("Session restoration completed successfully", map[string]interface{}{
+		"restored_sessions": len(sessionNames),
+	})
+
+	return nil
+}
+
 // DeleteSessionByNameOrID deleta uma sessão por nome ou UUID
 func (s *SessionService) DeleteSessionByNameOrID(ctx context.Context, idOrName string) error {
 	// Resolver para UUID

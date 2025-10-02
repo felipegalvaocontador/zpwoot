@@ -440,7 +440,21 @@ func (s *Service) validateProxyConfig(proxy *ProxyConfig) error {
 
 // initiateConnection inicia processo de conexão
 func (s *Service) initiateConnection(ctx context.Context, session *Session) error {
-	// Configurar proxy se necessário
+	// Verificar se sessão existe no gateway, se não, restaurar primeiro
+	sessionExists := s.gateway.SessionExists(session.Name)
+	if !sessionExists {
+		// Registrar UUID da sessão ANTES da restauração
+		s.gateway.RegisterSessionUUID(session.Name, session.ID.String())
+
+		// Restaurar sessão no gateway
+		if err := s.gateway.RestoreSession(ctx, session.Name); err != nil {
+			session.SetConnectionError(err.Error())
+			_ = s.repository.Update(ctx, session)
+			return fmt.Errorf("failed to restore session: %w", err)
+		}
+	}
+
+	// Configurar proxy se necessário (após garantir que sessão existe)
 	if session.ProxyConfig != nil {
 		if err := s.gateway.SetProxy(ctx, session.Name, session.ProxyConfig); err != nil {
 			return fmt.Errorf("failed to set proxy: %w", err)

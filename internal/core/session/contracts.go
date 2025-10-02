@@ -44,8 +44,10 @@ type WhatsAppGateway interface {
 	ConnectSession(ctx context.Context, sessionName string) error
 	DisconnectSession(ctx context.Context, sessionName string) error
 	DeleteSession(ctx context.Context, sessionName string) error
+	RestoreSession(ctx context.Context, sessionName string) error // Restaura sessão individual
 	RestoreAllSessions(ctx context.Context, sessionNames []string) error
 	RegisterSessionUUID(sessionName, sessionUUID string) // Registra mapeamento nome -> UUID
+	SessionExists(sessionName string) bool               // Verifica se sessão existe no gateway
 
 	// Status e informações
 	IsSessionConnected(ctx context.Context, sessionName string) (bool, error)

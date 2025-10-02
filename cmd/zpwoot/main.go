@@ -29,6 +29,8 @@ import (
 	"syscall"
 	"time"
 
+	"zpwoot/internal/adapters/server/contracts"
+	"zpwoot/internal/services"
 	"zpwoot/platform/config"
 	"zpwoot/platform/container"
 	"zpwoot/platform/database"
@@ -126,6 +128,9 @@ func main() {
 		}
 	}()
 
+	// Iniciar reconexão automática em goroutine separada
+	go connectOnStartup(diContainer, log)
+
 	// Aguardar sinal de parada ou erro
 	select {
 	case sig := <-sigChan:
@@ -158,6 +163,135 @@ func main() {
 	}
 
 	log.Info("Application shutdown completed successfully")
+}
+
+// connectOnStartup reconnects existing sessions automatically on startup
+func connectOnStartup(container *container.Container, logger *logger.Logger) {
+	const (
+		startupDelay     = 3 * time.Second
+		operationTimeout = 60 * time.Second
+		sessionLimit     = 100
+		reconnectDelay   = 1 * time.Second
+	)
+
+	time.Sleep(startupDelay)
+	logger.Info("Starting automatic reconnection of existing sessions")
+
+	sessionService := container.GetSessionService()
+	if sessionService == nil {
+		logger.Error("SessionService not available, skipping auto-connect")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
+	defer cancel()
+
+	// Buscar sessões existentes que têm deviceJID (credenciais)
+	sessions := getExistingSessions(ctx, sessionService, sessionLimit, logger)
+	if len(sessions) == 0 {
+		logger.Info("No existing sessions with credentials found, skipping auto-connect")
+		return
+	}
+
+	logger.InfoWithFields("Starting auto-reconnect", map[string]interface{}{
+		"total_sessions": len(sessions),
+	})
+
+	stats := reconnectSessions(ctx, sessions, sessionService, logger, reconnectDelay)
+
+	logger.InfoWithFields("Auto-reconnect completed", map[string]interface{}{
+		"connected": stats.connected,
+		"skipped":   stats.skipped,
+		"failed":    stats.failed,
+	})
+}
+
+// getExistingSessions returns sessions that have saved credentials
+func getExistingSessions(ctx context.Context, sessionService *services.SessionService, limit int, logger *logger.Logger) []sessionInfo {
+	req := &contracts.ListSessionsRequest{
+		Limit:  limit,
+		Offset: 0,
+	}
+
+	response, err := sessionService.ListSessions(ctx, req)
+	if err != nil {
+		logger.ErrorWithFields("Failed to list sessions", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil
+	}
+
+	var sessionsWithCredentials []sessionInfo
+	for _, sessionResponse := range response.Sessions {
+		session := sessionResponse.Session
+		if session.DeviceJID != "" {
+			sessionsWithCredentials = append(sessionsWithCredentials, sessionInfo{
+				ID:        session.ID,
+				Name:      session.Name,
+				DeviceJID: session.DeviceJID,
+			})
+		}
+	}
+
+	if len(sessionsWithCredentials) > 0 {
+		logger.InfoWithFields("Found sessions with credentials", map[string]interface{}{
+			"sessions_with_creds": len(sessionsWithCredentials),
+		})
+	}
+
+	return sessionsWithCredentials
+}
+
+// reconnectSessions attempts to reconnect existing sessions
+func reconnectSessions(ctx context.Context, sessions []sessionInfo, sessionService *services.SessionService, logger *logger.Logger, delay time.Duration) reconnectStats {
+	stats := reconnectStats{}
+
+	for _, session := range sessions {
+		select {
+		case <-ctx.Done():
+			logger.Warn("Auto-reconnect cancelled due to timeout")
+			return stats
+		default:
+		}
+
+		result, err := sessionService.ConnectSession(ctx, session.ID)
+		if err != nil {
+			logger.ErrorWithFields("Failed to reconnect session", map[string]interface{}{
+				"session_name": session.Name,
+				"error":        err.Error(),
+			})
+			stats.failed++
+		} else if result.Success {
+			if result.QRCode != "" {
+				stats.skipped++
+			} else {
+				logger.InfoWithFields("Session reconnected successfully", map[string]interface{}{
+					"session_name": session.Name,
+				})
+				stats.connected++
+			}
+		} else {
+			stats.failed++
+		}
+
+		if delay > 0 {
+			time.Sleep(delay)
+		}
+	}
+
+	return stats
+}
+
+type sessionInfo struct {
+	ID        string
+	Name      string
+	DeviceJID string
+}
+
+type reconnectStats struct {
+	connected int
+	skipped   int
+	failed    int
 }
 
 // runMigrations executa as migrações do banco de dados

@@ -156,6 +156,58 @@ func NewClient(sessionName string, container *sqlstore.Container, logger *logger
 	return client, nil
 }
 
+// NewClientWithDevice cria cliente WhatsApp com device existente
+func NewClientWithDevice(sessionName string, deviceStore *store.Device, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
+	if sessionName == "" {
+		return nil, fmt.Errorf("session name cannot be empty")
+	}
+
+	if deviceStore == nil {
+		return nil, fmt.Errorf("device store cannot be nil")
+	}
+
+	if container == nil {
+		return nil, fmt.Errorf("sqlstore container cannot be nil")
+	}
+
+	// Criar logger compatível com whatsmeow
+	waLogger := NewWhatsmeowLogger(logger)
+
+	// Criar cliente whatsmeow com device existente
+	whatsmeowClient := whatsmeow.NewClient(deviceStore, waLogger)
+
+	// Criar contexto para gerenciamento de lifecycle
+	ctx, cancel := context.WithCancel(context.Background())
+
+	client := &Client{
+		sessionName:   sessionName,
+		client:        whatsmeowClient,
+		device:        deviceStore,
+		logger:        logger,
+		qrGenerator:   NewQRGenerator(logger),
+		status:        "disconnected",
+		lastActivity:  time.Now(),
+		eventHandlers: make([]func(interface{}), 0),
+		ctx:           ctx,
+		cancel:        cancel,
+	}
+
+	// Configurar event handlers
+	client.setupEventHandlers()
+
+	deviceID := "nil"
+	if deviceStore.ID != nil {
+		deviceID = deviceStore.ID.String()
+	}
+
+	logger.InfoWithFields("WhatsApp client created with existing device", map[string]interface{}{
+		"session_name": sessionName,
+		"device_id":    deviceID,
+	})
+
+	return client, nil
+}
+
 // Connect conecta o cliente ao WhatsApp baseado no legacy
 func (c *Client) Connect() error {
 	c.logger.InfoWithFields("Starting connection process", map[string]interface{}{

@@ -2,6 +2,7 @@ package waclient
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"sync"
@@ -75,11 +76,30 @@ type BusinessProfile struct {
 	Address      string `json:"address,omitempty"`
 }
 
+// SessionServiceExtended interface estendida para operações de sessão
+type SessionServiceExtended interface {
+	SessionService // Herda métodos existentes
+	GetSession(ctx context.Context, sessionID string) (*SessionInfoResponse, error)
+}
+
+// SessionInfoResponse representa informações de uma sessão (DTO simplificado)
+type SessionInfoResponse struct {
+	Session *SessionDTO `json:"session"`
+}
+
+// SessionDTO representa uma sessão (DTO simplificado)
+type SessionDTO struct {
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	DeviceJID *string `json:"deviceJid"`
+}
+
 // Gateway implementa session.WhatsAppGateway para integração com whatsmeow
 type Gateway struct {
 	// Dependencies
 	logger    *logger.Logger
 	container *sqlstore.Container
+	db        DatabaseInterface // Interface para consultas SQL diretas
 
 	// Internal state
 	clients       map[string]*Client
@@ -92,7 +112,12 @@ type Gateway struct {
 	chatwootManager ChatwootManager
 
 	// Session service for database updates
-	sessionService SessionService
+	sessionService SessionServiceExtended
+}
+
+// DatabaseInterface interface para consultas SQL diretas
+type DatabaseInterface interface {
+	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
 // NewGateway cria nova instância do gateway WhatsApp
@@ -104,6 +129,24 @@ func NewGateway(container *sqlstore.Container, logger *logger.Logger) *Gateway {
 		eventHandlers: make(map[string][]session.EventHandler),
 		sessionUUIDs:  make(map[string]string),
 	}
+}
+
+// SetDatabase configura o database para consultas SQL diretas
+func (g *Gateway) SetDatabase(db DatabaseInterface) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.db = db
+}
+
+// SetSessionService configura o session service para operações de banco
+func (g *Gateway) SetSessionService(service SessionServiceExtended) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.sessionService = service
+
+	g.logger.InfoWithFields("SessionService configured for gateway", map[string]interface{}{
+		"service_configured": service != nil,
+	})
 }
 
 // RegisterSessionUUID registra o mapeamento entre nome da sessão e UUID
@@ -118,16 +161,19 @@ func (g *Gateway) RegisterSessionUUID(sessionName, sessionUUID string) {
 	})
 }
 
+// SessionExists verifica se uma sessão existe no gateway
+func (g *Gateway) SessionExists(sessionName string) bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	_, exists := g.clients[sessionName]
+	return exists
+}
+
 // GetSessionUUID obtém o UUID da sessão pelo nome
 func (g *Gateway) GetSessionUUID(sessionName string) string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.sessionUUIDs[sessionName]
-}
-
-// SetSessionService configura o session service para atualizações no banco
-func (g *Gateway) SetSessionService(service SessionService) {
-	g.sessionService = service
 }
 
 // CreateSession cria uma nova sessão WhatsApp
@@ -225,9 +271,6 @@ func (g *Gateway) RestoreSession(ctx context.Context, sessionName string) error 
 
 	// Verificar se cliente já existe na memória
 	if _, exists := g.clients[sessionName]; exists {
-		g.logger.DebugWithFields("Session client already exists in memory", map[string]interface{}{
-			"session_name": sessionName,
-		})
 		return nil
 	}
 
@@ -235,8 +278,30 @@ func (g *Gateway) RestoreSession(ctx context.Context, sessionName string) error 
 		"session_name": sessionName,
 	})
 
-	// Criar cliente WhatsApp (mesmo processo do CreateSession)
-	client, err := NewClient(sessionName, g.container, g.logger)
+	// Buscar deviceJID da sessão no banco para carregar device existente
+	sessionUUID, exists := g.sessionUUIDs[sessionName]
+	if !exists {
+		g.logger.ErrorWithFields("Session UUID not found in mapping", map[string]interface{}{
+			"session_name":     sessionName,
+			"available_uuids":  len(g.sessionUUIDs),
+			"registered_names": func() []string {
+				names := make([]string, 0, len(g.sessionUUIDs))
+				for name := range g.sessionUUIDs {
+					names = append(names, name)
+				}
+				return names
+			}(),
+		})
+		return fmt.Errorf("session UUID not found for session %s", sessionName)
+	}
+
+	g.logger.InfoWithFields("Found session UUID for restoration", map[string]interface{}{
+		"session_name": sessionName,
+		"session_uuid": sessionUUID,
+	})
+
+	// Criar cliente WhatsApp com device existente
+	client, err := g.newClientWithExistingDevice(sessionName, sessionUUID)
 	if err != nil {
 		return fmt.Errorf("failed to create WhatsApp client: %w", err)
 	}
@@ -252,6 +317,90 @@ func (g *Gateway) RestoreSession(ctx context.Context, sessionName string) error 
 	})
 
 	return nil
+}
+
+// newClientWithExistingDevice cria cliente WhatsApp carregando device existente
+func (g *Gateway) newClientWithExistingDevice(sessionName, sessionUUID string) (*Client, error) {
+	g.logger.InfoWithFields("Starting device restoration", map[string]interface{}{
+		"session_name": sessionName,
+		"session_uuid": sessionUUID,
+	})
+
+	// Buscar deviceJID do banco de dados
+	deviceJID, err := g.getDeviceJIDFromDatabase(sessionUUID)
+	if err != nil {
+		g.logger.WarnWithFields("Failed to get deviceJID from database, creating new device", map[string]interface{}{
+			"session_name": sessionName,
+			"error":        err.Error(),
+		})
+		return NewClient(sessionName, g.container, g.logger)
+	}
+
+	// Se não tem deviceJID, criar novo device
+	if deviceJID == "" {
+		g.logger.InfoWithFields("No deviceJID found, creating new device", map[string]interface{}{
+			"session_name": sessionName,
+		})
+		return NewClient(sessionName, g.container, g.logger)
+	}
+
+	// Carregar device existente pelo deviceJID
+	g.logger.InfoWithFields("Loading existing device from credentials", map[string]interface{}{
+		"session_name": sessionName,
+		"device_jid":   deviceJID,
+	})
+
+	client, err := g.newClientWithDeviceJID(sessionName, deviceJID)
+	if err != nil {
+		g.logger.WarnWithFields("Failed to load existing device, creating new one", map[string]interface{}{
+			"session_name": sessionName,
+			"error":        err.Error(),
+		})
+		return NewClient(sessionName, g.container, g.logger)
+	}
+
+	return client, nil
+}
+
+// getDeviceJIDFromDatabase busca deviceJID diretamente do banco de dados
+func (g *Gateway) getDeviceJIDFromDatabase(sessionUUID string) (string, error) {
+	if g.db == nil {
+		return "", fmt.Errorf("database not configured")
+	}
+
+	// Query SQL direta para buscar deviceJid da sessão
+	query := `SELECT "deviceJid" FROM "zpSessions" WHERE "id" = $1`
+
+	var deviceJID *string
+	err := g.db.QueryRow(query, sessionUUID).Scan(&deviceJID)
+	if err != nil {
+		return "", fmt.Errorf("failed to query deviceJID: %w", err)
+	}
+
+	if deviceJID == nil {
+		return "", nil
+	}
+
+	return *deviceJID, nil
+}
+
+// newClientWithDeviceJID cria cliente com device existente
+func (g *Gateway) newClientWithDeviceJID(sessionName, deviceJID string) (*Client, error) {
+	jid, err := types.ParseJID(deviceJID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid device JID format: %w", err)
+	}
+
+	deviceStore, err := g.container.GetDevice(context.Background(), jid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get device from store: %w", err)
+	}
+
+	if deviceStore == nil {
+		return nil, fmt.Errorf("device not found in store")
+	}
+
+	return NewClientWithDevice(sessionName, deviceStore, g.container, g.logger)
 }
 
 // RestoreAllSessions restaura clientes WhatsApp para todas as sessões do banco

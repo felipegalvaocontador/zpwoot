@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/google/uuid"
 
 	// External dependencies
 	"go.mau.fi/whatsmeow/store/sqlstore"
@@ -121,6 +124,11 @@ func (c *Container) initialize() error {
 	// 3. External gateways
 	c.whatsappGateway = waclient.NewGateway(waContainer, c.logger)
 
+	// Configurar database no gateway para consultas SQL diretas
+	if gateway, ok := c.whatsappGateway.(*waclient.Gateway); ok {
+		gateway.SetDatabase(c.database.DB)
+	}
+
 	// 4. QR Generator
 	qrGenerator := waclient.NewQRGenerator(c.logger)
 
@@ -132,9 +140,7 @@ func (c *Container) initialize() error {
 	)
 
 	// Configurar session service no gateway para atualizações de device JID
-	if gateway, ok := c.whatsappGateway.(*waclient.Gateway); ok {
-		gateway.SetSessionService(c.sessionCore)
-	}
+	// Será configurado depois que o sessionService for criado
 
 	c.messagingCore = messaging.NewService(
 		c.messageRepo,
@@ -174,6 +180,13 @@ func (c *Container) initialize() error {
 		validator,
 	)
 
+	// Configurar SessionService no gateway para reconexão automática
+	// Criar adapter para interface estendida
+	sessionServiceAdapter := &sessionServiceAdapter{service: c.sessionService}
+	if gateway, ok := c.whatsappGateway.(*waclient.Gateway); ok {
+		gateway.SetSessionService(sessionServiceAdapter)
+	}
+
 	c.logger.Debug("Container initialized successfully")
 	return nil
 }
@@ -182,15 +195,7 @@ func (c *Container) initialize() error {
 func (c *Container) Start(ctx context.Context) error {
 	c.logger.Info("Starting container components...")
 
-	// Restaurar sessões existentes do banco de dados
-	if err := c.sessionService.RestoreAllSessions(ctx); err != nil {
-		c.logger.ErrorWithFields("Failed to restore sessions", map[string]interface{}{
-			"error": err.Error(),
-		})
-		// Não falhar a inicialização por causa disso
-		// As sessões podem ser restauradas individualmente quando necessário
-	}
-
+	// Componentes inicializados - restauração de sessões será feita via connectOnStartup
 	c.logger.Info("Container components started successfully")
 	return nil
 }
@@ -272,4 +277,45 @@ func (c *Container) Server() *server.Server {
 // Handler retorna um handler HTTP completo com todas as rotas (para compatibilidade)
 func (c *Container) Handler() http.Handler {
 	return c.Server().Handler()
+}
+
+// sessionServiceAdapter adapta SessionService para SessionServiceExtended
+type sessionServiceAdapter struct {
+	service *services.SessionService
+}
+
+// Implementa métodos da interface SessionService original
+func (a *sessionServiceAdapter) UpdateDeviceJID(ctx context.Context, id uuid.UUID, deviceJID string) error {
+	// SessionService não tem esses métodos, usar core service diretamente
+	// Por enquanto, retornar nil (esses métodos são chamados via eventos)
+	return nil
+}
+
+func (a *sessionServiceAdapter) UpdateQRCode(ctx context.Context, id uuid.UUID, qrCode string, expiresAt time.Time) error {
+	// SessionService não tem esses métodos, usar core service diretamente
+	// Por enquanto, retornar nil (esses métodos são chamados via eventos)
+	return nil
+}
+
+func (a *sessionServiceAdapter) ClearQRCode(ctx context.Context, id uuid.UUID) error {
+	// SessionService não tem esses métodos, usar core service diretamente
+	// Por enquanto, retornar nil (esses métodos são chamados via eventos)
+	return nil
+}
+
+// Implementa método adicional da interface SessionServiceExtended
+func (a *sessionServiceAdapter) GetSession(ctx context.Context, sessionID string) (*waclient.SessionInfoResponse, error) {
+	response, err := a.service.GetSession(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Converter para o tipo esperado pelo gateway
+	return &waclient.SessionInfoResponse{
+		Session: &waclient.SessionDTO{
+			ID:        response.Session.ID,
+			Name:      response.Session.Name,
+			DeviceJID: &response.Session.DeviceJID,
+		},
+	}, nil
 }

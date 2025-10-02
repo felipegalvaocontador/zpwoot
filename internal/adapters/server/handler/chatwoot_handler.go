@@ -204,18 +204,7 @@ func (h *ChatwootHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration retrieved successfully")
 }
 
-// UpdateConfig atualiza a configuração do Chatwoot
-// @Summary Update Chatwoot configuration
-// @Description Update the Chatwoot configuration for the session
-// @Tags Chatwoot
-// @Accept json
-// @Produce json
-// @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse
-// @Failure 400 {object} shared.SuccessResponse
-// @Failure 404 {object} shared.SuccessResponse
-// @Failure 500 {object} shared.SuccessResponse
-// @Router /sessions/{sessionId}/chatwoot [put]
+// UpdateConfig atualiza a configuração do Chatwoot (método interno - não documentado no Swagger)
 func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "update chatwoot config")
 

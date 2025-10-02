@@ -18,9 +18,55 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
-        "/chatwoot/webhook/{sessionId}": {
+        "/chatwoot/find": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Find the current Chatwoot configuration for the session",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chatwoot"
+                ],
+                "summary": "Find Chatwoot configuration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SuccessResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/SuccessResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chatwoot/set": {
             "post": {
-                "description": "Process incoming webhook from Chatwoot",
+                "description": "Create a new Chatwoot configuration for the session",
                 "consumes": [
                     "application/json"
                 ],
@@ -30,7 +76,7 @@
                 "tags": [
                     "Chatwoot"
                 ],
-                "summary": "Receive Chatwoot webhook",
+                "summary": "Create Chatwoot configuration",
                 "parameters": [
                     {
                         "type": "string",
@@ -38,15 +84,6 @@
                         "name": "sessionId",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "description": "Webhook payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_adapters_server_handler.ChatwootWebhookPayload"
-                        }
                     }
                 ],
                 "responses": {
@@ -262,316 +299,6 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/sessions/{sessionId}/chatwoot": {
-            "get": {
-                "description": "Get the current Chatwoot configuration for the session",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Chatwoot"
-                ],
-                "summary": "Get Chatwoot configuration",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "Update the Chatwoot configuration for the session",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Chatwoot"
-                ],
-                "summary": "Update Chatwoot configuration",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Delete the Chatwoot configuration for the session",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Chatwoot"
-                ],
-                "summary": "Delete Chatwoot configuration",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/sessions/{sessionId}/chatwoot/auto-create-inbox": {
-            "post": {
-                "description": "Automatically create an inbox in Chatwoot for the session",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Chatwoot"
-                ],
-                "summary": "Auto-create Chatwoot inbox",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/sessions/{sessionId}/chatwoot/set": {
-            "post": {
-                "description": "Create a new Chatwoot configuration for the session",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Chatwoot"
-                ],
-                "summary": "Create Chatwoot configuration",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/sessions/{sessionId}/chatwoot/stats": {
-            "get": {
-                "description": "Get statistics for Chatwoot integration",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Chatwoot"
-                ],
-                "summary": "Get Chatwoot statistics",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/sessions/{sessionId}/chatwoot/test": {
-            "post": {
-                "description": "Test the connection to Chatwoot instance",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Chatwoot"
-                ],
-                "summary": "Test Chatwoot connection",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
                         }
                     }
                 }
@@ -5781,96 +5508,6 @@
                 },
                 "website": {
                     "type": "string"
-                }
-            }
-        },
-        "internal_adapters_server_handler.ChatwootAccount": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_server_handler.ChatwootContact": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "phone_number": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_server_handler.ChatwootConversation": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_server_handler.ChatwootInbox": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_server_handler.ChatwootMessage": {
-            "type": "object",
-            "properties": {
-                "content": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "message_type": {
-                    "type": "string"
-                },
-                "private": {
-                    "type": "boolean"
-                },
-                "sender_type": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_server_handler.ChatwootWebhookPayload": {
-            "type": "object",
-            "properties": {
-                "account": {
-                    "$ref": "#/definitions/internal_adapters_server_handler.ChatwootAccount"
-                },
-                "contact": {
-                    "$ref": "#/definitions/internal_adapters_server_handler.ChatwootContact"
-                },
-                "conversation": {
-                    "$ref": "#/definitions/internal_adapters_server_handler.ChatwootConversation"
-                },
-                "event": {
-                    "type": "string"
-                },
-                "inbox": {
-                    "$ref": "#/definitions/internal_adapters_server_handler.ChatwootInbox"
-                },
-                "message": {
-                    "$ref": "#/definitions/internal_adapters_server_handler.ChatwootMessage"
                 }
             }
         },

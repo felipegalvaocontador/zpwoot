@@ -78,12 +78,8 @@ func setupGlobalRoutes(r *chi.Mux, appLogger *logger.Logger) {
 		w.Write([]byte(`{"events":["message","session","contact","group"]}`))
 	})
 
-	// Global chatwoot webhook endpoint
-	r.Post("/chatwoot/webhook/{sessionId}", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"message":"Chatwoot webhook received"}`))
-	})
+	// Chatwoot webhook endpoint (interno - não documentado no Swagger)
+	// Movido para rotas internas se necessário
 }
 
 // setupMiddlewares configura todos os middlewares globais da aplicação

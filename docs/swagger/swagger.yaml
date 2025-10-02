@@ -913,64 +913,6 @@ definitions:
       website:
         type: string
     type: object
-  internal_adapters_server_handler.ChatwootAccount:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-    type: object
-  internal_adapters_server_handler.ChatwootContact:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-      phone_number:
-        type: string
-    type: object
-  internal_adapters_server_handler.ChatwootConversation:
-    properties:
-      id:
-        type: integer
-      status:
-        type: string
-    type: object
-  internal_adapters_server_handler.ChatwootInbox:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-    type: object
-  internal_adapters_server_handler.ChatwootMessage:
-    properties:
-      content:
-        type: string
-      id:
-        type: integer
-      message_type:
-        type: string
-      private:
-        type: boolean
-      sender_type:
-        type: string
-    type: object
-  internal_adapters_server_handler.ChatwootWebhookPayload:
-    properties:
-      account:
-        $ref: '#/definitions/internal_adapters_server_handler.ChatwootAccount'
-      contact:
-        $ref: '#/definitions/internal_adapters_server_handler.ChatwootContact'
-      conversation:
-        $ref: '#/definitions/internal_adapters_server_handler.ChatwootConversation'
-      event:
-        type: string
-      inbox:
-        $ref: '#/definitions/internal_adapters_server_handler.ChatwootInbox'
-      message:
-        $ref: '#/definitions/internal_adapters_server_handler.ChatwootMessage'
-    type: object
   internal_adapters_server_handler.CheckWhatsAppRequest:
     properties:
       phoneNumbers:
@@ -1390,77 +1332,12 @@ info:
   title: ZPWoot WhatsApp API
   version: 2.0.0
 paths:
-  /chatwoot/webhook/{sessionId}:
-    post:
-      consumes:
-      - application/json
-      description: Process incoming webhook from Chatwoot
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      - description: Webhook payload
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/internal_adapters_server_handler.ChatwootWebhookPayload'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      summary: Receive Chatwoot webhook
-      tags:
-      - Chatwoot
-  /sessions/{sessionId}/chatwoot:
-    delete:
-      description: Delete the Chatwoot configuration for the session
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      summary: Delete Chatwoot configuration
-      tags:
-      - Chatwoot
+  /chatwoot/find:
     get:
-      description: Get the current Chatwoot configuration for the session
+      description: Find the current Chatwoot configuration for the session
       parameters:
       - description: Session ID
-        in: path
+        in: query
         name: sessionId
         required: true
         type: string
@@ -1479,75 +1356,12 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/SuccessResponse'
-      summary: Get Chatwoot configuration
+      security:
+      - ApiKeyAuth: []
+      summary: Find Chatwoot configuration
       tags:
       - Chatwoot
-    put:
-      consumes:
-      - application/json
-      description: Update the Chatwoot configuration for the session
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      summary: Update Chatwoot configuration
-      tags:
-      - Chatwoot
-  /sessions/{sessionId}/chatwoot/auto-create-inbox:
-    post:
-      consumes:
-      - application/json
-      description: Automatically create an inbox in Chatwoot for the session
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      summary: Auto-create Chatwoot inbox
-      tags:
-      - Chatwoot
-  /sessions/{sessionId}/chatwoot/set:
+  /chatwoot/set:
     post:
       consumes:
       - application/json
@@ -1578,60 +1392,6 @@ paths:
           schema:
             $ref: '#/definitions/SuccessResponse'
       summary: Create Chatwoot configuration
-      tags:
-      - Chatwoot
-  /sessions/{sessionId}/chatwoot/stats:
-    get:
-      description: Get statistics for Chatwoot integration
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      summary: Get Chatwoot statistics
-      tags:
-      - Chatwoot
-  /sessions/{sessionId}/chatwoot/test:
-    post:
-      description: Test the connection to Chatwoot instance
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      summary: Test Chatwoot connection
       tags:
       - Chatwoot
   /sessions/{sessionId}/connect:

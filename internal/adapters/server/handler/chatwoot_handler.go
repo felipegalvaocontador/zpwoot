@@ -70,19 +70,7 @@ type ChatwootInbox struct {
 	Name string `json:"name"`
 }
 
-// ReceiveWebhook processa webhooks do Chatwoot
-// @Summary Receive Chatwoot webhook
-// @Description Process incoming webhook from Chatwoot
-// @Tags Chatwoot
-// @Accept json
-// @Produce json
-// @Param sessionId path string true "Session ID"
-// @Param payload body ChatwootWebhookPayload true "Webhook payload"
-// @Success 200 {object} shared.SuccessResponse
-// @Failure 400 {object} shared.SuccessResponse
-// @Failure 404 {object} shared.SuccessResponse
-// @Failure 500 {object} shared.SuccessResponse
-// @Router /chatwoot/webhook/{sessionId} [post]
+// ReceiveWebhook processa webhooks do Chatwoot (método interno - não documentado no Swagger)
 func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "receive chatwoot webhook")
 
@@ -304,16 +292,7 @@ func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot inbox created successfully")
 }
 
-// GetStats obtém estatísticas do Chatwoot
-// @Summary Get Chatwoot statistics
-// @Description Get statistics for Chatwoot integration
-// @Tags Chatwoot
-// @Produce json
-// @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse
-// @Failure 404 {object} shared.SuccessResponse
-// @Failure 500 {object} shared.SuccessResponse
-// @Router /sessions/{sessionId}/chatwoot/stats [get]
+// GetStats obtém estatísticas do Chatwoot (método interno - não documentado no Swagger)
 func (h *ChatwootHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get chatwoot stats")
 

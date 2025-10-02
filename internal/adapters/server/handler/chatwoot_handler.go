@@ -229,16 +229,7 @@ func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration updated successfully")
 }
 
-// DeleteConfig remove a configuração do Chatwoot
-// @Summary Delete Chatwoot configuration
-// @Description Delete the Chatwoot configuration for the session
-// @Tags Chatwoot
-// @Produce json
-// @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse
-// @Failure 404 {object} shared.SuccessResponse
-// @Failure 500 {object} shared.SuccessResponse
-// @Router /sessions/{sessionId}/chatwoot [delete]
+// DeleteConfig remove a configuração do Chatwoot (método interno - não documentado no Swagger)
 func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "delete chatwoot config")
 
@@ -263,16 +254,7 @@ func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration deleted successfully")
 }
 
-// TestConnection testa a conexão com o Chatwoot
-// @Summary Test Chatwoot connection
-// @Description Test the connection to Chatwoot instance
-// @Tags Chatwoot
-// @Produce json
-// @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse
-// @Failure 404 {object} shared.SuccessResponse
-// @Failure 500 {object} shared.SuccessResponse
-// @Router /sessions/{sessionId}/chatwoot/test [post]
+// TestConnection testa a conexão com o Chatwoot (método interno - não documentado no Swagger)
 func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "test chatwoot connection")
 
@@ -297,18 +279,7 @@ func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request)
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot connection test completed successfully")
 }
 
-// AutoCreateInbox cria automaticamente um inbox no Chatwoot
-// @Summary Auto-create Chatwoot inbox
-// @Description Automatically create an inbox in Chatwoot for the session
-// @Tags Chatwoot
-// @Accept json
-// @Produce json
-// @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse
-// @Failure 400 {object} shared.SuccessResponse
-// @Failure 404 {object} shared.SuccessResponse
-// @Failure 500 {object} shared.SuccessResponse
-// @Router /sessions/{sessionId}/chatwoot/auto-create-inbox [post]
+// AutoCreateInbox cria automaticamente um inbox no Chatwoot (método interno - não documentado no Swagger)
 func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "auto-create chatwoot inbox")
 

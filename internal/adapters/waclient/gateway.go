@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
@@ -17,6 +18,13 @@ import (
 	"zpwoot/internal/core/session"
 	"zpwoot/platform/logger"
 )
+
+// SessionService interface para atualizar dados da sessão
+type SessionService interface {
+	UpdateDeviceJID(ctx context.Context, id uuid.UUID, deviceJID string) error
+	UpdateQRCode(ctx context.Context, id uuid.UUID, qrCode string, expiresAt time.Time) error
+	ClearQRCode(ctx context.Context, id uuid.UUID) error
+}
 
 // ===== CONTACT TYPES =====
 
@@ -82,6 +90,9 @@ type Gateway struct {
 	// External integrations (baseado no legacy)
 	webhookHandler  WebhookEventHandler
 	chatwootManager ChatwootManager
+
+	// Session service for database updates
+	sessionService SessionService
 }
 
 // NewGateway cria nova instância do gateway WhatsApp
@@ -91,7 +102,32 @@ func NewGateway(container *sqlstore.Container, logger *logger.Logger) *Gateway {
 		container:     container,
 		clients:       make(map[string]*Client),
 		eventHandlers: make(map[string][]session.EventHandler),
+		sessionUUIDs:  make(map[string]string),
 	}
+}
+
+// RegisterSessionUUID registra o mapeamento entre nome da sessão e UUID
+func (g *Gateway) RegisterSessionUUID(sessionName, sessionUUID string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.sessionUUIDs[sessionName] = sessionUUID
+
+	g.logger.DebugWithFields("Session UUID registered", map[string]interface{}{
+		"session_name": sessionName,
+		"session_uuid": sessionUUID,
+	})
+}
+
+// GetSessionUUID obtém o UUID da sessão pelo nome
+func (g *Gateway) GetSessionUUID(sessionName string) string {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.sessionUUIDs[sessionName]
+}
+
+// SetSessionService configura o session service para atualizações no banco
+func (g *Gateway) SetSessionService(service SessionService) {
+	g.sessionService = service
 }
 
 // CreateSession cria uma nova sessão WhatsApp
@@ -471,7 +507,31 @@ func (g *Gateway) setupEventHandlers(client *Client, sessionName string) {
 
 	// Configurar handler no cliente whatsmeow
 	client.GetClient().AddEventHandler(func(evt interface{}) {
-		eventHandler.HandleEvent(evt, sessionName)
+		// Obter UUID da sessão para o event handler
+		sessionUUID := g.GetSessionUUID(sessionName)
+		if sessionUUID == "" {
+			// Fallback para sessionName se UUID não estiver registrado
+			sessionUUID = sessionName
+			g.logger.WarnWithFields("Session UUID not found, using session name", map[string]interface{}{
+				"session_name": sessionName,
+			})
+		}
+		eventHandler.HandleEvent(evt, sessionUUID)
+	})
+
+	// Registrar event handler no client para eventos customizados
+	client.AddEventHandler(func(evt interface{}) {
+		// Obter UUID da sessão para o event handler
+		sessionUUID := g.GetSessionUUID(sessionName)
+		if sessionUUID == "" {
+			// Fallback para sessionName se UUID não estiver registrado
+			sessionUUID = sessionName
+			g.logger.WarnWithFields("Session UUID not found for custom event, using session name", map[string]interface{}{
+				"session_name": sessionName,
+				"event_type":   fmt.Sprintf("%T", evt),
+			})
+		}
+		eventHandler.HandleEvent(evt, sessionUUID)
 	})
 
 	g.logger.DebugWithFields("Event handlers configured", map[string]interface{}{
@@ -676,6 +736,139 @@ func (g *Gateway) UpdateSessionStatus(sessionID, status string) error {
 	g.logger.DebugWithFields("Session status updated", map[string]interface{}{
 		"session_id": sessionID,
 		"new_status": status,
+	})
+
+	return nil
+}
+
+// UpdateSessionDeviceJID atualiza o device JID de uma sessão após pareamento bem-sucedido
+func (g *Gateway) UpdateSessionDeviceJID(sessionUUID, deviceJID string) error {
+	g.logger.InfoWithFields("Updating session device JID", map[string]interface{}{
+		"session_uuid": sessionUUID,
+		"device_jid":   deviceJID,
+	})
+
+	// Verificar se session service está configurado
+	if g.sessionService == nil {
+		g.logger.WarnWithFields("Session service not configured, skipping device JID update", map[string]interface{}{
+			"session_uuid": sessionUUID,
+			"device_jid":   deviceJID,
+		})
+		return nil
+	}
+
+	// Converter UUID string para uuid.UUID
+	id, err := uuid.Parse(sessionUUID)
+	if err != nil {
+		g.logger.ErrorWithFields("Invalid session UUID format", map[string]interface{}{
+			"session_uuid": sessionUUID,
+			"error":        err.Error(),
+		})
+		return fmt.Errorf("invalid session UUID: %w", err)
+	}
+
+	// Atualizar device JID no banco de dados
+	ctx := context.Background()
+	if err := g.sessionService.UpdateDeviceJID(ctx, id, deviceJID); err != nil {
+		g.logger.ErrorWithFields("Failed to update device JID in database", map[string]interface{}{
+			"session_uuid": sessionUUID,
+			"device_jid":   deviceJID,
+			"error":        err.Error(),
+		})
+		return fmt.Errorf("failed to update device JID: %w", err)
+	}
+
+	g.logger.InfoWithFields("Session device JID updated successfully", map[string]interface{}{
+		"session_uuid": sessionUUID,
+		"device_jid":   deviceJID,
+	})
+
+	return nil
+}
+
+// UpdateSessionQRCode atualiza o QR code de uma sessão no banco de dados
+func (g *Gateway) UpdateSessionQRCode(sessionUUID, qrCode string, expiresAt time.Time) error {
+	g.logger.InfoWithFields("Updating session QR code", map[string]interface{}{
+		"session_uuid": sessionUUID,
+		"qr_length":    len(qrCode),
+		"expires_at":   expiresAt,
+	})
+
+	// Verificar se session service está configurado
+	if g.sessionService == nil {
+		g.logger.WarnWithFields("Session service not configured, skipping QR code update", map[string]interface{}{
+			"session_uuid": sessionUUID,
+			"qr_length":    len(qrCode),
+		})
+		return nil
+	}
+
+	// Converter UUID string para uuid.UUID
+	id, err := uuid.Parse(sessionUUID)
+	if err != nil {
+		g.logger.ErrorWithFields("Invalid session UUID format", map[string]interface{}{
+			"session_uuid": sessionUUID,
+			"error":        err.Error(),
+		})
+		return fmt.Errorf("invalid session UUID: %w", err)
+	}
+
+	// Atualizar QR code no banco de dados
+	ctx := context.Background()
+	if err := g.sessionService.UpdateQRCode(ctx, id, qrCode, expiresAt); err != nil {
+		g.logger.ErrorWithFields("Failed to update QR code in database", map[string]interface{}{
+			"session_uuid": sessionUUID,
+			"qr_length":    len(qrCode),
+			"error":        err.Error(),
+		})
+		return fmt.Errorf("failed to update QR code: %w", err)
+	}
+
+	g.logger.InfoWithFields("Session QR code updated successfully", map[string]interface{}{
+		"session_uuid": sessionUUID,
+		"qr_length":    len(qrCode),
+		"expires_at":   expiresAt,
+	})
+
+	return nil
+}
+
+// ClearSessionQRCode limpa o QR code de uma sessão no banco de dados
+func (g *Gateway) ClearSessionQRCode(sessionUUID string) error {
+	g.logger.InfoWithFields("Clearing session QR code", map[string]interface{}{
+		"session_uuid": sessionUUID,
+	})
+
+	// Verificar se session service está configurado
+	if g.sessionService == nil {
+		g.logger.WarnWithFields("Session service not configured, skipping QR code clear", map[string]interface{}{
+			"session_uuid": sessionUUID,
+		})
+		return nil
+	}
+
+	// Converter UUID string para uuid.UUID
+	id, err := uuid.Parse(sessionUUID)
+	if err != nil {
+		g.logger.ErrorWithFields("Invalid session UUID format", map[string]interface{}{
+			"session_uuid": sessionUUID,
+			"error":        err.Error(),
+		})
+		return fmt.Errorf("invalid session UUID: %w", err)
+	}
+
+	// Limpar QR code no banco de dados
+	ctx := context.Background()
+	if err := g.sessionService.ClearQRCode(ctx, id); err != nil {
+		g.logger.ErrorWithFields("Failed to clear QR code in database", map[string]interface{}{
+			"session_uuid": sessionUUID,
+			"error":        err.Error(),
+		})
+		return fmt.Errorf("failed to clear QR code: %w", err)
+	}
+
+	g.logger.InfoWithFields("Session QR code cleared successfully", map[string]interface{}{
+		"session_uuid": sessionUUID,
 	})
 
 	return nil

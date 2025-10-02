@@ -324,6 +324,37 @@ func (r *SessionRepository) UpdateQRCode(ctx context.Context, id uuid.UUID, qrCo
 	return nil
 }
 
+// UpdateDeviceJID atualiza o device JID da sessão após pareamento
+func (r *SessionRepository) UpdateDeviceJID(ctx context.Context, id uuid.UUID, deviceJID string) error {
+	query := `
+		UPDATE "zpSessions" SET
+			"deviceJid" = $2,
+			"isConnected" = true,
+			"connectedAt" = NOW(),
+			"lastSeen" = NOW(),
+			"qrCode" = NULL,
+			"qrCodeExpiresAt" = NULL,
+			"updatedAt" = NOW()
+		WHERE id = $1
+	`
+
+	result, err := r.db.ExecContext(ctx, query, id.String(), deviceJID)
+	if err != nil {
+		return fmt.Errorf("failed to update device JID: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return errors.ErrSessionNotFound
+	}
+
+	return nil
+}
+
 // ClearQRCode limpa o QR code da sessão
 func (r *SessionRepository) ClearQRCode(ctx context.Context, id uuid.UUID) error {
 	query := `

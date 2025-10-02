@@ -131,6 +131,11 @@ func (c *Container) initialize() error {
 		qrGenerator,
 	)
 
+	// Configurar session service no gateway para atualizações de device JID
+	if gateway, ok := c.whatsappGateway.(*waclient.Gateway); ok {
+		gateway.SetSessionService(c.sessionCore)
+	}
+
 	c.messagingCore = messaging.NewService(
 		c.messageRepo,
 		c.logger,

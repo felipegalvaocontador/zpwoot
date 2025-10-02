@@ -75,6 +75,8 @@ func (h *EventHandler) handleEventInternal(evt interface{}, sessionID string) {
 		h.handleLoggedOut(v, sessionID)
 	case *events.QR:
 		h.handleQREvent(sessionID)
+	case *QRCodeEvent:
+		h.handleQRCodeEvent(v, sessionID)
 	case *events.PairSuccess:
 		h.handlePairSuccess(v, sessionID)
 	case *events.PairError:
@@ -165,7 +167,7 @@ func (h *EventHandler) handleLoggedOut(evt *events.LoggedOut, sessionID string) 
 	}
 }
 
-// handleQREvent processa evento de QR code
+// handleQREvent processa evento de QR code (sem dados do QR)
 func (h *EventHandler) handleQREvent(sessionID string) {
 	h.logger.InfoWithFields("QR code event received", map[string]interface{}{
 		"session_id": sessionID,
@@ -181,14 +183,64 @@ func (h *EventHandler) handleQREvent(sessionID string) {
 	}
 }
 
-// handlePairSuccess processa evento de pareamento bem-sucedido
-func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID string) {
-	h.logger.InfoWithFields("WhatsApp pairing successful", map[string]interface{}{
-		"session_id": sessionID,
-		"jid":        evt.ID.String(),
+// handleQRCodeEvent processa evento de QR code customizado (com dados do QR)
+func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
+	h.logger.InfoWithFields("QR code event with data received", map[string]interface{}{
+		"session_id":   sessionID,
+		"session_name": evt.SessionName,
+		"qr_length":    len(evt.QRCode),
+		"expires_at":   evt.ExpiresAt,
 	})
 
-	// TODO: Atualizar status da sessão no banco de dados
+	// Exibir QR code no terminal usando o QR generator
+	qrGenerator := NewQRGenerator(h.logger)
+	qrGenerator.DisplayQRCodeInTerminal(evt.QRCode, evt.SessionName)
+
+	// Atualizar status da sessão no banco de dados
+	if err := h.gateway.UpdateSessionStatus(sessionID, "qr_code"); err != nil {
+		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
+			"session_id": sessionID,
+			"status":     "qr_code",
+			"error":      err.Error(),
+		})
+	}
+
+	// Atualizar QR code no banco de dados
+	if err := h.gateway.UpdateSessionQRCode(sessionID, evt.QRCode, evt.ExpiresAt); err != nil {
+		h.logger.ErrorWithFields("Failed to update QR code in database", map[string]interface{}{
+			"session_id": sessionID,
+			"qr_length":  len(evt.QRCode),
+			"error":      err.Error(),
+		})
+	}
+}
+
+// handlePairSuccess processa evento de pareamento bem-sucedido
+func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID string) {
+	deviceJID := evt.ID.String()
+
+	h.logger.InfoWithFields("WhatsApp pairing successful", map[string]interface{}{
+		"session_id": sessionID,
+		"device_jid": deviceJID,
+	})
+
+	// Atualizar device JID da sessão no banco de dados
+	if err := h.gateway.UpdateSessionDeviceJID(sessionID, deviceJID); err != nil {
+		h.logger.ErrorWithFields("Failed to update session device JID", map[string]interface{}{
+			"session_id": sessionID,
+			"device_jid": deviceJID,
+			"error":      err.Error(),
+		})
+	}
+
+	// Atualizar status da sessão para conectada
+	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
+		h.logger.ErrorWithFields("Failed to update session status after pairing", map[string]interface{}{
+			"session_id": sessionID,
+			"status":     "connected",
+			"error":      err.Error(),
+		})
+	}
 }
 
 // handlePairError processa evento de erro de pareamento

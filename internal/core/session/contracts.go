@@ -29,6 +29,9 @@ type Repository interface {
 	UpdateQRCode(ctx context.Context, id uuid.UUID, qrCode string, expiresAt time.Time) error
 	ClearQRCode(ctx context.Context, id uuid.UUID) error
 
+	// Device operations
+	UpdateDeviceJID(ctx context.Context, id uuid.UUID, deviceJID string) error
+
 	// Verificações
 	ExistsByName(ctx context.Context, name string) (bool, error)
 	Count(ctx context.Context) (int64, error)
@@ -42,6 +45,7 @@ type WhatsAppGateway interface {
 	DisconnectSession(ctx context.Context, sessionName string) error
 	DeleteSession(ctx context.Context, sessionName string) error
 	RestoreAllSessions(ctx context.Context, sessionNames []string) error
+	RegisterSessionUUID(sessionName, sessionUUID string) // Registra mapeamento nome -> UUID
 
 	// Status e informações
 	IsSessionConnected(ctx context.Context, sessionName string) (bool, error)

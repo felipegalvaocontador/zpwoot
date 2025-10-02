@@ -313,7 +313,7 @@ func (c *Client) handleQRCode(qrCode string) {
 		"qr_code":      qrCode,
 	})
 
-	// Exibir QR code no terminal
+	// Exibir QR code no terminal imediatamente
 	c.qrGenerator.DisplayQRCodeInTerminal(qrCode, c.sessionName)
 
 	// Notificar event handlers sobre novo QR code
@@ -373,7 +373,7 @@ func (c *Client) handleEvent(evt interface{}) {
 	case *events.LoggedOut:
 		c.handleLoggedOutEvent(v)
 	case *events.QR:
-		c.handleQRCodeEvent(v)
+		// QR code já é tratado pelo loop de QR code, não processar aqui
 	case *events.PairSuccess:
 		c.handlePairSuccessEvent(v)
 	case *events.PairError:

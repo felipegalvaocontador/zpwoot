@@ -194,18 +194,29 @@ func (s *SessionService) ResolveSessionID(ctx context.Context, idOrName string) 
 func (s *SessionService) RestoreAllSessions(ctx context.Context) error {
 	s.logger.Info("Starting session restoration process")
 
-	// Obter nomes de todas as sessões do banco
-	sessionNames, err := s.coreService.GetAllSessionNames(ctx)
+	// Obter todas as sessões do banco (não apenas nomes)
+	sessions, err := s.coreService.ListSessions(ctx, 1000, 0) // Buscar todas as sessões
 	if err != nil {
-		s.logger.ErrorWithFields("Failed to get session names for restoration", map[string]interface{}{
+		s.logger.ErrorWithFields("Failed to get sessions for restoration", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return fmt.Errorf("failed to get session names: %w", err)
+		return fmt.Errorf("failed to get sessions: %w", err)
 	}
 
-	if len(sessionNames) == 0 {
+	if len(sessions) == 0 {
 		s.logger.Info("No sessions found to restore")
 		return nil
+	}
+
+	// Registrar mapeamentos sessionName -> sessionUUID no gateway
+	for _, sess := range sessions {
+		s.gateway.RegisterSessionUUID(sess.Name, sess.ID.String())
+	}
+
+	// Extrair nomes das sessões para restauração
+	sessionNames := make([]string, len(sessions))
+	for i, sess := range sessions {
+		sessionNames[i] = sess.Name
 	}
 
 	// Restaurar clientes WhatsApp no gateway

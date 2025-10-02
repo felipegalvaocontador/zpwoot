@@ -69,6 +69,9 @@ func (s *Service) CreateSession(ctx context.Context, req *CreateSessionRequest) 
 		return nil, fmt.Errorf("failed to initialize WhatsApp session: %w", err)
 	}
 
+	// Registrar mapeamento sessionName -> sessionUUID no gateway
+	s.gateway.RegisterSessionUUID(session.Name, session.ID.String())
+
 	// Auto-conectar se solicitado
 	if req.AutoConnect {
 		if err := s.initiateConnection(ctx, session); err != nil {
@@ -575,6 +578,21 @@ func (h *SessionEventHandler) OnMessageReceived(sessionName string, message *Wha
 
 	session.UpdateLastSeen()
 	_ = h.service.repository.Update(ctx, session)
+}
+
+// UpdateDeviceJID atualiza o device JID de uma sessão após pareamento
+func (s *Service) UpdateDeviceJID(ctx context.Context, id uuid.UUID, deviceJID string) error {
+	return s.repository.UpdateDeviceJID(ctx, id, deviceJID)
+}
+
+// UpdateQRCode atualiza o QR code de uma sessão
+func (s *Service) UpdateQRCode(ctx context.Context, id uuid.UUID, qrCode string, expiresAt time.Time) error {
+	return s.repository.UpdateQRCode(ctx, id, qrCode, expiresAt)
+}
+
+// ClearQRCode limpa o QR code de uma sessão
+func (s *Service) ClearQRCode(ctx context.Context, id uuid.UUID) error {
+	return s.repository.ClearQRCode(ctx, id)
 }
 
 // OnMessageSent chamado quando mensagem é enviada (stub)

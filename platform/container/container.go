@@ -19,7 +19,7 @@ import (
 
 	// Adapters
 	"zpwoot/internal/adapters/repository"
-	"zpwoot/internal/adapters/http/router"
+	"zpwoot/internal/adapters/server"
 	"zpwoot/internal/adapters/waclient"
 
 	// Platform
@@ -251,7 +251,18 @@ func (c *Container) Stop(ctx context.Context) error {
 	return nil
 }
 
-// Handler retorna um handler HTTP completo com todas as rotas
+// Server cria e retorna uma nova instância do servidor HTTP
+func (c *Container) Server() *server.Server {
+	return server.New(&server.Config{
+		Config:         c.config,
+		Logger:         c.logger,
+		SessionService: c.sessionService,
+		MessageService: c.messagingService,
+		GroupService:   c.groupService,
+	})
+}
+
+// Handler retorna um handler HTTP completo com todas as rotas (para compatibilidade)
 func (c *Container) Handler() http.Handler {
-	return router.SetupRoutes(c.config, c.logger, c.sessionService, c.messagingService, c.groupService)
+	return c.Server().Handler()
 }

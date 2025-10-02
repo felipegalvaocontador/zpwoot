@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"zpwoot/internal/adapters/http/shared"
+	"zpwoot/internal/adapters/server/shared"
 	"zpwoot/internal/services"
 	"zpwoot/internal/services/shared/dto"
 	"zpwoot/platform/logger"

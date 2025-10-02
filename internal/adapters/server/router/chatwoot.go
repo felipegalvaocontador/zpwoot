@@ -3,7 +3,7 @@ package router
 import (
 	"github.com/go-chi/chi/v5"
 
-	"zpwoot/internal/adapters/http/handler"
+	"zpwoot/internal/adapters/server/handler"
 	"zpwoot/internal/services"
 	"zpwoot/platform/logger"
 )

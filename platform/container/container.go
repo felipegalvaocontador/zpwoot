@@ -14,7 +14,7 @@ import (
 	"zpwoot/internal/services/shared/validation"
 
 	// Adapters
-	"zpwoot/internal/adapters/database/postgres"
+	"zpwoot/internal/adapters/repository"
 	"zpwoot/internal/adapters/http/router"
 	"zpwoot/internal/adapters/waclient"
 
@@ -75,8 +75,8 @@ func (c *Container) initialize() error {
 	c.logger.Debug("Initializing container...")
 
 	// 1. Database repositories
-	c.sessionRepo = postgres.NewSessionRepository(c.database.DB)
-	c.messageRepo = postgres.NewMessageRepository(c.database.DB, c.logger)
+	c.sessionRepo = repository.NewSessionRepository(c.database.DB)
+	c.messageRepo = repository.NewMessageRepository(c.database.DB, c.logger)
 
 	// 2. External gateways
 	// TODO: Criar sqlstore.Container para WhatsApp

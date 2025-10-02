@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -140,9 +141,8 @@ func main() {
 
 // runMigrations executa as migrações do banco de dados
 func runMigrations(db *database.Database, cfg *config.Config, log *logger.Logger) error {
-	// TODO: Implementar sistema de migrações
-	log.Info("Database migrations completed (placeholder)")
-	return nil
+	migrator := database.NewMigrator(db, log)
+	return migrator.RunMigrations()
 }
 
 // printBanner exibe o banner da aplicação

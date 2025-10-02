@@ -185,22 +185,22 @@ migrate-create: ## Create a new migration (usage: make migrate-create NAME=migra
 		echo "Error: NAME is required. Usage: make migrate-create NAME=migration_name"; \
 		exit 1; \
 	fi
-	@NEXT_VERSION=$$(ls internal/infra/db/migrations/ | grep -E '^[0-9]+_' | sed 's/_.*//' | sort -n | tail -1 | awk '{print $$1 + 1}') && \
+	@NEXT_VERSION=$$(ls platform/database/migrations/ | grep -E '^[0-9]+_' | sed 's/_.*//' | sort -n | tail -1 | awk '{print $$1 + 1}') && \
 	if [ -z "$$NEXT_VERSION" ]; then NEXT_VERSION=1; fi && \
 	printf "%03d" $$NEXT_VERSION > /tmp/version && \
 	VERSION=$$(cat /tmp/version) && \
 	echo "Creating migration files for version $$VERSION..." && \
-	touch "internal/infra/db/migrations/$${VERSION}_$(NAME).up.sql" && \
-	touch "internal/infra/db/migrations/$${VERSION}_$(NAME).down.sql" && \
-	echo "-- Migration: $(NAME)" > "internal/infra/db/migrations/$${VERSION}_$(NAME).up.sql" && \
-	echo "-- Add your migration SQL here" >> "internal/infra/db/migrations/$${VERSION}_$(NAME).up.sql" && \
-	echo "" >> "internal/infra/db/migrations/$${VERSION}_$(NAME).up.sql" && \
-	echo "-- Migration: $(NAME) (rollback)" > "internal/infra/db/migrations/$${VERSION}_$(NAME).down.sql" && \
-	echo "-- Add your rollback SQL here" >> "internal/infra/db/migrations/$${VERSION}_$(NAME).down.sql" && \
-	echo "" >> "internal/infra/db/migrations/$${VERSION}_$(NAME).down.sql" && \
+	touch "platform/database/migrations/$${VERSION}_$(NAME).up.sql" && \
+	touch "platform/database/migrations/$${VERSION}_$(NAME).down.sql" && \
+	echo "-- Migration: $(NAME)" > "platform/database/migrations/$${VERSION}_$(NAME).up.sql" && \
+	echo "-- Add your migration SQL here" >> "platform/database/migrations/$${VERSION}_$(NAME).up.sql" && \
+	echo "" >> "platform/database/migrations/$${VERSION}_$(NAME).up.sql" && \
+	echo "-- Migration: $(NAME) (rollback)" > "platform/database/migrations/$${VERSION}_$(NAME).down.sql" && \
+	echo "-- Add your rollback SQL here" >> "platform/database/migrations/$${VERSION}_$(NAME).down.sql" && \
+	echo "" >> "platform/database/migrations/$${VERSION}_$(NAME).down.sql" && \
 	echo "Created migration files:" && \
-	echo "  internal/infra/db/migrations/$${VERSION}_$(NAME).up.sql" && \
-	echo "  internal/infra/db/migrations/$${VERSION}_$(NAME).down.sql"
+	echo "  platform/database/migrations/$${VERSION}_$(NAME).up.sql" && \
+	echo "  platform/database/migrations/$${VERSION}_$(NAME).down.sql"
 
 # Docker
 docker-build: ## Build Docker image

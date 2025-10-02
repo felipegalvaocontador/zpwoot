@@ -469,3 +469,97 @@ func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request)
 	// Resposta de sucesso
 	h.GetWriter().WriteSuccess(w, response, "Session statistics retrieved successfully")
 }
+
+// LogoutSession desconecta e faz logout da sessão
+// @Summary Logout session
+// @Description Logout from WhatsApp session and disconnect
+// @Tags Sessions
+// @Security ApiKeyAuth
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} shared.SuccessResponse "Session logout successful"
+// @Failure 404 {object} shared.ErrorResponse "Session not found"
+// @Failure 500 {object} shared.ErrorResponse "Internal Server Error"
+// @Router /sessions/{sessionId}/logout [post]
+func (h *SessionHandler) LogoutSession(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "logout session")
+
+	// Extrair session ID da URL
+	sessionID, err := h.GetSessionIDFromURL(r)
+	if err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
+		return
+	}
+
+	// TODO: Implementar logout no service
+	// Por enquanto, usar disconnect
+	err = h.sessionService.DisconnectSession(r.Context(), sessionID.String())
+	if err != nil {
+		h.GetLogger().ErrorWithFields("Failed to logout session", map[string]interface{}{
+			"session_id": sessionID.String(),
+			"error":      err.Error(),
+		})
+		h.GetWriter().WriteInternalError(w, "Failed to logout session")
+		return
+	}
+
+	h.LogSuccess("logout session", map[string]interface{}{
+		"session_id": sessionID.String(),
+	})
+
+	response := map[string]interface{}{
+		"session_id": sessionID.String(),
+		"status":     "logged_out",
+		"message":    "Session logged out successfully",
+	}
+
+	h.GetWriter().WriteSuccess(w, response, "Session logged out successfully")
+}
+
+// PairPhone pareia sessão com número de telefone
+// @Summary Pair phone number
+// @Description Pair WhatsApp session with phone number
+// @Tags Sessions
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Param request body dto.PairPhoneRequest true "Phone pairing request"
+// @Success 200 {object} shared.SuccessResponse "Phone pairing initiated successfully"
+// @Failure 400 {object} shared.ErrorResponse "Bad Request"
+// @Failure 404 {object} shared.ErrorResponse "Session not found"
+// @Failure 500 {object} shared.ErrorResponse "Internal Server Error"
+// @Router /sessions/{sessionId}/pair [post]
+func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "pair phone")
+
+	// Extrair session ID da URL
+	sessionID, err := h.GetSessionIDFromURL(r)
+	if err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
+		return
+	}
+
+	// Parse e validar request
+	var req dto.PairPhoneRequest
+	if err := h.ParseAndValidateJSON(r, &req); err != nil {
+		h.GetWriter().WriteBadRequest(w, "Invalid request format", err.Error())
+		return
+	}
+
+	// TODO: Implementar pair phone no service
+	// Por enquanto, retornar placeholder
+	h.LogSuccess("pair phone", map[string]interface{}{
+		"session_id":   sessionID.String(),
+		"phone_number": req.PhoneNumber,
+	})
+
+	response := map[string]interface{}{
+		"session_id":   sessionID.String(),
+		"phone_number": req.PhoneNumber,
+		"status":       "pairing_initiated",
+		"message":      "Phone pairing initiated successfully - Implementation pending",
+	}
+
+	h.GetWriter().WriteSuccess(w, response, "Phone pairing initiated successfully")
+}

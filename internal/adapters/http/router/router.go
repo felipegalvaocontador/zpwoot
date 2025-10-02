@@ -45,13 +45,13 @@ func setupAllRoutes(r *chi.Mux, appLogger *logger.Logger, sessionService *servic
 		setupContactRoutes(r, sessionService, appLogger)
 
 		// Webhook routes
-		setupWebhookRoutes(r, appLogger)
+		setupWebhookRoutes(r, sessionService, appLogger)
 
 		// Media routes
-		setupMediaRoutes(r, appLogger)
+		setupMediaRoutes(r, sessionService, appLogger)
 
 		// Chatwoot routes
-		setupChatwootRoutes(r, appLogger)
+		setupChatwootRoutes(r, messageService, sessionService, appLogger)
 	})
 
 	// Global routes

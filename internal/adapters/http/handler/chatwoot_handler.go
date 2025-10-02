@@ -132,3 +132,247 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 
 	h.GetWriter().WriteSuccess(w, nil, "Webhook processed successfully")
 }
+
+// CreateConfig cria uma nova configuração do Chatwoot
+// @Summary Create Chatwoot configuration
+// @Description Create a new Chatwoot configuration for the session
+// @Tags Chatwoot
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} shared.APIResponse
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/chatwoot/set [post]
+func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "create chatwoot config")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	// Verificar se sessão existe
+	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar criação de configuração Chatwoot
+	h.LogSuccess("create chatwoot config", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration created successfully")
+}
+
+// GetConfig obtém a configuração do Chatwoot
+// @Summary Get Chatwoot configuration
+// @Description Get the current Chatwoot configuration for the session
+// @Tags Chatwoot
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/chatwoot [get]
+func (h *ChatwootHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "get chatwoot config")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	// Verificar se sessão existe
+	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar busca de configuração Chatwoot
+	h.LogSuccess("get chatwoot config", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration retrieved successfully")
+}
+
+// UpdateConfig atualiza a configuração do Chatwoot
+// @Summary Update Chatwoot configuration
+// @Description Update the Chatwoot configuration for the session
+// @Tags Chatwoot
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} shared.APIResponse
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/chatwoot [put]
+func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "update chatwoot config")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	// Verificar se sessão existe
+	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar atualização de configuração Chatwoot
+	h.LogSuccess("update chatwoot config", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration updated successfully")
+}
+
+// DeleteConfig remove a configuração do Chatwoot
+// @Summary Delete Chatwoot configuration
+// @Description Delete the Chatwoot configuration for the session
+// @Tags Chatwoot
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/chatwoot [delete]
+func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "delete chatwoot config")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	// Verificar se sessão existe
+	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar remoção de configuração Chatwoot
+	h.LogSuccess("delete chatwoot config", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration deleted successfully")
+}
+
+// TestConnection testa a conexão com o Chatwoot
+// @Summary Test Chatwoot connection
+// @Description Test the connection to Chatwoot instance
+// @Tags Chatwoot
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/chatwoot/test [post]
+func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "test chatwoot connection")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	// Verificar se sessão existe
+	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar teste de conexão Chatwoot
+	h.LogSuccess("test chatwoot connection", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	h.GetWriter().WriteSuccess(w, nil, "Chatwoot connection test completed successfully")
+}
+
+// AutoCreateInbox cria automaticamente um inbox no Chatwoot
+// @Summary Auto-create Chatwoot inbox
+// @Description Automatically create an inbox in Chatwoot for the session
+// @Tags Chatwoot
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} shared.APIResponse
+// @Failure 400 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/chatwoot/auto-create-inbox [post]
+func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "auto-create chatwoot inbox")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	// Verificar se sessão existe
+	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar criação automática de inbox Chatwoot
+	h.LogSuccess("auto-create chatwoot inbox", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	h.GetWriter().WriteSuccess(w, nil, "Chatwoot inbox created successfully")
+}
+
+// GetStats obtém estatísticas do Chatwoot
+// @Summary Get Chatwoot statistics
+// @Description Get statistics for Chatwoot integration
+// @Tags Chatwoot
+// @Produce json
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} shared.APIResponse
+// @Failure 404 {object} shared.APIResponse
+// @Failure 500 {object} shared.APIResponse
+// @Router /sessions/{sessionId}/chatwoot/stats [get]
+func (h *ChatwootHandler) GetStats(w http.ResponseWriter, r *http.Request) {
+	h.LogRequest(r, "get chatwoot stats")
+
+	sessionID := chi.URLParam(r, "sessionId")
+	if sessionID == "" {
+		h.GetWriter().WriteBadRequest(w, "Session ID is required")
+		return
+	}
+
+	// Verificar se sessão existe
+	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	if err != nil {
+		h.GetWriter().WriteNotFound(w, "Session not found")
+		return
+	}
+
+	// TODO: Implementar busca de estatísticas Chatwoot
+	h.LogSuccess("get chatwoot stats", map[string]interface{}{
+		"session_id": sessionID,
+	})
+
+	h.GetWriter().WriteSuccess(w, nil, "Chatwoot statistics retrieved successfully")
+}

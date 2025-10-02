@@ -1316,7 +1316,6 @@ definitions:
       total:
         type: integer
     type: object
-host: localhost:8080
 info:
   contact:
     email: support@zpwoot.com
@@ -1332,12 +1331,12 @@ info:
   title: ZPWoot WhatsApp API
   version: 2.0.0
 paths:
-  /chatwoot/find:
+  /sessions/{sessionId}/chatwoot/find:
     get:
       description: Find the current Chatwoot configuration for the session
       parameters:
       - description: Session ID
-        in: query
+        in: path
         name: sessionId
         required: true
         type: string
@@ -1361,7 +1360,7 @@ paths:
       summary: Find Chatwoot configuration
       tags:
       - Chatwoot
-  /chatwoot/set:
+  /sessions/{sessionId}/chatwoot/set:
     post:
       consumes:
       - application/json

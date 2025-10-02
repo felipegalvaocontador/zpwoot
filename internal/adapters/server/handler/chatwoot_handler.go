@@ -132,7 +132,7 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 // @Failure 400 {object} shared.SuccessResponse
 // @Failure 404 {object} shared.SuccessResponse
 // @Failure 500 {object} shared.SuccessResponse
-// @Router /chatwoot/set [post]
+// @Router /sessions/{sessionId}/chatwoot/set [post]
 func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "create chatwoot config")
 
@@ -163,15 +163,15 @@ func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 // @Tags Chatwoot
 // @Security ApiKeyAuth
 // @Produce json
-// @Param sessionId query string true "Session ID"
+// @Param sessionId path string true "Session ID"
 // @Success 200 {object} shared.SuccessResponse
 // @Failure 404 {object} shared.SuccessResponse
 // @Failure 500 {object} shared.SuccessResponse
-// @Router /chatwoot/find [get]
+// @Router /sessions/{sessionId}/chatwoot/find [get]
 func (h *ChatwootHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "find chatwoot config")
 
-	sessionID := r.URL.Query().Get("sessionId")
+	sessionID := chi.URLParam(r, "sessionId")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return

@@ -14,7 +14,7 @@ import (
 	"zpwoot/platform/logger"
 )
 
-func SetupRoutes(cfg *config.Config, logger *logger.Logger, sessionService *services.SessionService, messageService *services.MessageService) http.Handler {
+func SetupRoutes(cfg *config.Config, logger *logger.Logger, sessionService *services.SessionService, messageService *services.MessageService, groupService *services.GroupService) http.Handler {
 	r := chi.NewRouter()
 
 	setupMiddlewares(r, cfg, logger)
@@ -30,7 +30,7 @@ func SetupRoutes(cfg *config.Config, logger *logger.Logger, sessionService *serv
 		w.Write([]byte(`{"status":"ok","service":"zpwoot","version":"2.0.0"}`))
 	})
 
-	setupSessionRoutes(r, logger, sessionService, messageService)
+	setupSessionRoutes(r, logger, sessionService, messageService, groupService)
 	setupGlobalRoutes(r, logger)
 
 	return r
@@ -71,11 +71,11 @@ func setupMiddlewares(r *chi.Mux, cfg *config.Config, logger *logger.Logger) {
 	r.Use(middleware.APIKeyAuth(cfg, logger))
 }
 
-func setupSessionRoutes(r *chi.Mux, appLogger *logger.Logger, sessionService *services.SessionService, messageService *services.MessageService) {
+func setupSessionRoutes(r *chi.Mux, appLogger *logger.Logger, sessionService *services.SessionService, messageService *services.MessageService, groupService *services.GroupService) {
 	r.Route("/sessions", func(r chi.Router) {
 		setupSessionManagementRoutes(r, sessionService, appLogger)
 		setupMessageRoutes(r, messageService, sessionService, appLogger)
-		setupGroupRoutes(r, appLogger)
+		setupGroupRoutes(r, groupService, sessionService, appLogger)
 		setupContactRoutes(r, sessionService, appLogger)
 		setupWebhookRoutes(r, appLogger)
 		setupMediaRoutes(r, appLogger)
@@ -161,14 +161,39 @@ func setupMessageRoutes(r chi.Router, messageService *services.MessageService, s
 	})
 }
 
-func setupGroupRoutes(r chi.Router, appLogger *logger.Logger) {
-	// TODO: Implementar GroupHandler
+func setupGroupRoutes(r chi.Router, groupService *services.GroupService, sessionService *services.SessionService, appLogger *logger.Logger) {
+	groupHandler := handler.NewGroupHandler(groupService, sessionService, appLogger)
+
 	r.Route("/{sessionId}/groups", func(r chi.Router) {
-		r.Post("/", func(w http.ResponseWriter, req *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"message":"Group routes - Ready for implementation"}`))
-		})
+		// Operações básicas
+		r.Post("/", groupHandler.CreateGroup)
+		r.Get("/", groupHandler.ListGroups)
+		r.Get("/info", groupHandler.GetGroupInfo)
+
+		// Gerenciamento de participantes
+		r.Post("/participants", groupHandler.UpdateGroupParticipants)
+
+		// Configurações do grupo
+		r.Put("/name", groupHandler.SetGroupName)
+		r.Put("/description", groupHandler.SetGroupDescription)
+		r.Put("/photo", groupHandler.SetGroupPhoto)
+
+		// Links de convite
+		r.Get("/invite-link", groupHandler.GetGroupInviteLink)
+		r.Post("/join-via-link", groupHandler.JoinGroupViaLink)
+		r.Post("/leave", groupHandler.LeaveGroup)
+
+		// Configurações avançadas
+		r.Put("/settings", groupHandler.UpdateGroupSettings)
+		r.Get("/request-participants", groupHandler.GetGroupRequestParticipants)
+		r.Post("/request-participants", groupHandler.UpdateGroupRequestParticipants)
+		r.Put("/join-approval-mode", groupHandler.SetGroupJoinApprovalMode)
+		r.Put("/member-add-mode", groupHandler.SetGroupMemberAddMode)
+
+		// Informações de convite
+		r.Get("/info-from-link", groupHandler.GetGroupInfoFromLink)
+		r.Post("/info-from-invite", groupHandler.GetGroupInfoFromInvite)
+		r.Post("/join-with-invite", groupHandler.JoinGroupWithInvite)
 	})
 }
 

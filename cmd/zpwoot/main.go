@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -21,19 +22,19 @@ const (
 )
 
 func main() {
-	// Exibir banner
-	printBanner()
-
-	// Criar contexto principal da aplicação
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Carregar configuração
+	// Carregar configuração primeiro
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Exibir banner com configuração
+	printBanner(cfg)
+
+	// Criar contexto principal da aplicação
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// Inicializar logger
 	log := logger.NewFromAppConfig(cfg)
@@ -144,19 +145,63 @@ func runMigrations(db *database.Database, cfg *config.Config, log *logger.Logger
 	return migrator.RunMigrations()
 }
 
-// printBanner exibe o banner da aplicação
-func printBanner() {
-	banner := `
- ███████╗██████╗ ██╗    ██╗ ██████╗  ██████╗ ████████╗
- ╚══███╔╝██╔══██╗██║    ██║██╔═══██╗██╔═══██╗╚══██╔══╝
-   ███╔╝ ██████╔╝██║ █╗ ██║██║   ██║██║   ██║   ██║
-  ███╔╝  ██╔═══╝ ██║███╗██║██║   ██║██║   ██║   ██║
- ███████╗██║     ╚███╔███╔╝╚██████╔╝╚██████╔╝   ██║
- ╚══════╝╚═╝      ╚══╝╚══╝  ╚═════╝  ╚═════╝    ╚═╝
+// printBanner exibe o banner da aplicação com design moderno
+func printBanner(cfg *config.Config) {
+	// Cores ANSI
+	const (
+		reset = "\033[0m"
+		bold  = "\033[1m"
+		cyan  = "\033[36m"
+		white = "\033[97m"
+		gray  = "\033[90m"
+		green = "\033[32m"
+	)
 
- WhatsApp Business API Gateway - Clean Architecture
- Version: %s
- Environment: development`
+	// Linhas compactas — menos “peso” que ASCII art grande
+	logo := "zpwoot"
+	tag := "WhatsApp Business API Gateway"
+	meta := fmt.Sprintf("v2.0.0 • %s", cfg.Environment)
 
-	fmt.Printf(banner+"\n", appVersion)
+	// calcula largura baseada no maior item (runes)
+	items := []string{logo, tag, meta}
+	maxLen := 0
+	for _, s := range items {
+		if l := len([]rune(s)); l > maxLen {
+			maxLen = l
+		}
+	}
+	if maxLen < 40 {
+		maxLen = 40
+	}
+
+	// helpers
+	padCenter := func(s string, w int) string {
+		r := []rune(s)
+		if len(r) >= w {
+			return string(r)
+		}
+		total := w - len(r)
+		left := total / 2
+		right := total - left
+		return strings.Repeat(" ", left) + s + strings.Repeat(" ", right)
+	}
+	repeat := func(ch string, n int) string { return strings.Repeat(ch, n) }
+
+	// borda compacta
+	top := "╭" + repeat("─", maxLen+2) + "╮"
+	bot := "╰" + repeat("─", maxLen+2) + "╯"
+	empty := "│ " + padCenter("", maxLen) + " │"
+
+	// imprime compacto e moderno
+	fmt.Println()
+	fmt.Println(top)
+	fmt.Println(empty)
+	fmt.Printf("│ %s%s%s │\n", cyan+bold, padCenter(logo, maxLen), reset)
+	fmt.Printf("│ %s%s%s │\n", white, padCenter(tag, maxLen), reset)
+	fmt.Println(empty)
+	fmt.Printf("│ %s%s%s │\n", green, padCenter(meta, maxLen), reset)
+	fmt.Println(empty)
+	fmt.Println(bot)
+	fmt.Println()
+	fmt.Printf("%s>> Initializing application components...%s\n\n", gray, reset)
 }

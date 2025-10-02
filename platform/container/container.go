@@ -43,6 +43,7 @@ type Container struct {
 	// Application services
 	sessionService   *services.SessionService
 	messagingService *services.MessageService
+	groupService     *services.GroupService
 
 	// Adapters
 	sessionRepo     session.Repository
@@ -158,6 +159,16 @@ func (c *Container) initialize() error {
 		validator,
 	)
 
+	// TODO: Implementar GroupCore e GroupRepository quando necessário
+	// Por enquanto, usar nil para manter a compilação
+	c.groupService = services.NewGroupService(
+		nil, // groupCore - TODO: implementar
+		nil, // groupRepo - TODO: implementar
+		nil, // whatsappGateway - TODO: implementar interface unificada
+		c.logger,
+		validator,
+	)
+
 	c.logger.Debug("Container initialized successfully")
 	return nil
 }
@@ -242,5 +253,5 @@ func (c *Container) Stop(ctx context.Context) error {
 
 // Handler retorna um handler HTTP completo com todas as rotas
 func (c *Container) Handler() http.Handler {
-	return router.SetupRoutes(c.config, c.logger, c.sessionService, c.messagingService)
+	return router.SetupRoutes(c.config, c.logger, c.sessionService, c.messagingService, c.groupService)
 }

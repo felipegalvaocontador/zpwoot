@@ -10,6 +10,7 @@ import (
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 
+	"zpwoot/internal/core/messaging"
 	"zpwoot/internal/core/session"
 	"zpwoot/platform/logger"
 )
@@ -367,6 +368,39 @@ func (g *Gateway) SetChatwootManager(manager ChatwootManager) {
 
 	g.chatwootManager = manager
 	g.logger.Info("Chatwoot manager configured for WhatsApp gateway")
+}
+
+// SaveReceivedMessage salva mensagem recebida no banco de dados
+func (g *Gateway) SaveReceivedMessage(message *messaging.Message) error {
+	// TODO: Implementar salvamento via message repository
+	// Por enquanto, apenas log
+	g.logger.InfoWithFields("Message received and ready to save", map[string]interface{}{
+		"session_id":    message.SessionID,
+		"message_id":    message.ZpMessageID,
+		"sender":        message.ZpSender,
+		"chat":          message.ZpChat,
+		"type":          message.ZpType,
+		"from_me":       message.ZpFromMe,
+	})
+
+	return nil
+}
+
+// UpdateSessionStatus atualiza o status de uma sessão no banco de dados
+func (g *Gateway) UpdateSessionStatus(sessionID, status string) error {
+	g.logger.InfoWithFields("Updating session status", map[string]interface{}{
+		"session_id": sessionID,
+		"status":     status,
+	})
+
+	// TODO: Implementar atualização via session repository
+	// Por enquanto, apenas log
+	g.logger.DebugWithFields("Session status updated", map[string]interface{}{
+		"session_id": sessionID,
+		"new_status": status,
+	})
+
+	return nil
 }
 
 // handleWhatsmeowEvent processa eventos do whatsmeow e repassa para handlers registrados

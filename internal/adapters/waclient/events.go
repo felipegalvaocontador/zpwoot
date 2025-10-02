@@ -6,9 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types/events"
 
+	"zpwoot/internal/core/messaging"
 	"zpwoot/platform/logger"
 )
 
@@ -120,7 +122,14 @@ func (h *EventHandler) handleConnected(evt *events.Connected, sessionID string) 
 		"session_id": sessionID,
 	})
 
-	// TODO: Atualizar status da sessão no banco de dados
+	// Atualizar status da sessão no banco de dados
+	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
+		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
+			"session_id": sessionID,
+			"status":     "connected",
+			"error":      err.Error(),
+		})
+	}
 }
 
 // handleDisconnected processa evento de desconexão
@@ -129,7 +138,14 @@ func (h *EventHandler) handleDisconnected(evt *events.Disconnected, sessionID st
 		"session_id": sessionID,
 	})
 
-	// TODO: Atualizar status da sessão no banco de dados
+	// Atualizar status da sessão no banco de dados
+	if err := h.gateway.UpdateSessionStatus(sessionID, "disconnected"); err != nil {
+		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
+			"session_id": sessionID,
+			"status":     "disconnected",
+			"error":      err.Error(),
+		})
+	}
 }
 
 // handleLoggedOut processa evento de logout
@@ -139,7 +155,14 @@ func (h *EventHandler) handleLoggedOut(evt *events.LoggedOut, sessionID string) 
 		"reason":     evt.Reason,
 	})
 
-	// TODO: Atualizar status da sessão no banco de dados
+	// Atualizar status da sessão no banco de dados
+	if err := h.gateway.UpdateSessionStatus(sessionID, "logged_out"); err != nil {
+		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
+			"session_id": sessionID,
+			"status":     "logged_out",
+			"error":      err.Error(),
+		})
+	}
 }
 
 // handleQREvent processa evento de QR code
@@ -148,7 +171,14 @@ func (h *EventHandler) handleQREvent(sessionID string) {
 		"session_id": sessionID,
 	})
 
-	// TODO: Gerar QR code e atualizar no banco de dados
+	// Atualizar status da sessão no banco de dados
+	if err := h.gateway.UpdateSessionStatus(sessionID, "qr_code"); err != nil {
+		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
+			"session_id": sessionID,
+			"status":     "qr_code",
+			"error":      err.Error(),
+		})
+	}
 }
 
 // handlePairSuccess processa evento de pareamento bem-sucedido
@@ -171,7 +201,7 @@ func (h *EventHandler) handlePairError(evt *events.PairError, sessionID string) 
 	// TODO: Atualizar status da sessão no banco de dados
 }
 
-// handleMessage processa evento de mensagem
+// handleMessage processa evento de mensagem baseado no legacy
 func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 	h.logger.InfoWithFields("Message received", map[string]interface{}{
 		"session_id": sessionID,
@@ -182,12 +212,19 @@ func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 		"type":       evt.Info.Type,
 	})
 
+	// Salvar mensagem no banco de dados
+	if err := h.saveMessageToDatabase(evt, sessionID); err != nil {
+		h.logger.ErrorWithFields("Failed to save message to database", map[string]interface{}{
+			"session_id": sessionID,
+			"message_id": evt.Info.ID,
+			"error":      err.Error(),
+		})
+	}
+
 	// Processar para Chatwoot se habilitado
 	if h.chatwootManager != nil && h.chatwootManager.IsEnabled(sessionID) {
 		h.processMessageForChatwoot(evt, sessionID)
 	}
-
-	// TODO: Salvar mensagem no banco de dados
 }
 
 // handleReceipt processa evento de recibo
@@ -243,7 +280,7 @@ func (h *EventHandler) processMessageForChatwoot(evt *events.Message, sessionID 
 	fromMe := evt.Info.IsFromMe
 
 	// Extrair conteúdo e tipo da mensagem
-	content, messageType := h.extractMessageContent(evt.Message)
+	content, messageType := h.extractMessageContentString(evt.Message)
 
 	// Extrair número de telefone do contato
 	contactNumber := h.extractContactNumber(from)
@@ -272,8 +309,8 @@ func (h *EventHandler) processMessageForChatwoot(evt *events.Message, sessionID 
 	}
 }
 
-// extractMessageContent extrai conteúdo e tipo da mensagem
-func (h *EventHandler) extractMessageContent(message *waE2E.Message) (string, string) {
+// extractMessageContentString extrai conteúdo e tipo da mensagem como string
+func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (string, string) {
 	if message == nil {
 		return "", "unknown"
 	}
@@ -440,4 +477,103 @@ func (h *EventHandler) handleBusinessName(evt *events.BusinessName, sessionID st
 		"session_id": sessionID,
 		"jid":        evt.JID.String(),
 	})
+}
+
+// ===== MESSAGE PROCESSING =====
+
+// saveMessageToDatabase salva mensagem recebida no banco de dados baseado no legacy
+func (h *EventHandler) saveMessageToDatabase(evt *events.Message, sessionID string) error {
+	// Converter mensagem whatsmeow para formato interno
+	message, err := h.convertWhatsmeowMessage(evt, sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to convert message: %w", err)
+	}
+
+	// Salvar via gateway (que tem acesso aos repositórios)
+	if err := h.gateway.SaveReceivedMessage(message); err != nil {
+		return fmt.Errorf("failed to save message: %w", err)
+	}
+
+	h.logger.DebugWithFields("Message saved to database", map[string]interface{}{
+		"session_id":    sessionID,
+		"message_id":    evt.Info.ID,
+		"zp_message_id": message.ZpMessageID,
+	})
+
+	return nil
+}
+
+// convertWhatsmeowMessage converte mensagem whatsmeow para formato interno
+func (h *EventHandler) convertWhatsmeowMessage(evt *events.Message, sessionID string) (*messaging.Message, error) {
+	// Extrair conteúdo da mensagem baseado no tipo
+	contentMap := h.extractMessageContent(evt.Message)
+
+	// Converter content map para string JSON
+	contentStr := fmt.Sprintf("%v", contentMap)
+
+	// Parse sessionID para UUID
+	sessionUUID, err := uuid.Parse(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid session ID: %w", err)
+	}
+
+	// Criar mensagem no formato interno
+	message := &messaging.Message{
+		ID:          uuid.New(),
+		SessionID:   sessionUUID,
+		ZpMessageID: evt.Info.ID,
+		ZpSender:    evt.Info.Sender.String(),
+		ZpChat:      evt.Info.Chat.String(),
+		ZpTimestamp: evt.Info.Timestamp,
+		ZpFromMe:    evt.Info.IsFromMe,
+		ZpType:      string(evt.Info.Type),
+		Content:     contentStr,
+		SyncStatus:  "pending",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	return message, nil
+}
+
+// extractMessageContent extrai conteúdo da mensagem baseado no tipo
+func (h *EventHandler) extractMessageContent(message *waE2E.Message) map[string]interface{} {
+	content := make(map[string]interface{})
+
+	switch {
+	case message.GetConversation() != "":
+		content["text"] = message.GetConversation()
+		content["type"] = "text"
+	case message.GetExtendedTextMessage() != nil:
+		content["text"] = message.GetExtendedTextMessage().GetText()
+		content["type"] = "extended_text"
+	case message.GetImageMessage() != nil:
+		img := message.GetImageMessage()
+		content["type"] = "image"
+		content["caption"] = img.GetCaption()
+		content["mimetype"] = img.GetMimetype()
+		content["url"] = img.GetURL()
+	case message.GetVideoMessage() != nil:
+		vid := message.GetVideoMessage()
+		content["type"] = "video"
+		content["caption"] = vid.GetCaption()
+		content["mimetype"] = vid.GetMimetype()
+		content["url"] = vid.GetURL()
+	case message.GetAudioMessage() != nil:
+		aud := message.GetAudioMessage()
+		content["type"] = "audio"
+		content["mimetype"] = aud.GetMimetype()
+		content["url"] = aud.GetURL()
+	case message.GetDocumentMessage() != nil:
+		doc := message.GetDocumentMessage()
+		content["type"] = "document"
+		content["filename"] = doc.GetFileName()
+		content["mimetype"] = doc.GetMimetype()
+		content["url"] = doc.GetURL()
+	default:
+		content["type"] = "unknown"
+		content["raw"] = fmt.Sprintf("%+v", message)
+	}
+
+	return content
 }

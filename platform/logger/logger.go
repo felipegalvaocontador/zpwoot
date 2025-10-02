@@ -63,13 +63,7 @@ func NewWithConfig(cfg config.LogConfig) *Logger {
 
 	// Criar contexto base do logger
 	ctx := zerolog.New(writer).With().
-		Timestamp().
-		Str("service", "zpwoot")
-
-	// Adicionar informações de ambiente
-	if env := os.Getenv("NODE_ENV"); env != "" {
-		ctx = ctx.Str("env", env)
-	}
+		Timestamp()
 
 	// Adicionar caller se habilitado
 	if cfg.Caller {
@@ -87,6 +81,15 @@ func NewWithConfig(cfg config.LogConfig) *Logger {
 // NewFromAppConfig cria logger a partir da configuração da aplicação
 func NewFromAppConfig(appConfig *config.Config) *Logger {
 	return New(appConfig.Log)
+}
+
+// WithModule cria um novo logger com módulo específico
+func (l *Logger) WithModule(module string) *Logger {
+	newLogger := l.logger.With().Str("component", module).Logger()
+	return &Logger{
+		logger: newLogger,
+		config: l.config,
+	}
 }
 
 // ===== MÉTODOS DE LOGGING =====

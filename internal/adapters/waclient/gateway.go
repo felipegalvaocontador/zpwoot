@@ -144,9 +144,7 @@ func (g *Gateway) SetSessionService(service SessionServiceExtended) {
 	defer g.mu.Unlock()
 	g.sessionService = service
 
-	g.logger.InfoWithFields("SessionService configured for gateway", map[string]interface{}{
-		"service_configured": service != nil,
-	})
+	// SessionService configured
 }
 
 // RegisterSessionUUID registra o mapeamento entre nome da sessão e UUID
@@ -186,10 +184,6 @@ func (g *Gateway) CreateSession(ctx context.Context, sessionName string) error {
 		return fmt.Errorf("session %s already exists", sessionName)
 	}
 
-	g.logger.InfoWithFields("Creating WhatsApp session", map[string]interface{}{
-		"session_name": sessionName,
-	})
-
 	// Criar cliente WhatsApp
 	client, err := NewClient(sessionName, g.container, g.logger)
 	if err != nil {
@@ -202,19 +196,11 @@ func (g *Gateway) CreateSession(ctx context.Context, sessionName string) error {
 	// Armazenar cliente
 	g.clients[sessionName] = client
 
-	g.logger.InfoWithFields("WhatsApp session created successfully", map[string]interface{}{
-		"session_name": sessionName,
-	})
-
 	return nil
 }
 
 // ConnectSession conecta uma sessão WhatsApp baseado no legacy
 func (g *Gateway) ConnectSession(ctx context.Context, sessionName string) error {
-	g.logger.InfoWithFields("Starting session connection", map[string]interface{}{
-		"session_name": sessionName,
-	})
-
 	client := g.getClient(sessionName)
 	if client == nil {
 		g.logger.InfoWithFields("Client not found in memory, attempting to restore", map[string]interface{}{
@@ -242,9 +228,6 @@ func (g *Gateway) ConnectSession(ctx context.Context, sessionName string) error 
 
 	// Verificar se já está conectado
 	if client.GetClient().IsConnected() {
-		g.logger.InfoWithFields("Session already connected", map[string]interface{}{
-			"session_name": sessionName,
-		})
 		return nil
 	}
 
@@ -256,10 +239,6 @@ func (g *Gateway) ConnectSession(ctx context.Context, sessionName string) error 
 		})
 		return fmt.Errorf("failed to connect session: %w", err)
 	}
-
-	g.logger.InfoWithFields("Session connection initiated", map[string]interface{}{
-		"session_name": sessionName,
-	})
 
 	return nil
 }
@@ -274,9 +253,7 @@ func (g *Gateway) RestoreSession(ctx context.Context, sessionName string) error 
 		return nil
 	}
 
-	g.logger.InfoWithFields("Restoring WhatsApp session client", map[string]interface{}{
-		"session_name": sessionName,
-	})
+	// Restoring session client
 
 	// Buscar deviceJID da sessão no banco para carregar device existente
 	sessionUUID, exists := g.sessionUUIDs[sessionName]
@@ -295,10 +272,7 @@ func (g *Gateway) RestoreSession(ctx context.Context, sessionName string) error 
 		return fmt.Errorf("session UUID not found for session %s", sessionName)
 	}
 
-	g.logger.InfoWithFields("Found session UUID for restoration", map[string]interface{}{
-		"session_name": sessionName,
-		"session_uuid": sessionUUID,
-	})
+	// Found session UUID for restoration
 
 	// Criar cliente WhatsApp com device existente
 	client, err := g.newClientWithExistingDevice(sessionName, sessionUUID)
@@ -312,19 +286,14 @@ func (g *Gateway) RestoreSession(ctx context.Context, sessionName string) error 
 	// Armazenar cliente
 	g.clients[sessionName] = client
 
-	g.logger.InfoWithFields("WhatsApp session client restored successfully", map[string]interface{}{
-		"session_name": sessionName,
-	})
+	// Session client restored successfully
 
 	return nil
 }
 
 // newClientWithExistingDevice cria cliente WhatsApp carregando device existente
 func (g *Gateway) newClientWithExistingDevice(sessionName, sessionUUID string) (*Client, error) {
-	g.logger.InfoWithFields("Starting device restoration", map[string]interface{}{
-		"session_name": sessionName,
-		"session_uuid": sessionUUID,
-	})
+	// Starting device restoration
 
 	// Buscar deviceJID do banco de dados
 	deviceJID, err := g.getDeviceJIDFromDatabase(sessionUUID)
@@ -345,9 +314,9 @@ func (g *Gateway) newClientWithExistingDevice(sessionName, sessionUUID string) (
 	}
 
 	// Carregar device existente pelo deviceJID
-	g.logger.InfoWithFields("Loading existing device from credentials", map[string]interface{}{
-		"session_name": sessionName,
-		"device_jid":   deviceJID,
+	g.logger.InfoWithFields("Loading existing device", map[string]interface{}{
+		"module":  "gateway",
+		"session": sessionName,
 	})
 
 	client, err := g.newClientWithDeviceJID(sessionName, deviceJID)
@@ -576,11 +545,7 @@ func (g *Gateway) SetProxy(ctx context.Context, sessionName string, proxy *sessi
 		return fmt.Errorf("session %s not found", sessionName)
 	}
 
-	g.logger.InfoWithFields("Setting proxy for session", map[string]interface{}{
-		"session_name": sessionName,
-		"proxy_type":   proxy.Type,
-		"proxy_host":   proxy.Host,
-	})
+	// Setting proxy for session
 
 	if err := client.SetProxy(proxy); err != nil {
 		return fmt.Errorf("failed to set proxy: %w", err)
@@ -712,14 +677,7 @@ func (g *Gateway) SetChatwootManager(manager ChatwootManager) {
 func (g *Gateway) SaveReceivedMessage(message *messaging.Message) error {
 	// TODO: Implementar salvamento via message repository
 	// Por enquanto, apenas log
-	g.logger.InfoWithFields("Message received and ready to save", map[string]interface{}{
-		"session_id":    message.SessionID,
-		"message_id":    message.ZpMessageID,
-		"sender":        message.ZpSender,
-		"chat":          message.ZpChat,
-		"type":          message.ZpType,
-		"from_me":       message.ZpFromMe,
-	})
+	// Message received and ready to save (silently)
 
 	return nil
 }
@@ -875,10 +833,7 @@ func (g *Gateway) GetGroupInfo(ctx context.Context, sessionID, groupJID string) 
 
 // UpdateSessionStatus atualiza o status de uma sessão no banco de dados
 func (g *Gateway) UpdateSessionStatus(sessionID, status string) error {
-	g.logger.InfoWithFields("Updating session status", map[string]interface{}{
-		"session_id": sessionID,
-		"status":     status,
-	})
+	// Updating session status
 
 	// TODO: Implementar atualização via session repository
 	// Por enquanto, apenas log

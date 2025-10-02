@@ -125,6 +125,7 @@ func (h *EventHandler) deliverToWebhook(evt interface{}, sessionID string) {
 // handleConnected processa evento de conexão
 func (h *EventHandler) handleConnected(evt *events.Connected, sessionID string) {
 	h.logger.InfoWithFields("WhatsApp connected", map[string]interface{}{
+		"module":     "events",
 		"session_id": sessionID,
 	})
 
@@ -259,12 +260,9 @@ func (h *EventHandler) handlePairError(evt *events.PairError, sessionID string) 
 // handleMessage processa evento de mensagem baseado no legacy
 func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 	h.logger.InfoWithFields("Message received", map[string]interface{}{
-		"session_id": sessionID,
-		"message_id": evt.Info.ID,
-		"from":       evt.Info.Sender.String(),
-		"chat":       evt.Info.Chat.String(),
-		"from_me":    evt.Info.IsFromMe,
-		"type":       evt.Info.Type,
+		"module": "events",
+		"type":   evt.Info.Type,
+		"from_me": evt.Info.IsFromMe,
 	})
 
 	// Salvar mensagem no banco de dados

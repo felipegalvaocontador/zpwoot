@@ -334,9 +334,7 @@ func (s *SessionService) ConnectSession(ctx context.Context, sessionID string) (
 		return nil, fmt.Errorf("invalid session ID format: %w", err)
 	}
 
-	s.logger.InfoWithFields("Connecting session", map[string]interface{}{
-		"session_id": sessionID,
-	})
+	// Connecting session
 
 	// Executar conexão no core
 	err = s.coreService.ConnectSession(ctx, id)
@@ -373,11 +371,7 @@ func (s *SessionService) ConnectSession(ctx context.Context, sessionID string) (
 		}
 	}
 
-	s.logger.InfoWithFields("Session connection processed", map[string]interface{}{
-		"session_id": sessionID,
-		"success":    response.Success,
-		"has_qr":     response.QRCode != "",
-	})
+	// Session connection processed
 
 	return response, nil
 }

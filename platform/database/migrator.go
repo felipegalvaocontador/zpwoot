@@ -42,8 +42,6 @@ func NewMigrator(db *Database, logger *logger.Logger) *Migrator {
 
 // RunMigrations executa todas as migrações pendentes
 func (m *Migrator) RunMigrations() error {
-	m.logger.Info("Starting database migrations...")
-
 	if err := m.createMigrationsTable(); err != nil {
 		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
@@ -68,14 +66,7 @@ func (m *Migrator) RunMigrations() error {
 		}
 	}
 
-	if pendingCount > 0 {
-		m.logger.InfoWithFields("Database migrations completed", map[string]interface{}{
-			"migrations_applied": pendingCount,
-			"total_migrations":   len(migrations),
-		})
-	} else {
-		m.logger.Info("Database is up to date, no migrations needed")
-	}
+	// Migrations completed silently
 
 	return nil
 }

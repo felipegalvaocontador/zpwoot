@@ -74,7 +74,6 @@ func New(cfg *Config) (*Container, error) {
 		return nil, fmt.Errorf("failed to initialize container: %w", err)
 	}
 
-	cfg.Logger.Info("Dependency injection container initialized successfully")
 	return container, nil
 }
 
@@ -99,10 +98,6 @@ func (c *Container) createWhatsAppContainer() (*sqlstore.Container, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to upgrade sqlstore: %w", err)
 	}
-
-	c.logger.InfoWithFields("WhatsApp sqlstore container created successfully", map[string]interface{}{
-		"database_url": c.config.Database.URL,
-	})
 
 	return container, nil
 }
@@ -193,10 +188,6 @@ func (c *Container) initialize() error {
 
 // Start inicia os componentes do container
 func (c *Container) Start(ctx context.Context) error {
-	c.logger.Info("Starting container components...")
-
-	// Componentes inicializados - restauração de sessões será feita via connectOnStartup
-	c.logger.Info("Container components started successfully")
 	return nil
 }
 
@@ -241,25 +232,14 @@ func (c *Container) GetWhatsAppGateway() session.WhatsAppGateway {
 
 // Stop para todos os componentes gracefully
 func (c *Container) Stop(ctx context.Context) error {
-	c.logger.Info("Stopping container components...")
-
 	// Parar WhatsApp gateway se necessário
 	if stopper, ok := c.whatsappGateway.(interface{ Stop(context.Context) error }); ok {
-		if err := stopper.Stop(ctx); err != nil {
-			c.logger.ErrorWithFields("Failed to stop WhatsApp gateway", map[string]interface{}{
-				"error": err.Error(),
-			})
-		}
+		stopper.Stop(ctx)
 	}
 
 	// Fechar conexão com banco de dados
-	if err := c.database.Close(); err != nil {
-		c.logger.ErrorWithFields("Failed to close database connection", map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
+	c.database.Close()
 
-	c.logger.Info("Container components stopped successfully")
 	return nil
 }
 

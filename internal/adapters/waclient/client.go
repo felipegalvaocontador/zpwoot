@@ -143,15 +143,7 @@ func NewClient(sessionName string, container *sqlstore.Container, logger *logger
 	// Configurar event handlers
 	client.setupEventHandlers()
 
-	deviceID := "nil"
-	if deviceStore.ID != nil {
-		deviceID = deviceStore.ID.String()
-	}
-
-	logger.InfoWithFields("WhatsApp client created", map[string]interface{}{
-		"session_name": sessionName,
-		"device_id":    deviceID,
-	})
+	// WhatsApp client created
 
 	return client, nil
 }
@@ -195,14 +187,9 @@ func NewClientWithDevice(sessionName string, deviceStore *store.Device, containe
 	// Configurar event handlers
 	client.setupEventHandlers()
 
-	deviceID := "nil"
-	if deviceStore.ID != nil {
-		deviceID = deviceStore.ID.String()
-	}
-
 	logger.InfoWithFields("WhatsApp client created with existing device", map[string]interface{}{
-		"session_name": sessionName,
-		"device_id":    deviceID,
+		"module":  "client",
+		"session": sessionName,
 	})
 
 	return client, nil
@@ -210,9 +197,7 @@ func NewClientWithDevice(sessionName string, deviceStore *store.Device, containe
 
 // Connect conecta o cliente ao WhatsApp baseado no legacy
 func (c *Client) Connect() error {
-	c.logger.InfoWithFields("Starting connection process", map[string]interface{}{
-		"session_name": c.sessionName,
-	})
+	// Starting connection process
 
 	// Parar qualquer processo de QR code ativo
 	c.stopQRProcess()
@@ -253,14 +238,8 @@ func (c *Client) startConnectionLoop() {
 	isRegistered := c.isDeviceRegistered()
 
 	if !isRegistered {
-		c.logger.InfoWithFields("Device not registered, starting QR code process", map[string]interface{}{
-			"session_name": c.sessionName,
-		})
 		c.handleNewDeviceRegistration()
 	} else {
-		c.logger.InfoWithFields("Device registered, connecting existing device", map[string]interface{}{
-			"session_name": c.sessionName,
-		})
 		c.handleExistingDeviceConnection()
 	}
 }
@@ -307,9 +286,7 @@ func (c *Client) handleExistingDeviceConnection() {
 		return
 	}
 
-	c.logger.InfoWithFields("Existing device connected successfully", map[string]interface{}{
-		"session_name": c.sessionName,
-	})
+	// Existing device connected successfully
 }
 
 // handleQRLoop processa o loop de QR code
@@ -471,7 +448,8 @@ func (c *Client) handleConnectedEvent(evt *events.Connected) {
 	c.setStatus("connected")
 
 	c.logger.InfoWithFields("WhatsApp client connected", map[string]interface{}{
-		"session_name": c.sessionName,
+		"module":  "client",
+		"session": c.sessionName,
 	})
 }
 

@@ -61,14 +61,12 @@ func main() {
 
 	// Inicializar logger
 	log := logger.NewFromAppConfig(cfg)
-	log.InfoWithFields("Starting zpwoot application", map[string]interface{}{
-		"version":     appVersion,
-		"environment": cfg.Environment,
-		"port":        cfg.Server.Port,
+	log.InfoWithFields("Starting zpwoot", map[string]interface{}{
+		"module":  "main",
+		"version": appVersion,
 	})
 
 	// Inicializar banco de dados
-	log.Info("Initializing database connection...")
 	db, err := database.NewFromAppConfig(cfg, log)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Failed to initialize database: %v", err))
@@ -77,14 +75,12 @@ func main() {
 
 	// Executar migrações se habilitado
 	if cfg.Database.AutoMigrate {
-		log.Info("Running database migrations...")
 		if err := runMigrations(db, log); err != nil {
 			log.Fatal(fmt.Sprintf("Failed to run migrations: %v", err))
 		}
 	}
 
 	// Inicializar container de DI
-	log.Info("Initializing dependency injection container...")
 	containerConfig := &container.Config{
 		AppConfig: cfg,
 		Logger:    log,
@@ -119,8 +115,9 @@ func main() {
 
 	// Iniciar servidor HTTP em goroutine
 	go func() {
-		log.InfoWithFields("Starting HTTP server", map[string]interface{}{
-			"address": server.Addr,
+		log.InfoWithFields("Server started", map[string]interface{}{
+			"module": "server",
+			"port":   cfg.Server.Port,
 		})
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -175,35 +172,28 @@ func connectOnStartup(container *container.Container, logger *logger.Logger) {
 	)
 
 	time.Sleep(startupDelay)
-	logger.Info("Starting automatic reconnection of existing sessions")
 
 	sessionService := container.GetSessionService()
 	if sessionService == nil {
-		logger.Error("SessionService not available, skipping auto-connect")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
-	// Buscar sessões existentes que têm deviceJID (credenciais)
 	sessions := getExistingSessions(ctx, sessionService, sessionLimit, logger)
 	if len(sessions) == 0 {
-		logger.Info("No existing sessions with credentials found, skipping auto-connect")
 		return
 	}
 
-	logger.InfoWithFields("Starting auto-reconnect", map[string]interface{}{
-		"total_sessions": len(sessions),
-	})
-
 	stats := reconnectSessions(ctx, sessions, sessionService, logger, reconnectDelay)
 
-	logger.InfoWithFields("Auto-reconnect completed", map[string]interface{}{
-		"connected": stats.connected,
-		"skipped":   stats.skipped,
-		"failed":    stats.failed,
-	})
+	if stats.connected > 0 {
+		logger.InfoWithFields("Auto-reconnect completed", map[string]interface{}{
+			"module":    "session",
+			"connected": stats.connected,
+		})
+	}
 }
 
 // getExistingSessions returns sessions that have saved credentials
@@ -233,12 +223,6 @@ func getExistingSessions(ctx context.Context, sessionService *services.SessionSe
 		}
 	}
 
-	if len(sessionsWithCredentials) > 0 {
-		logger.InfoWithFields("Found sessions with credentials", map[string]interface{}{
-			"sessions_with_creds": len(sessionsWithCredentials),
-		})
-	}
-
 	return sessionsWithCredentials
 }
 
@@ -256,18 +240,11 @@ func reconnectSessions(ctx context.Context, sessions []sessionInfo, sessionServi
 
 		result, err := sessionService.ConnectSession(ctx, session.ID)
 		if err != nil {
-			logger.ErrorWithFields("Failed to reconnect session", map[string]interface{}{
-				"session_name": session.Name,
-				"error":        err.Error(),
-			})
 			stats.failed++
 		} else if result.Success {
 			if result.QRCode != "" {
 				stats.skipped++
 			} else {
-				logger.InfoWithFields("Session reconnected successfully", map[string]interface{}{
-					"session_name": session.Name,
-				})
 				stats.connected++
 			}
 		} else {

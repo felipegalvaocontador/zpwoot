@@ -45,11 +45,7 @@ func New(cfg config.DatabaseConfig, log *logger.Logger) (*Database, error) {
 		logger: log,
 	}
 
-	log.InfoWithFields("Database connected successfully", map[string]interface{}{
-		"max_open_conns":    cfg.MaxOpenConns,
-		"max_idle_conns":    cfg.MaxIdleConns,
-		"conn_max_lifetime": cfg.ConnMaxLifetime,
-	})
+	// Database connected successfully
 
 	return database, nil
 }
@@ -61,7 +57,9 @@ func NewFromAppConfig(appConfig *config.Config, log *logger.Logger) (*Database, 
 
 // Close fecha conexão com banco de dados
 func (d *Database) Close() error {
-	d.logger.Info("Closing database connection")
+	d.logger.InfoWithFields("Closing database connection", map[string]interface{}{
+		"module": "database",
+	})
 	return d.DB.Close()
 }
 

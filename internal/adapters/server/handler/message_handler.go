@@ -80,11 +80,11 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	response, err := h.messageService.SendTextMessage(r.Context(), sessionID, req.To, req.Content)
+	response, err := h.messageService.SendTextMessage(r.Context(), sessionID, req.RemoteJID, req.Body)
 	if err != nil {
 		h.GetLogger().ErrorWithFields("Failed to send text message", map[string]interface{}{
 			"session_id": sessionID,
-			"to":         req.To,
+			"remote_jid": req.RemoteJID,
 			"error":      err.Error(),
 		})
 		h.GetWriter().WriteInternalError(w, "Failed to send text message")
@@ -94,8 +94,8 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 	h.LogSuccess("send text message", map[string]interface{}{
 		"session_id":  sessionID,
 		"message_id":  response.MessageID,
-		"to":          req.To,
-		"content_len": len(req.Content),
+		"remote_jid":  req.RemoteJID,
+		"body_len":    len(req.Body),
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Text message sent successfully")

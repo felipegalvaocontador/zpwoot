@@ -24,13 +24,15 @@ type ListMessagesRequest struct {
 } // @name ListMessagesRequest
 
 type SendTextMessageRequest struct {
-	To           string   `json:"to" validate:"required" example:"5511999999999@s.whatsapp.net"`
-	Text         string   `json:"text" validate:"required" example:"Hello, World!"`
-	Content      string   `json:"content,omitempty" example:"Hello, World!"`
-	ReplyTo      string   `json:"reply_to,omitempty" example:"3EB0C767D71D"`
-	MentionedJID []string `json:"mentioned_jid,omitempty" example:"[\"5511888888888@s.whatsapp.net\"]"`
-	LinkPreview  bool     `json:"link_preview" example:"true"`
+	RemoteJID   string       `json:"remoteJid" validate:"required" example:"5511999999999@s.whatsapp.net"`
+	Body        string       `json:"body" validate:"required" example:"Hello, World!"`
+	ContextInfo *ContextInfo `json:"contextInfo,omitempty"`
 } // @name SendTextMessageRequest
+
+type ContextInfo struct {
+	StanzaID    string `json:"stanzaId" validate:"required" example:"ABCD1234abcd"`
+	Participant string `json:"participant,omitempty" example:"5511999999999@s.whatsapp.net"`
+} // @name ContextInfo
 
 type SendMediaMessageRequest struct {
 	To       string `json:"to" validate:"required" example:"5511999999999@s.whatsapp.net"`

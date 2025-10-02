@@ -1859,162 +1859,6 @@
                 }
             }
         },
-        "/sessions/{sessionId}/messages": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "List messages with filters and pagination",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Messages"
-                ],
-                "summary": "List messages",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Chat JID filter",
-                        "name": "chat_jid",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default: 50, max: 100)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Offset (default: 0)",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/zpwoot_internal_services.ListMessagesResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Create a new message in the system",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Messages"
-                ],
-                "summary": "Create message",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Message creation request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/CreateMessageRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/zpwoot_internal_services.CreateMessageResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/sessions/{sessionId}/messages/edit": {
             "post": {
                 "security": [
@@ -3561,128 +3405,7 @@
                 }
             }
         },
-        "/sessions/{sessionId}/messages/stats": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Get statistics for messages in a session",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Messages"
-                ],
-                "summary": "Get message statistics",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/zpwoot_internal_core_messaging.MessageStats"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/sessions/{sessionId}/messages/{messageId}": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Get a message by ID",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Messages"
-                ],
-                "summary": "Get message",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Message ID",
-                        "name": "messageId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.MessageDTO"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            },
             "delete": {
                 "security": [
                     {
@@ -3716,77 +3439,6 @@
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/sessions/{sessionId}/messages/{messageId}/sync": {
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Update the synchronization status of a message",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Messages"
-                ],
-                "summary": "Update message sync status",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Message ID",
-                        "name": "messageId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Sync status update request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/UpdateSyncStatusRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/SuccessResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/SuccessResponse"
                         }
@@ -4308,7 +3960,6 @@
             "type": "object",
             "properties": {
                 "contact_name": {
-                    "description": "Alias para Name",
                     "type": "string",
                     "example": "John Doe"
                 },
@@ -4335,46 +3986,6 @@
                 "success": {
                     "type": "boolean",
                     "example": true
-                }
-            }
-        },
-        "CreateMessageRequest": {
-            "type": "object",
-            "required": [
-                "zp_chat",
-                "zp_message_id",
-                "zp_sender",
-                "zp_timestamp",
-                "zp_type"
-            ],
-            "properties": {
-                "content": {
-                    "type": "string",
-                    "example": "Hello World"
-                },
-                "zp_chat": {
-                    "type": "string",
-                    "example": "5511999999999@s.whatsapp.net"
-                },
-                "zp_from_me": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "zp_message_id": {
-                    "type": "string",
-                    "example": "3EB0C767D71D"
-                },
-                "zp_sender": {
-                    "type": "string",
-                    "example": "5511999999999@s.whatsapp.net"
-                },
-                "zp_timestamp": {
-                    "type": "string",
-                    "example": "2024-01-01T12:00:00Z"
-                },
-                "zp_type": {
-                    "type": "string",
-                    "example": "text"
                 }
             }
         },
@@ -4465,7 +4076,6 @@
                     "example": "3EB0C767D71D"
                 },
                 "new_body": {
-                    "description": "Alias para NewText",
                     "type": "string",
                     "example": "Updated message"
                 },
@@ -4542,7 +4152,6 @@
                     "example": 15
                 },
                 "vote_results": {
-                    "description": "Alias para Votes",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/PollVoteInfo"
@@ -4910,7 +4519,6 @@
                     "example": "req-123"
                 },
                 "results": {
-                    "description": "Alias para ContactResults",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/ContactResult"
@@ -4943,12 +4551,10 @@
             ],
             "properties": {
                 "contact_name": {
-                    "description": "Alias para Name",
                     "type": "string",
                     "example": "John Doe"
                 },
                 "contact_phone": {
-                    "description": "Alias para Phone",
                     "type": "string",
                     "example": "+5511888888888"
                 },
@@ -5303,7 +4909,6 @@
             ],
             "properties": {
                 "content": {
-                    "description": "Alias para Text (compatibilidade)",
                     "type": "string",
                     "example": "Hello, World!"
                 },
@@ -5453,31 +5058,6 @@
                 "success": {
                     "type": "boolean",
                     "example": true
-                }
-            }
-        },
-        "UpdateSyncStatusRequest": {
-            "type": "object",
-            "required": [
-                "sync_status"
-            ],
-            "properties": {
-                "cw_conversation_id": {
-                    "type": "integer",
-                    "example": 456
-                },
-                "cw_message_id": {
-                    "type": "integer",
-                    "example": 123
-                },
-                "sync_status": {
-                    "type": "string",
-                    "enum": [
-                        "pending",
-                        "synced",
-                        "failed"
-                    ],
-                    "example": "synced"
                 }
             }
         },
@@ -6025,86 +5605,6 @@
                 },
                 "success": {
                     "type": "boolean"
-                }
-            }
-        },
-        "zpwoot_internal_core_messaging.MessageStats": {
-            "type": "object",
-            "properties": {
-                "failed_messages": {
-                    "type": "integer"
-                },
-                "messages_by_status": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer",
-                        "format": "int64"
-                    }
-                },
-                "messages_by_type": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer",
-                        "format": "int64"
-                    }
-                },
-                "messages_this_month": {
-                    "type": "integer"
-                },
-                "messages_this_week": {
-                    "type": "integer"
-                },
-                "messages_today": {
-                    "type": "integer"
-                },
-                "pending_messages": {
-                    "type": "integer"
-                },
-                "synced_messages": {
-                    "type": "integer"
-                },
-                "total_messages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "zpwoot_internal_services.CreateMessageResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "session_id": {
-                    "type": "string"
-                },
-                "sync_status": {
-                    "type": "string"
-                },
-                "zp_message_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "zpwoot_internal_services.ListMessagesResponse": {
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "type": "integer"
-                },
-                "messages": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/zpwoot_internal_adapters_server_contracts.MessageDTO"
-                    }
-                },
-                "offset": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
                 }
             }
         }

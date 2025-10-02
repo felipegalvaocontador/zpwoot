@@ -45,7 +45,6 @@ definitions:
   ContactResult:
     properties:
       contact_name:
-        description: Alias para Name
         example: John Doe
         type: string
       error:
@@ -66,36 +65,6 @@ definitions:
       success:
         example: true
         type: boolean
-    type: object
-  CreateMessageRequest:
-    properties:
-      content:
-        example: Hello World
-        type: string
-      zp_chat:
-        example: 5511999999999@s.whatsapp.net
-        type: string
-      zp_from_me:
-        example: false
-        type: boolean
-      zp_message_id:
-        example: 3EB0C767D71D
-        type: string
-      zp_sender:
-        example: 5511999999999@s.whatsapp.net
-        type: string
-      zp_timestamp:
-        example: "2024-01-01T12:00:00Z"
-        type: string
-      zp_type:
-        example: text
-        type: string
-    required:
-    - zp_chat
-    - zp_message_id
-    - zp_sender
-    - zp_timestamp
-    - zp_type
     type: object
   CreateSessionRequest:
     properties:
@@ -156,7 +125,6 @@ definitions:
         example: 3EB0C767D71D
         type: string
       new_body:
-        description: Alias para NewText
         example: Updated message
         type: string
       new_text:
@@ -217,7 +185,6 @@ definitions:
         example: 15
         type: integer
       vote_results:
-        description: Alias para Votes
         items:
           $ref: '#/definitions/PollVoteInfo'
         type: array
@@ -478,7 +445,6 @@ definitions:
         example: req-123
         type: string
       results:
-        description: Alias para ContactResults
         items:
           $ref: '#/definitions/ContactResult'
         type: array
@@ -498,11 +464,9 @@ definitions:
   SendContactMessageRequest:
     properties:
       contact_name:
-        description: Alias para Name
         example: John Doe
         type: string
       contact_phone:
-        description: Alias para Phone
         example: "+5511888888888"
         type: string
       name:
@@ -765,7 +729,6 @@ definitions:
   SendTextMessageRequest:
     properties:
       content:
-        description: Alias para Text (compatibilidade)
         example: Hello, World!
         type: string
       link_preview:
@@ -875,24 +838,6 @@ definitions:
       success:
         example: true
         type: boolean
-    type: object
-  UpdateSyncStatusRequest:
-    properties:
-      cw_conversation_id:
-        example: 456
-        type: integer
-      cw_message_id:
-        example: 123
-        type: integer
-      sync_status:
-        enum:
-        - pending
-        - synced
-        - failed
-        example: synced
-        type: string
-    required:
-    - sync_status
     type: object
   internal_adapters_server_handler.BusinessProfileResponse:
     properties:
@@ -1262,59 +1207,6 @@ definitions:
         type: array
       success:
         type: boolean
-    type: object
-  zpwoot_internal_core_messaging.MessageStats:
-    properties:
-      failed_messages:
-        type: integer
-      messages_by_status:
-        additionalProperties:
-          format: int64
-          type: integer
-        type: object
-      messages_by_type:
-        additionalProperties:
-          format: int64
-          type: integer
-        type: object
-      messages_this_month:
-        type: integer
-      messages_this_week:
-        type: integer
-      messages_today:
-        type: integer
-      pending_messages:
-        type: integer
-      synced_messages:
-        type: integer
-      total_messages:
-        type: integer
-    type: object
-  zpwoot_internal_services.CreateMessageResponse:
-    properties:
-      created_at:
-        type: string
-      id:
-        type: string
-      session_id:
-        type: string
-      sync_status:
-        type: string
-      zp_message_id:
-        type: string
-    type: object
-  zpwoot_internal_services.ListMessagesResponse:
-    properties:
-      limit:
-        type: integer
-      messages:
-        items:
-          $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.MessageDTO'
-        type: array
-      offset:
-        type: integer
-      total:
-        type: integer
     type: object
 info:
   contact:
@@ -2349,101 +2241,6 @@ paths:
       summary: Get media statistics
       tags:
       - Media
-  /sessions/{sessionId}/messages:
-    get:
-      description: List messages with filters and pagination
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      - description: Chat JID filter
-        in: query
-        name: chat_jid
-        type: string
-      - description: 'Limit (default: 50, max: 100)'
-        in: query
-        name: limit
-        type: integer
-      - description: 'Offset (default: 0)'
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/zpwoot_internal_services.ListMessagesResponse'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: List messages
-      tags:
-      - Messages
-    post:
-      consumes:
-      - application/json
-      description: Create a new message in the system
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      - description: Message creation request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/CreateMessageRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            allOf:
-            - $ref: '#/definitions/SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/zpwoot_internal_services.CreateMessageResponse'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Create message
-      tags:
-      - Messages
   /sessions/{sessionId}/messages/{messageId}:
     delete:
       description: Delete a message from the system
@@ -2476,90 +2273,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Delete message
-      tags:
-      - Messages
-    get:
-      description: Get a message by ID
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      - description: Message ID
-        in: path
-        name: messageId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/zpwoot_internal_adapters_server_contracts.MessageDTO'
-              type: object
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Get message
-      tags:
-      - Messages
-  /sessions/{sessionId}/messages/{messageId}/sync:
-    put:
-      consumes:
-      - application/json
-      description: Update the synchronization status of a message
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      - description: Message ID
-        in: path
-        name: messageId
-        required: true
-        type: string
-      - description: Sync status update request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/UpdateSyncStatusRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Update message sync status
       tags:
       - Messages
   /sessions/{sessionId}/messages/edit:
@@ -3502,40 +3215,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Send video message
-      tags:
-      - Messages
-  /sessions/{sessionId}/messages/stats:
-    get:
-      description: Get statistics for messages in a session
-      parameters:
-      - description: Session ID
-        in: path
-        name: sessionId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/zpwoot_internal_core_messaging.MessageStats'
-              type: object
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/SuccessResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Get message statistics
       tags:
       - Messages
   /sessions/{sessionId}/pair:

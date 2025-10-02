@@ -1,7 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"zpwoot/internal/adapters/server/shared"
 	"zpwoot/internal/services"
@@ -21,6 +25,22 @@ func NewSessionHandler(sessionService *services.SessionService, logger *logger.L
 		BaseHandler:    shared.NewBaseHandler(logger),
 		sessionService: sessionService,
 	}
+}
+
+// resolveSessionIdentifier resolve um identificador de sessão (UUID ou nome) para UUID
+func (h *SessionHandler) resolveSessionIdentifier(r *http.Request) (uuid.UUID, string, error) {
+	sessionIdentifier := chi.URLParam(r, "sessionId")
+	if sessionIdentifier == "" {
+		return uuid.Nil, "", fmt.Errorf("session identifier is required")
+	}
+
+	// Resolver para UUID
+	sessionID, err := h.sessionService.ResolveSessionID(r.Context(), sessionIdentifier)
+	if err != nil {
+		return uuid.Nil, sessionIdentifier, fmt.Errorf("session not found: %w", err)
+	}
+
+	return sessionID, sessionIdentifier, nil
 }
 
 // CreateSession cria uma nova sessão
@@ -181,22 +201,23 @@ func (h *SessionHandler) GetSessionInfo(w http.ResponseWriter, r *http.Request) 
 func (h *SessionHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "delete session")
 
-	// Extrair session ID da URL
-	sessionID, err := h.GetSessionIDFromURL(r)
+	// Resolver identificador da sessão
+	sessionID, sessionIdentifier, err := h.resolveSessionIdentifier(r)
 	if err != nil {
-		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
+		h.GetWriter().WriteBadRequest(w, "Session not found", err.Error())
 		return
 	}
 
 	// Executar no service
-	if err := h.sessionService.DeleteSession(r.Context(), sessionID.String()); err != nil {
+	if err := h.sessionService.DeleteSessionByNameOrID(r.Context(), sessionIdentifier); err != nil {
 		h.HandleError(w, err, "delete session")
 		return
 	}
 
 	// Log sucesso
 	h.LogSuccess("delete session", map[string]interface{}{
-		"session_id": sessionID.String(),
+		"session_identifier": sessionIdentifier,
+		"session_id":         sessionID.String(),
 	})
 
 	// Resposta de sucesso

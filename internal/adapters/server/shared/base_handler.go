@@ -47,19 +47,30 @@ func (h *BaseHandler) GetValidator() *validation.Validator {
 
 // ===== URL PARAMETER EXTRACTION =====
 
-// GetSessionIDFromURL extrai session ID da URL
+// GetSessionIDFromURL extrai session ID da URL (aceita UUID ou nome de sessão)
 func (h *BaseHandler) GetSessionIDFromURL(r *http.Request) (uuid.UUID, error) {
 	sessionIDStr := chi.URLParam(r, "sessionId")
 	if sessionIDStr == "" {
 		return uuid.Nil, fmt.Errorf("session ID is required")
 	}
 
+	// Tentar primeiro como UUID
 	sessionID, err := uuid.Parse(sessionIDStr)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("invalid session ID format: %w", err)
+	if err == nil {
+		return sessionID, nil
 	}
 
-	return sessionID, nil
+	// Se não for UUID, é um nome de sessão - retornar erro especial para indicar que é nome
+	return uuid.Nil, fmt.Errorf("session_name:%s", sessionIDStr)
+}
+
+// GetSessionNameFromURL extrai nome da sessão da URL
+func (h *BaseHandler) GetSessionNameFromURL(r *http.Request) (string, error) {
+	sessionName := chi.URLParam(r, "sessionId")
+	if sessionName == "" {
+		return "", fmt.Errorf("session identifier is required")
+	}
+	return sessionName, nil
 }
 
 // GetStringParam extrai parâmetro string da URL

@@ -169,6 +169,64 @@ func (s *SessionService) GetSession(ctx context.Context, sessionID string) (*con
 	return response, nil
 }
 
+// ResolveSessionID resolve um identificador (UUID ou nome) para UUID
+func (s *SessionService) ResolveSessionID(ctx context.Context, idOrName string) (uuid.UUID, error) {
+	// Tentar primeiro como UUID
+	if id, err := uuid.Parse(idOrName); err == nil {
+		// Verificar se a sessão existe
+		_, err := s.coreService.GetSession(ctx, id)
+		if err != nil {
+			return uuid.Nil, fmt.Errorf("session with ID %s not found: %w", idOrName, err)
+		}
+		return id, nil
+	}
+
+	// Se não for UUID, buscar por nome
+	sess, err := s.coreService.GetSessionByName(ctx, idOrName)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("session with name '%s' not found: %w", idOrName, err)
+	}
+
+	return sess.ID, nil
+}
+
+// DeleteSessionByNameOrID deleta uma sessão por nome ou UUID
+func (s *SessionService) DeleteSessionByNameOrID(ctx context.Context, idOrName string) error {
+	// Resolver para UUID
+	sessionID, err := s.ResolveSessionID(ctx, idOrName)
+	if err != nil {
+		return err
+	}
+
+	// Deletar usando o UUID
+	return s.DeleteSession(ctx, sessionID.String())
+}
+
+// GetSessionByNameOrID busca uma sessão por nome ou UUID
+func (s *SessionService) GetSessionByNameOrID(ctx context.Context, identifier string) (*contracts.SessionInfoResponse, error) {
+	// Tentar primeiro como UUID
+	if id, err := uuid.Parse(identifier); err == nil {
+		return s.GetSession(ctx, id.String())
+	}
+
+	// Se não for UUID, buscar por nome
+	sess, err := s.coreService.GetSessionByName(ctx, identifier)
+	if err != nil {
+		s.logger.ErrorWithFields("Failed to get session by name", map[string]interface{}{
+			"session_name": identifier,
+			"error":        err.Error(),
+		})
+		return nil, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	// Converter para DTO
+	response := &contracts.SessionInfoResponse{
+		Session: s.sessionToDTO(sess),
+	}
+
+	return response, nil
+}
+
 // ListSessions lista sessões com paginação
 func (s *SessionService) ListSessions(ctx context.Context, req *contracts.ListSessionsRequest) (*contracts.ListSessionsResponse, error) {
 	// Validar entrada

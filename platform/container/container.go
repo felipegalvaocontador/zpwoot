@@ -82,12 +82,16 @@ func (c *Container) initialize() error {
 	c.sessionRepo = repository.NewSessionRepository(c.database.DB)
 	c.messageRepo = repository.NewMessageRepository(c.database.DB, c.logger)
 
-	// 2. External gateways
-	// TODO: Criar sqlstore.Container para WhatsApp
-	// Por enquanto, vamos usar nil e implementar depois
-	c.whatsappGateway = waclient.NewGateway(nil, c.logger)
+	// 2. WhatsApp sqlstore container
+	waContainer, err := c.createWhatsAppContainer()
+	if err != nil {
+		return fmt.Errorf("failed to create WhatsApp container: %w", err)
+	}
 
-	// 3. QR Generator
+	// 3. External gateways
+	c.whatsappGateway = waclient.NewGateway(waContainer, c.logger)
+
+	// 4. QR Generator
 	qrGenerator := waclient.NewQRGenerator(c.logger)
 
 	// 4. Core services

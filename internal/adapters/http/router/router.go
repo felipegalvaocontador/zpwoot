@@ -85,3 +85,25 @@ func setupGlobalRoutes(r *chi.Mux, appLogger *logger.Logger) {
 		w.Write([]byte(`{"message":"Chatwoot webhook received"}`))
 	})
 }
+
+// setupMiddlewares configura todos os middlewares globais da aplicação
+func setupMiddlewares(r *chi.Mux, cfg *config.Config, logger *logger.Logger) {
+	// Panic recovery middleware
+	r.Use(middleware.ErrorLogger(logger))
+
+	// HTTP logging middleware
+	r.Use(middleware.HTTPLogger(logger))
+
+	// CORS middleware
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
+
+	// API Key authentication middleware
+	r.Use(middleware.APIKeyAuth(cfg, logger))
+}

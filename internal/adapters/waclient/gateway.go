@@ -999,7 +999,7 @@ func (g *Gateway) DemoteParticipants(ctx context.Context, sessionID, groupJID st
 }
 
 // updateGroupParticipants método interno para atualizar participantes
-func (g *Gateway) updateGroupParticipants(ctx context.Context, sessionID, groupJID string, participants []string, action string) error {
+func (g *Gateway) updateGroupParticipants(_ context.Context, sessionID, groupJID string, participants []string, action string) error {
 	g.logger.InfoWithFields("Updating group participants", map[string]interface{}{
 		"session_id":   sessionID,
 		"group_jid":    groupJID,
@@ -1547,7 +1547,7 @@ func (g *Gateway) GetUserInfo(ctx context.Context, sessionID string, jids []stri
 
 	// Obter informações dos usuários
 	results := make([]*UserInfo, 0, len(jids))
-	for i, _ := range targetJIDs {
+	for i := range targetJIDs {
 		userInfo := &UserInfo{
 			JID:         jids[i],
 			PhoneNumber: g.extractPhoneFromJID(jids[i]),
@@ -1685,30 +1685,9 @@ func (g *Gateway) convertToGroupInfo(groupInfo *types.GroupInfo, description str
 	}
 }
 
-// handleWhatsmeowEvent processa eventos do whatsmeow e repassa para handlers registrados
-func (g *Gateway) handleWhatsmeowEvent(evt interface{}, sessionName string) {
-	g.mu.RLock()
-	handlers := g.eventHandlers[sessionName]
-	g.mu.RUnlock()
+// handleWhatsmeowEvent removed - unused method
 
-	if len(handlers) == 0 {
-		return
-	}
-
-	// Processar evento e repassar para handlers
-	g.processAndDispatchEvent(evt, sessionName, handlers)
-}
-
-// processAndDispatchEvent processa evento e despacha para handlers
-func (g *Gateway) processAndDispatchEvent(evt interface{}, sessionName string, handlers []session.EventHandler) {
-	// TODO: Implementar processamento específico de cada tipo de evento
-	// Por enquanto, apenas log do evento
-	g.logger.DebugWithFields("WhatsApp event received", map[string]interface{}{
-		"session_name": sessionName,
-		"event_type":   fmt.Sprintf("%T", evt),
-		"handlers":     len(handlers),
-	})
-}
+// processAndDispatchEvent removed - unused method
 
 // GetSessionInfo implementa session.WhatsAppGateway.GetSessionInfo baseado no legacy
 func (g *Gateway) GetSessionInfo(ctx context.Context, sessionName string) (*session.DeviceInfo, error) {

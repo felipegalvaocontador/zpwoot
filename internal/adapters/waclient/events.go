@@ -123,7 +123,7 @@ func (h *EventHandler) deliverToWebhook(evt interface{}, sessionID string) {
 // ===== EVENT HANDLERS =====
 
 // handleConnected processa evento de conexão
-func (h *EventHandler) handleConnected(evt *events.Connected, sessionID string) {
+func (h *EventHandler) handleConnected(_ *events.Connected, sessionID string) {
 	h.logger.InfoWithFields("WhatsApp connected", map[string]interface{}{
 		"module":     "events",
 		"session_id": sessionID,
@@ -140,7 +140,7 @@ func (h *EventHandler) handleConnected(evt *events.Connected, sessionID string) 
 }
 
 // handleDisconnected processa evento de desconexão
-func (h *EventHandler) handleDisconnected(evt *events.Disconnected, sessionID string) {
+func (h *EventHandler) handleDisconnected(_ *events.Disconnected, sessionID string) {
 	h.logger.WarnWithFields("WhatsApp disconnected", map[string]interface{}{
 		"session_id": sessionID,
 	})
@@ -472,7 +472,7 @@ func (h *EventHandler) handleHistorySync(evt *events.HistorySync, sessionID stri
 }
 
 // handleAppState processa evento de estado da aplicação
-func (h *EventHandler) handleAppState(evt *events.AppState) {
+func (h *EventHandler) handleAppState(_ *events.AppState) {
 	h.logger.DebugWithFields("App state update", map[string]interface{}{
 		"name": "app_state",
 	})
@@ -487,14 +487,14 @@ func (h *EventHandler) handleAppStateSyncComplete(evt *events.AppStateSyncComple
 }
 
 // handleKeepAliveTimeout processa evento de timeout de keep alive
-func (h *EventHandler) handleKeepAliveTimeout(evt *events.KeepAliveTimeout, sessionID string) {
+func (h *EventHandler) handleKeepAliveTimeout(_ *events.KeepAliveTimeout, sessionID string) {
 	h.logger.WarnWithFields("Keep alive timeout", map[string]interface{}{
 		"session_id": sessionID,
 	})
 }
 
 // handleKeepAliveRestored processa evento de keep alive restaurado
-func (h *EventHandler) handleKeepAliveRestored(evt *events.KeepAliveRestored, sessionID string) {
+func (h *EventHandler) handleKeepAliveRestored(_ *events.KeepAliveRestored, sessionID string) {
 	h.logger.InfoWithFields("Keep alive restored", map[string]interface{}{
 		"session_id": sessionID,
 	})

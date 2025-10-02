@@ -312,9 +312,10 @@ func (c *Client) handleQRLoop(qrChan <-chan whatsmeow.QRChannelItem) {
 				return
 			}
 
-			if evt.Event == "code" {
+			switch evt.Event {
+			case "code":
 				c.handleQRCode(evt.Code)
-			} else if evt.Event == "timeout" {
+			case "timeout":
 				c.logger.WarnWithFields("QR code timeout", map[string]interface{}{
 					"session_name": c.sessionName,
 				})
@@ -326,9 +327,7 @@ func (c *Client) handleQRLoop(qrChan <-chan whatsmeow.QRChannelItem) {
 }
 
 // handleQRCodeEvent processa evento de QR code
-func (c *Client) handleQRCodeEvent(evt *events.QR) {
-	c.handleQRCode(evt.Codes[0])
-}
+// handleQRCodeEvent removed - unused method
 
 // handleQRCode processa novo QR code
 func (c *Client) handleQRCode(qrCode string) {
@@ -440,7 +439,7 @@ func (c *Client) notifyEventHandlers(evt interface{}) {
 }
 
 // handleConnectedEvent processa evento de conexão
-func (c *Client) handleConnectedEvent(evt *events.Connected) {
+func (c *Client) handleConnectedEvent(_ *events.Connected) {
 	c.mu.Lock()
 	c.isConnected = true
 	c.mu.Unlock()
@@ -454,7 +453,7 @@ func (c *Client) handleConnectedEvent(evt *events.Connected) {
 }
 
 // handleDisconnectedEvent processa evento de desconexão
-func (c *Client) handleDisconnectedEvent(evt *events.Disconnected) {
+func (c *Client) handleDisconnectedEvent(_ *events.Disconnected) {
 	c.mu.Lock()
 	c.isConnected = false
 	c.isLoggedIn = false
@@ -697,41 +696,7 @@ func (c *Client) configureProxy() error {
 
 
 
-// handleConnected processa evento de conexão
-func (c *Client) handleConnected(evt *events.Connected) {
-	c.mu.Lock()
-	c.isConnected = true
-	c.mu.Unlock()
-
-	c.logger.InfoWithFields("WhatsApp connected", map[string]interface{}{
-		"session_name": c.sessionName,
-	})
-}
-
-// handleDisconnected processa evento de desconexão
-func (c *Client) handleDisconnected(evt *events.Disconnected) {
-	c.mu.Lock()
-	c.isConnected = false
-	c.mu.Unlock()
-
-	c.logger.InfoWithFields("WhatsApp disconnected", map[string]interface{}{
-		"session_name": c.sessionName,
-	})
-}
-
-// handleLoggedOut processa evento de logout
-func (c *Client) handleLoggedOut(evt *events.LoggedOut) {
-	c.mu.Lock()
-	c.isLoggedIn = false
-	c.qrCode = ""
-	c.qrCodeExpires = time.Time{}
-	c.mu.Unlock()
-
-	c.logger.InfoWithFields("WhatsApp logged out", map[string]interface{}{
-		"session_name": c.sessionName,
-		"reason":       evt.Reason,
-	})
-}
+// Unused methods removed for code cleanliness
 
 
 

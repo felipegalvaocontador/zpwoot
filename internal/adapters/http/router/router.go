@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 
+	"zpwoot/internal/adapters/http/middleware"
 	"zpwoot/internal/services"
 	"zpwoot/platform/config"
 	"zpwoot/platform/logger"

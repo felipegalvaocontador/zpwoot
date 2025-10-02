@@ -20,6 +20,9 @@ type EventHandler struct {
 	sessionName string
 	logger      *logger.Logger
 
+	// QR code generator (reutilizado para evitar criação desnecessária)
+	qrGenerator *QRGenerator
+
 	// Callbacks externos
 	webhookHandler  WebhookEventHandler
 	chatwootManager ChatwootManager
@@ -42,6 +45,7 @@ func NewEventHandler(gateway *Gateway, sessionName string, logger *logger.Logger
 		gateway:     gateway,
 		sessionName: sessionName,
 		logger:      logger,
+		qrGenerator: NewQRGenerator(logger), // Inicializar QR generator uma vez
 	}
 }
 
@@ -192,9 +196,8 @@ func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
 		"expires_at":   evt.ExpiresAt,
 	})
 
-	// Exibir QR code no terminal usando o QR generator
-	qrGenerator := NewQRGenerator(h.logger)
-	qrGenerator.DisplayQRCodeInTerminal(evt.QRCode, evt.SessionName)
+	// Exibir QR code no terminal usando o QR generator reutilizado
+	h.qrGenerator.DisplayQRCodeInTerminal(evt.QRCode, evt.SessionName)
 
 	// Atualizar status da sessão no banco de dados
 	if err := h.gateway.UpdateSessionStatus(sessionID, "qr_code"); err != nil {

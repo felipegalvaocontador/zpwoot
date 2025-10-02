@@ -313,10 +313,8 @@ func (c *Client) handleQRCode(qrCode string) {
 		"qr_code":      qrCode,
 	})
 
-	// Exibir QR code no terminal imediatamente
-	c.qrGenerator.DisplayQRCodeInTerminal(qrCode, c.sessionName)
-
 	// Notificar event handlers sobre novo QR code
+	// A exibição do QR code será feita pelo EventHandler
 	c.notifyEventHandlers(&QRCodeEvent{
 		SessionName: c.sessionName,
 		QRCode:      qrCode,

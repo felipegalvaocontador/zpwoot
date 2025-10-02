@@ -78,10 +78,10 @@ type ChatwootInbox struct {
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param payload body ChatwootWebhookPayload true "Webhook payload"
-// @Success 200 {object} shared.APIResponse
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /chatwoot/webhook/{sessionId} [post]
 func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "receive chatwoot webhook")
@@ -140,10 +140,10 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/chatwoot/set [post]
 func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "create chatwoot config")
@@ -175,9 +175,9 @@ func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 // @Tags Chatwoot
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/chatwoot [get]
 func (h *ChatwootHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get chatwoot config")
@@ -210,10 +210,10 @@ func (h *ChatwootHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/chatwoot [put]
 func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "update chatwoot config")
@@ -245,9 +245,9 @@ func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 // @Tags Chatwoot
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/chatwoot [delete]
 func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "delete chatwoot config")
@@ -279,9 +279,9 @@ func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 // @Tags Chatwoot
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/chatwoot/test [post]
 func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "test chatwoot connection")
@@ -314,10 +314,10 @@ func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request)
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/chatwoot/auto-create-inbox [post]
 func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "auto-create chatwoot inbox")
@@ -349,9 +349,9 @@ func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request
 // @Tags Chatwoot
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/chatwoot/stats [get]
 func (h *ChatwootHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get chatwoot stats")

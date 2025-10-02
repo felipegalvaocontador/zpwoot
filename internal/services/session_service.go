@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"zpwoot/internal/core/session"
-	"zpwoot/internal/services/shared/dto"
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/internal/services/shared/validation"
 	"zpwoot/platform/logger"
 )
@@ -49,7 +49,7 @@ func NewSessionService(
 }
 
 // CreateSession cria uma nova sessão com validação e orquestração
-func (s *SessionService) CreateSession(ctx context.Context, req *dto.CreateSessionRequest) (*dto.CreateSessionResponse, error) {
+func (s *SessionService) CreateSession(ctx context.Context, req *contracts.CreateSessionRequest) (*contracts.CreateSessionResponse, error) {
 	// Log da operação
 	s.logger.InfoWithFields("Creating session", map[string]interface{}{
 		"name":     req.Name,
@@ -93,7 +93,7 @@ func (s *SessionService) CreateSession(ctx context.Context, req *dto.CreateSessi
 	}
 
 	// Converter entidade para DTO de resposta
-	response := &dto.CreateSessionResponse{
+	response := &contracts.CreateSessionResponse{
 		ID:          sess.ID.String(),
 		Name:        sess.Name,
 		IsConnected: sess.IsConnected,
@@ -102,7 +102,7 @@ func (s *SessionService) CreateSession(ctx context.Context, req *dto.CreateSessi
 
 	// Adicionar proxy config se presente
 	if sess.ProxyConfig != nil {
-		response.ProxyConfig = &dto.ProxyConfig{
+		response.ProxyConfig = &contracts.ProxyConfig{
 			Type:     sess.ProxyConfig.Type,
 			Host:     sess.ProxyConfig.Host,
 			Port:     sess.ProxyConfig.Port,
@@ -139,7 +139,7 @@ func (s *SessionService) CreateSession(ctx context.Context, req *dto.CreateSessi
 }
 
 // GetSession busca informações de uma sessão
-func (s *SessionService) GetSession(ctx context.Context, sessionID string) (*dto.SessionInfoResponse, error) {
+func (s *SessionService) GetSession(ctx context.Context, sessionID string) (*contracts.SessionInfoResponse, error) {
 	// Validar UUID
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
@@ -157,7 +157,7 @@ func (s *SessionService) GetSession(ctx context.Context, sessionID string) (*dto
 	}
 
 	// Converter para DTO
-	response := &dto.SessionInfoResponse{
+	response := &contracts.SessionInfoResponse{
 		Session: s.sessionToDTO(sess),
 	}
 
@@ -170,7 +170,7 @@ func (s *SessionService) GetSession(ctx context.Context, sessionID string) (*dto
 }
 
 // ListSessions lista sessões com paginação
-func (s *SessionService) ListSessions(ctx context.Context, req *dto.ListSessionsRequest) (*dto.ListSessionsResponse, error) {
+func (s *SessionService) ListSessions(ctx context.Context, req *contracts.ListSessionsRequest) (*contracts.ListSessionsResponse, error) {
 	// Validar entrada
 	if err := s.validator.ValidateStruct(req); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
@@ -202,9 +202,9 @@ func (s *SessionService) ListSessions(ctx context.Context, req *dto.ListSessions
 	}
 
 	// Converter para DTOs
-	sessionResponses := make([]dto.SessionInfoResponse, len(sessions))
+	sessionResponses := make([]contracts.SessionInfoResponse, len(sessions))
 	for i, sess := range sessions {
-		sessionResponses[i] = dto.SessionInfoResponse{
+		sessionResponses[i] = contracts.SessionInfoResponse{
 			Session: s.sessionToDTO(sess),
 		}
 	}
@@ -212,7 +212,7 @@ func (s *SessionService) ListSessions(ctx context.Context, req *dto.ListSessions
 	// TODO: Obter total count do repositório
 	total := len(sessions) // Placeholder
 
-	response := &dto.ListSessionsResponse{
+	response := &contracts.ListSessionsResponse{
 		Sessions: sessionResponses,
 		Total:    total,
 		Limit:    limit,
@@ -223,7 +223,7 @@ func (s *SessionService) ListSessions(ctx context.Context, req *dto.ListSessions
 }
 
 // ConnectSession inicia conexão de uma sessão
-func (s *SessionService) ConnectSession(ctx context.Context, sessionID string) (*dto.ConnectSessionResponse, error) {
+func (s *SessionService) ConnectSession(ctx context.Context, sessionID string) (*contracts.ConnectSessionResponse, error) {
 	// Validar UUID
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
@@ -237,7 +237,7 @@ func (s *SessionService) ConnectSession(ctx context.Context, sessionID string) (
 	// Executar conexão no core
 	err = s.coreService.ConnectSession(ctx, id)
 
-	response := &dto.ConnectSessionResponse{
+	response := &contracts.ConnectSessionResponse{
 		Success: true,
 	}
 
@@ -335,7 +335,7 @@ func (s *SessionService) DeleteSession(ctx context.Context, sessionID string) er
 }
 
 // GetQRCode obtém QR code de uma sessão
-func (s *SessionService) GetQRCode(ctx context.Context, sessionID string) (*dto.QRCodeResponse, error) {
+func (s *SessionService) GetQRCode(ctx context.Context, sessionID string) (*contracts.QRCodeResponse, error) {
 	// Validar UUID
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
@@ -353,7 +353,7 @@ func (s *SessionService) GetQRCode(ctx context.Context, sessionID string) (*dto.
 	}
 
 	// Converter para DTO
-	response := &dto.QRCodeResponse{
+	response := &contracts.QRCodeResponse{
 		QRCode:    qrResponse.QRCode,
 		ExpiresAt: qrResponse.ExpiresAt,
 		Timeout:   qrResponse.Timeout,
@@ -366,7 +366,7 @@ func (s *SessionService) GetQRCode(ctx context.Context, sessionID string) (*dto.
 }
 
 // GenerateQRCode gera novo QR code para uma sessão
-func (s *SessionService) GenerateQRCode(ctx context.Context, sessionID string) (*dto.QRCodeResponse, error) {
+func (s *SessionService) GenerateQRCode(ctx context.Context, sessionID string) (*contracts.QRCodeResponse, error) {
 	// Validar UUID
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
@@ -388,7 +388,7 @@ func (s *SessionService) GenerateQRCode(ctx context.Context, sessionID string) (
 	}
 
 	// Converter para DTO
-	response := &dto.QRCodeResponse{
+	response := &contracts.QRCodeResponse{
 		QRCode:    qrResponse.QRCode,
 		ExpiresAt: qrResponse.ExpiresAt,
 		Timeout:   qrResponse.Timeout,
@@ -406,7 +406,7 @@ func (s *SessionService) GenerateQRCode(ctx context.Context, sessionID string) (
 }
 
 // SetProxy configura proxy para uma sessão
-func (s *SessionService) SetProxy(ctx context.Context, sessionID string, req *dto.SetProxyRequest) error {
+func (s *SessionService) SetProxy(ctx context.Context, sessionID string, req *contracts.SetProxyRequest) error {
 	// Validar UUID
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
@@ -450,7 +450,7 @@ func (s *SessionService) SetProxy(ctx context.Context, sessionID string, req *dt
 }
 
 // GetProxy obtém configuração de proxy de uma sessão
-func (s *SessionService) GetProxy(ctx context.Context, sessionID string) (*dto.ProxyResponse, error) {
+func (s *SessionService) GetProxy(ctx context.Context, sessionID string) (*contracts.ProxyResponse, error) {
 	// Validar UUID
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
@@ -467,11 +467,11 @@ func (s *SessionService) GetProxy(ctx context.Context, sessionID string) (*dto.P
 		return nil, fmt.Errorf("failed to get proxy: %w", err)
 	}
 
-	response := &dto.ProxyResponse{}
+	response := &contracts.ProxyResponse{}
 
 	// Converter se proxy existe
 	if proxyConfig != nil {
-		response.ProxyConfig = &dto.ProxyConfig{
+		response.ProxyConfig = &contracts.ProxyConfig{
 			Type:     proxyConfig.Type,
 			Host:     proxyConfig.Host,
 			Port:     proxyConfig.Port,
@@ -484,7 +484,7 @@ func (s *SessionService) GetProxy(ctx context.Context, sessionID string) (*dto.P
 }
 
 // GetSessionStats obtém estatísticas das sessões
-func (s *SessionService) GetSessionStats(ctx context.Context) (*dto.SessionStatsResponse, error) {
+func (s *SessionService) GetSessionStats(ctx context.Context) (*contracts.SessionStatsResponse, error) {
 	// Buscar no core
 	stats, err := s.coreService.GetSessionStats(ctx)
 	if err != nil {
@@ -495,7 +495,7 @@ func (s *SessionService) GetSessionStats(ctx context.Context) (*dto.SessionStats
 	}
 
 	// Converter para DTO
-	response := &dto.SessionStatsResponse{
+	response := &contracts.SessionStatsResponse{
 		Total:     stats.Total,
 		Connected: stats.Connected,
 		Offline:   stats.Offline,
@@ -523,8 +523,8 @@ func (s *SessionService) UpdateLastSeen(ctx context.Context, sessionID string) e
 // ===== MÉTODOS AUXILIARES PRIVADOS =====
 
 // sessionToDTO converte entidade Session para DTO
-func (s *SessionService) sessionToDTO(sess *session.Session) *dto.SessionResponse {
-	response := &dto.SessionResponse{
+func (s *SessionService) sessionToDTO(sess *session.Session) *contracts.SessionResponse {
+	response := &contracts.SessionResponse{
 		ID:          sess.ID.String(),
 		Name:        sess.Name,
 		IsConnected: sess.IsConnected,
@@ -546,7 +546,7 @@ func (s *SessionService) sessionToDTO(sess *session.Session) *dto.SessionRespons
 	}
 
 	if sess.ProxyConfig != nil {
-		response.ProxyConfig = &dto.ProxyConfig{
+		response.ProxyConfig = &contracts.ProxyConfig{
 			Type:     sess.ProxyConfig.Type,
 			Host:     sess.ProxyConfig.Host,
 			Port:     sess.ProxyConfig.Port,
@@ -559,8 +559,8 @@ func (s *SessionService) sessionToDTO(sess *session.Session) *dto.SessionRespons
 }
 
 // deviceInfoToDTO converte DeviceInfo para DTO (placeholder)
-// func (s *SessionService) deviceInfoToDTO(deviceInfo *session.DeviceInfo) *dto.DeviceInfoResponse {
-//     return &dto.DeviceInfoResponse{
+// func (s *SessionService) deviceInfoToDTO(deviceInfo *session.DeviceInfo) *contracts.DeviceInfoResponse {
+//     return &contracts.DeviceInfoResponse{
 //         Platform:    deviceInfo.Platform,
 //         DeviceModel: deviceInfo.DeviceModel,
 //         OSVersion:   deviceInfo.OSVersion,

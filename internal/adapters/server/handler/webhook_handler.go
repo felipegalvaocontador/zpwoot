@@ -34,10 +34,10 @@ func NewWebhookHandler(
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/webhook/set [post]
 func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "set webhook config")
@@ -69,9 +69,9 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 // @Tags Webhooks
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/webhook/find [get]
 func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "find webhook config")
@@ -104,9 +104,9 @@ func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/webhook/test [post]
 func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "test webhook")

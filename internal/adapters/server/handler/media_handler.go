@@ -34,10 +34,10 @@ func NewMediaHandler(
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/media/download [post]
 func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "download media")
@@ -69,9 +69,9 @@ func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 // @Tags Media
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/media/info [get]
 func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get media info")
@@ -103,9 +103,9 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 // @Tags Media
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/media/list [get]
 func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "list cached media")
@@ -138,9 +138,9 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/media/clear-cache [post]
 func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "clear media cache")
@@ -172,9 +172,9 @@ func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 // @Tags Media
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/media/stats [get]
 func (h *MediaHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get media stats")

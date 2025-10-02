@@ -7,7 +7,7 @@ import (
 
 	"zpwoot/internal/adapters/server/shared"
 	"zpwoot/internal/services"
-	"zpwoot/internal/services/shared/dto"
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/platform/logger"
 )
 
@@ -39,8 +39,8 @@ func NewGroupHandler(
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.CreateGroupRequest true "Group creation request"
-// @Success 200 {object} shared.SuccessResponse{data=dto.CreateGroupResponse}
+// @Param request body contracts.CreateGroupRequest true "Group creation request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.CreateGroupResponse}
 // @Failure 400 {object} shared.ErrorResponse
 // @Failure 404 {object} shared.ErrorResponse
 // @Failure 500 {object} shared.ErrorResponse
@@ -55,7 +55,7 @@ func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse e validar request
-	var req dto.CreateGroupRequest
+	var req contracts.CreateGroupRequest
 	if err := h.ParseAndValidateJSON(r, &req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request format", err.Error())
 		return
@@ -87,7 +87,7 @@ func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse{data=dto.ListGroupsResponse}
+// @Success 200 {object} shared.SuccessResponse{data=contracts.ListGroupsResponse}
 // @Failure 404 {object} shared.ErrorResponse
 // @Failure 500 {object} shared.ErrorResponse
 // @Router /sessions/{sessionId}/groups [get]
@@ -125,7 +125,7 @@ func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param groupJid query string true "Group JID"
-// @Success 200 {object} shared.SuccessResponse{data=dto.GetGroupInfoResponse}
+// @Success 200 {object} shared.SuccessResponse{data=contracts.GetGroupInfoResponse}
 // @Failure 400 {object} shared.ErrorResponse
 // @Failure 404 {object} shared.ErrorResponse
 // @Failure 500 {object} shared.ErrorResponse
@@ -172,8 +172,8 @@ func (h *GroupHandler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.UpdateParticipantsRequest true "Participants update request"
-// @Success 200 {object} shared.SuccessResponse{data=dto.UpdateParticipantsResponse}
+// @Param request body contracts.UpdateParticipantsRequest true "Participants update request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.UpdateParticipantsResponse}
 // @Failure 400 {object} shared.ErrorResponse
 // @Failure 404 {object} shared.ErrorResponse
 // @Failure 500 {object} shared.ErrorResponse
@@ -188,7 +188,7 @@ func (h *GroupHandler) UpdateGroupParticipants(w http.ResponseWriter, r *http.Re
 	}
 
 	// Parse e validar request
-	var req dto.UpdateParticipantsRequest
+	var req contracts.UpdateParticipantsRequest
 	if err := h.ParseAndValidateJSON(r, &req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request format", err.Error())
 		return
@@ -221,8 +221,8 @@ func (h *GroupHandler) UpdateGroupParticipants(w http.ResponseWriter, r *http.Re
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SetGroupNameRequest true "Group name request"
-// @Success 200 {object} shared.SuccessResponse{data=dto.SetGroupNameResponse}
+// @Param request body contracts.SetGroupNameRequest true "Group name request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SetGroupNameResponse}
 // @Failure 400 {object} shared.ErrorResponse
 // @Failure 404 {object} shared.ErrorResponse
 // @Failure 500 {object} shared.ErrorResponse
@@ -237,7 +237,7 @@ func (h *GroupHandler) SetGroupName(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse e validar request
-	var req dto.SetGroupNameRequest
+	var req contracts.SetGroupNameRequest
 	if err := h.ParseAndValidateJSON(r, &req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request format", err.Error())
 		return

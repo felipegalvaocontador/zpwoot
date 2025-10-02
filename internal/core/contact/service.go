@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"zpwoot/internal/services/shared/dto"
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/platform/logger"
 )
 
@@ -105,7 +105,7 @@ func NewService(gateway ContactGateway, repository ContactRepository, logger *lo
 }
 
 // CheckWhatsApp verifica se números de telefone estão no WhatsApp
-func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *dto.CheckWhatsAppRequest) (*dto.CheckWhatsAppResponse, error) {
+func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *contracts.CheckWhatsAppRequest) (*contracts.CheckWhatsAppResponse, error) {
 	s.logger.InfoWithFields("Checking WhatsApp numbers", map[string]interface{}{
 		"session_id":   sessionID,
 		"phone_count":  len(req.PhoneNumbers),
@@ -130,7 +130,7 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *dto.
 	}
 
 	// Converter resultado
-	checkResults := make([]dto.WhatsAppCheckResult, 0, len(req.PhoneNumbers))
+	checkResults := make([]contracts.WhatsAppCheckResult, 0, len(req.PhoneNumbers))
 	foundCount := 0
 
 	for _, phone := range req.PhoneNumbers {
@@ -139,7 +139,7 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *dto.
 			foundCount++
 		}
 
-		result := dto.WhatsAppCheckResult{
+		result := contracts.WhatsAppCheckResult{
 			PhoneNumber:  phone,
 			IsOnWhatsApp: isOnWhatsApp,
 		}
@@ -153,7 +153,7 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *dto.
 		checkResults = append(checkResults, result)
 	}
 
-	response := &dto.CheckWhatsAppResponse{
+	response := &contracts.CheckWhatsAppResponse{
 		Results: checkResults,
 		Total:   len(req.PhoneNumbers),
 		Found:   foundCount,
@@ -171,7 +171,7 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *dto.
 }
 
 // GetProfilePictureInfo obtém informações da foto de perfil
-func (s *Service) GetProfilePictureInfo(ctx context.Context, sessionID string, req *dto.GetProfilePictureInfoRequest) (*dto.GetProfilePictureInfoResponse, error) {
+func (s *Service) GetProfilePictureInfo(ctx context.Context, sessionID string, req *contracts.GetProfilePictureInfoRequest) (*contracts.GetProfilePictureInfoResponse, error) {
 	s.logger.InfoWithFields("Getting profile picture info", map[string]interface{}{
 		"session_id": sessionID,
 		"jid":        req.JID,
@@ -189,7 +189,7 @@ func (s *Service) GetProfilePictureInfo(ctx context.Context, sessionID string, r
 		return nil, err
 	}
 
-	response := &dto.GetProfilePictureInfoResponse{
+	response := &contracts.GetProfilePictureInfoResponse{
 		JID:        info.JID,
 		HasPicture: info.HasPicture,
 		URL:        info.URL,
@@ -205,7 +205,7 @@ func (s *Service) GetProfilePictureInfo(ctx context.Context, sessionID string, r
 }
 
 // GetUserInfo obtém informações detalhadas do usuário
-func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *dto.GetUserInfoRequest) (*dto.GetUserInfoResponse, error) {
+func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *contracts.GetUserInfoRequest) (*contracts.GetUserInfoResponse, error) {
 	s.logger.InfoWithFields("Getting user info", map[string]interface{}{
 		"session_id": sessionID,
 		"jid_count":  len(req.JIDs),
@@ -230,9 +230,9 @@ func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *dto.Ge
 	}
 
 	// Converter resultado
-	userInfos := make([]dto.UserInfo, 0, len(users))
+	userInfos := make([]contracts.UserInfo, 0, len(users))
 	for _, user := range users {
-		userInfo := dto.UserInfo{
+		userInfo := contracts.UserInfo{
 			JID:          user.JID,
 			PhoneNumber:  user.PhoneNumber,
 			Name:         user.Name,
@@ -247,7 +247,7 @@ func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *dto.Ge
 		userInfos = append(userInfos, userInfo)
 	}
 
-	response := &dto.GetUserInfoResponse{
+	response := &contracts.GetUserInfoResponse{
 		Users:   userInfos,
 		Total:   len(req.JIDs),
 		Found:   len(users),
@@ -259,7 +259,7 @@ func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *dto.Ge
 }
 
 // ListContacts lista contatos com paginação
-func (s *Service) ListContacts(ctx context.Context, sessionID string, req *dto.ListContactsRequest) (*dto.ListContactsResponse, error) {
+func (s *Service) ListContacts(ctx context.Context, sessionID string, req *contracts.ListContactsRequest) (*contracts.ListContactsResponse, error) {
 	s.logger.InfoWithFields("Listing contacts", map[string]interface{}{
 		"session_id": sessionID,
 		"limit":      req.Limit,
@@ -289,9 +289,9 @@ func (s *Service) ListContacts(ctx context.Context, sessionID string, req *dto.L
 	}
 
 	// Converter resultado
-	contactInfos := make([]dto.ContactDetails, 0, len(contacts))
+	contactInfos := make([]contracts.ContactDetails, 0, len(contacts))
 	for _, contact := range contacts {
-		contactInfo := dto.ContactDetails{
+		contactInfo := contracts.ContactDetails{
 			JID:          contact.ZpJID,
 			PhoneNumber:  contact.PhoneNumber,
 			Name:         contact.GetDisplayName(),
@@ -303,7 +303,7 @@ func (s *Service) ListContacts(ctx context.Context, sessionID string, req *dto.L
 		contactInfos = append(contactInfos, contactInfo)
 	}
 
-	response := &dto.ListContactsResponse{
+	response := &contracts.ListContactsResponse{
 		Contacts: contactInfos,
 		Total:    int(total),
 		Limit:    listReq.Limit,
@@ -316,7 +316,7 @@ func (s *Service) ListContacts(ctx context.Context, sessionID string, req *dto.L
 }
 
 // SyncContacts sincroniza contatos do WhatsApp
-func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *dto.SyncContactsRequest) (*dto.SyncContactsResponse, error) {
+func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *contracts.SyncContactsRequest) (*contracts.SyncContactsResponse, error) {
 	s.logger.InfoWithFields("Syncing contacts", map[string]interface{}{
 		"session_id": sessionID,
 		"force":      req.Force,
@@ -400,7 +400,7 @@ func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *dto.S
 		syncedCount++
 	}
 
-	response := &dto.SyncContactsResponse{
+	response := &contracts.SyncContactsResponse{
 		TotalContacts: len(whatsappContacts),
 		SyncedCount:   syncedCount,
 		NewCount:      newCount,
@@ -421,7 +421,7 @@ func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *dto.S
 }
 
 // GetBusinessProfile obtém perfil de negócio
-func (s *Service) GetBusinessProfile(ctx context.Context, sessionID string, req *dto.GetBusinessProfileRequest) (*dto.GetBusinessProfileResponse, error) {
+func (s *Service) GetBusinessProfile(ctx context.Context, sessionID string, req *contracts.GetBusinessProfileRequest) (*contracts.GetBusinessProfileResponse, error) {
 	s.logger.InfoWithFields("Getting business profile", map[string]interface{}{
 		"session_id": sessionID,
 		"jid":        req.JID,
@@ -438,7 +438,7 @@ func (s *Service) GetBusinessProfile(ctx context.Context, sessionID string, req 
 		return nil, err
 	}
 
-	response := &dto.GetBusinessProfileResponse{
+	response := &contracts.GetBusinessProfileResponse{
 		JID:          profile.JID,
 		IsBusiness:   profile.IsBusiness,
 		BusinessName: profile.BusinessName,

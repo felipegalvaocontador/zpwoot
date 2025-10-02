@@ -11,7 +11,7 @@ import (
 
 	"zpwoot/internal/adapters/server/shared"
 	"zpwoot/internal/services"
-	"zpwoot/internal/services/shared/dto"
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/platform/logger"
 )
 
@@ -35,11 +35,11 @@ func NewMessageHandler(
 	}
 }
 
-// Todos os DTOs agora estão centralizados em internal/services/shared/dto/message_dto.go
+// Todos os DTOs agora estão centralizados em internal/services/shared/dto/message_contracts.go
 
-// DTOs removidos - agora usando os centralizados de internal/services/shared/dto/message_dto.go
+// DTOs removidos - agora usando os centralizados de internal/services/shared/dto/message_contracts.go
 
-// Todos os DTOs foram movidos para internal/services/shared/dto/message_dto.go
+// Todos os DTOs foram movidos para internal/services/shared/dto/message_contracts.go
 
 // ===== CRUD OPERATIONS =====
 
@@ -51,11 +51,11 @@ func NewMessageHandler(
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.CreateMessageRequest true "Message creation request"
-// @Success 201 {object} shared.APIResponse{data=services.CreateMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.CreateMessageRequest true "Message creation request"
+// @Success 201 {object} shared.SuccessResponse{data=services.CreateMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages [post]
 func (h *MessageHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "create message")
@@ -68,7 +68,7 @@ func (h *MessageHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request body
-	var req dto.CreateMessageRequest
+	var req contracts.CreateMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -126,9 +126,9 @@ func (h *MessageHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param messageId path string true "Message ID"
-// @Success 200 {object} shared.APIResponse{data=dto.MessageDTO}
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=contracts.MessageDTO}
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/{messageId} [get]
 func (h *MessageHandler) GetMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get message")
@@ -173,10 +173,10 @@ func (h *MessageHandler) GetMessage(w http.ResponseWriter, r *http.Request) {
 // @Param chat_jid query string false "Chat JID filter"
 // @Param limit query int false "Limit (default: 50, max: 100)"
 // @Param offset query int false "Offset (default: 0)"
-// @Success 200 {object} shared.APIResponse{data=services.ListMessagesResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=services.ListMessagesResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages [get]
 func (h *MessageHandler) ListMessages(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "list messages")
@@ -249,11 +249,11 @@ func (h *MessageHandler) ListMessages(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param messageId path string true "Message ID"
-// @Param request body dto.UpdateSyncStatusRequest true "Sync status update request"
-// @Success 200 {object} shared.APIResponse
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.UpdateSyncStatusRequest true "Sync status update request"
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/{messageId}/sync [put]
 func (h *MessageHandler) UpdateSyncStatus(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "update message sync status")
@@ -267,7 +267,7 @@ func (h *MessageHandler) UpdateSyncStatus(w http.ResponseWriter, r *http.Request
 	}
 
 	// Parse request body
-	var req dto.UpdateSyncStatusRequest
+	var req contracts.UpdateSyncStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -325,11 +325,11 @@ func (h *MessageHandler) UpdateSyncStatus(w http.ResponseWriter, r *http.Request
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendTextMessageRequest true "Text message request"
-// @Success 200 {object} shared.APIResponse
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendTextMessageRequest true "Text message request"
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/text [post]
 func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send text message")
@@ -341,7 +341,7 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Parse request body
-	var req dto.SendTextMessageRequest
+	var req contracts.SendTextMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -383,11 +383,11 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendMediaMessageRequest true "Media message request"
-// @Success 200 {object} shared.APIResponse
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendMediaMessageRequest true "Media message request"
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/media [post]
 func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send media message")
@@ -399,7 +399,7 @@ func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request
 	}
 
 	// Parse request body
-	var req dto.SendMediaMessageRequest
+	var req contracts.SendMediaMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -443,11 +443,11 @@ func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendImageMessageRequest true "Image message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendImageMessageRequest true "Image message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/image [post]
 func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send image message")
@@ -459,7 +459,7 @@ func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request body
-	var req dto.SendImageMessageRequest
+	var req contracts.SendImageMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -502,11 +502,11 @@ func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendAudioMessageRequest true "Audio message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendAudioMessageRequest true "Audio message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/audio [post]
 func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send audio message")
@@ -518,7 +518,7 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request body
-	var req dto.SendAudioMessageRequest
+	var req contracts.SendAudioMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -561,11 +561,11 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendVideoMessageRequest true "Video message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendVideoMessageRequest true "Video message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/video [post]
 func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send video message")
@@ -576,7 +576,7 @@ func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.SendVideoMessageRequest
+	var req contracts.SendVideoMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -618,11 +618,11 @@ func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendDocumentMessageRequest true "Document message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendDocumentMessageRequest true "Document message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/document [post]
 func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send document message")
@@ -633,7 +633,7 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.SendDocumentMessageRequest
+	var req contracts.SendDocumentMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -675,11 +675,11 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendStickerMessageRequest true "Sticker message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendStickerMessageRequest true "Sticker message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/sticker [post]
 func (h *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send sticker message")
@@ -690,7 +690,7 @@ func (h *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.SendStickerMessageRequest
+	var req contracts.SendStickerMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -731,11 +731,11 @@ func (h *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendLocationMessageRequest true "Location message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendLocationMessageRequest true "Location message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/location [post]
 func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send location message")
@@ -746,7 +746,7 @@ func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.SendLocationMessageRequest
+	var req contracts.SendLocationMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -789,11 +789,11 @@ func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendContactMessageRequest true "Contact message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendContactMessageRequest true "Contact message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/contact [post]
 func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send contact message")
@@ -804,7 +804,7 @@ func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.SendContactMessageRequest
+	var req contracts.SendContactMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -846,11 +846,11 @@ func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendContactListMessageRequest true "Contact list message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendContactListResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendContactListMessageRequest true "Contact list message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendContactListResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/contact-list [post]
 func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send contact list message")
@@ -861,7 +861,7 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var req dto.SendContactListMessageRequest
+	var req contracts.SendContactListMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -879,16 +879,16 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Implementar envio via WhatsApp Gateway
-	contactResults := make([]dto.ContactResult, len(req.Contacts))
+	contactResults := make([]contracts.ContactResult, len(req.Contacts))
 	for i, contact := range req.Contacts {
-		contactResults[i] = dto.ContactResult{
+		contactResults[i] = contracts.ContactResult{
 			ContactName: contact.Name,
 			MessageID:   uuid.New().String(),
 			Status:      "sent",
 		}
 	}
 
-	response := &dto.SendContactListResponse{
+	response := &contracts.SendContactListResponse{
 		SessionID:      sessionID,
 		RemoteJID:      req.To,
 		ContactCount:   len(req.Contacts),
@@ -914,11 +914,11 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendBusinessProfileMessageRequest true "Business profile message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendBusinessProfileMessageRequest true "Business profile message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/profile/business [post]
 func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send business profile message")
@@ -929,7 +929,7 @@ func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var req dto.SendBusinessProfileMessageRequest
+	var req contracts.SendBusinessProfileMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -947,7 +947,7 @@ func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Requ
 	}
 
 	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
 		Status:    "sent",
@@ -972,11 +972,11 @@ func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Requ
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendButtonMessageRequest true "Button message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendButtonMessageRequest true "Button message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/button [post]
 func (h *MessageHandler) SendButton(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send button message")
@@ -987,7 +987,7 @@ func (h *MessageHandler) SendButton(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.SendButtonMessageRequest
+	var req contracts.SendButtonMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -1005,7 +1005,7 @@ func (h *MessageHandler) SendButton(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
 		Status:    "sent",
@@ -1030,11 +1030,11 @@ func (h *MessageHandler) SendButton(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendListMessageRequest true "List message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendListMessageRequest true "List message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/list [post]
 func (h *MessageHandler) SendList(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send list message")
@@ -1045,7 +1045,7 @@ func (h *MessageHandler) SendList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.SendListMessageRequest
+	var req contracts.SendListMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -1069,7 +1069,7 @@ func (h *MessageHandler) SendList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
 		Status:    "sent",
@@ -1095,11 +1095,11 @@ func (h *MessageHandler) SendList(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendPollMessageRequest true "Poll message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendPollMessageRequest true "Poll message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/poll [post]
 func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send poll message")
@@ -1110,7 +1110,7 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.SendPollMessageRequest
+	var req contracts.SendPollMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -1128,7 +1128,7 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
 		Status:    "sent",
@@ -1156,11 +1156,11 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendReactionMessageRequest true "Reaction message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendReactionMessageRequest true "Reaction message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/reaction [post]
 func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send reaction message")
@@ -1171,7 +1171,7 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.SendReactionMessageRequest
+	var req contracts.SendReactionMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -1189,7 +1189,7 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
 		Status:    "sent",
@@ -1215,11 +1215,11 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SendPresenceMessageRequest true "Presence message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.SendPresenceMessageRequest true "Presence message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/send/presence [post]
 func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send presence message")
@@ -1230,7 +1230,7 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.SendPresenceMessageRequest
+	var req contracts.SendPresenceMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -1248,7 +1248,7 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Implementar envio via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
 		Status:    "sent",
@@ -1273,11 +1273,11 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.EditMessageRequest true "Edit message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.EditMessageRequest true "Edit message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/edit [post]
 func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "edit message")
@@ -1288,7 +1288,7 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.EditMessageRequest
+	var req contracts.EditMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -1306,7 +1306,7 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Implementar edição via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: req.MessageID,
 		To:        req.To,
 		Status:    "edited",
@@ -1332,11 +1332,11 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.RevokeMessageRequest true "Revoke message request"
-// @Success 200 {object} shared.APIResponse{data=dto.SendMessageResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.RevokeMessageRequest true "Revoke message request"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SendMessageResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/revoke [post]
 func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "revoke message")
@@ -1347,7 +1347,7 @@ func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.RevokeMessageRequest
+	var req contracts.RevokeMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -1365,7 +1365,7 @@ func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Implementar revogação via WhatsApp Gateway
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: req.MessageID,
 		To:        req.To,
 		Status:    "revoked",
@@ -1390,10 +1390,10 @@ func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param messageId path string true "Message ID"
-// @Success 200 {object} shared.APIResponse{data=dto.GetPollResultsResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=contracts.GetPollResultsResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/poll/{messageId}/results [get]
 func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get poll results")
@@ -1414,7 +1414,7 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 
 	// TODO: Implementar busca de resultados via WhatsApp Gateway
 	// Por enquanto, simular resposta de sucesso
-	voteResults := []dto.PollVoteInfo{
+	voteResults := []contracts.PollVoteInfo{
 		{
 			OptionName: "Option 1",
 			Voters:     []string{"5511888888888@s.whatsapp.net", "5511777777777@s.whatsapp.net"},
@@ -1427,7 +1427,7 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 		},
 	}
 
-	response := &dto.GetPollResultsResponse{
+	response := &contracts.GetPollResultsResponse{
 		MessageID:   messageID,
 		PollName:    "Sample Poll",
 		TotalVotes:  3,
@@ -1454,9 +1454,9 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse{data=messaging.MessageStats}
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=zpwoot_internal_core_messaging.MessageStats}
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/stats [get]
 func (h *MessageHandler) GetMessageStats(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get message stats")
@@ -1502,9 +1502,9 @@ func (h *MessageHandler) GetMessageStats(w http.ResponseWriter, r *http.Request)
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param limit query int false "Limit (default: 50, max: 100)"
-// @Success 200 {object} shared.APIResponse{data=[]dto.MessageDTO}
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=[]contracts.MessageDTO}
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/pending-sync [get]
 func (h *MessageHandler) GetPendingSyncMessages(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get pending sync messages")
@@ -1559,9 +1559,9 @@ func (h *MessageHandler) GetPendingSyncMessages(w http.ResponseWriter, r *http.R
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param messageId path string true "Message ID"
-// @Success 200 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/{messageId} [delete]
 func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "delete message")
@@ -1599,11 +1599,11 @@ func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.MarkAsReadRequest true "Mark as read request"
-// @Success 200 {object} shared.APIResponse
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Param request body contracts.MarkAsReadRequest true "Mark as read request"
+// @Success 200 {object} shared.SuccessResponse
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/messages/mark-read [post]
 func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "mark messages as read")
@@ -1615,7 +1615,7 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request body
-	var req dto.MarkAsReadRequest
+	var req contracts.MarkAsReadRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -1642,7 +1642,7 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 		"message_count":   len(req.MessageIDs),
 	})
 
-	response := &dto.MarkAsReadResponse{
+	response := &contracts.MarkAsReadResponse{
 		ChatJID:     req.ChatJID,
 		MarkedCount: len(req.MessageIDs),
 		Status:      "success",

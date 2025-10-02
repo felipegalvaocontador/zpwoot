@@ -9,7 +9,7 @@ import (
 	"zpwoot/internal/adapters/server/shared"
 	"zpwoot/internal/core/contact"
 	"zpwoot/internal/services"
-	"zpwoot/internal/services/shared/dto"
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/platform/logger"
 )
 
@@ -135,10 +135,10 @@ type BusinessProfileResponse struct {
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param request body CheckWhatsAppRequest true "Phone numbers to check"
-// @Success 200 {object} shared.APIResponse{data=CheckWhatsAppResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=CheckWhatsAppResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/contacts/check [post]
 func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "check WhatsApp numbers")
@@ -151,7 +151,7 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request body
-	var req dto.CheckWhatsAppRequest
+	var req contracts.CheckWhatsAppRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -199,10 +199,10 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param jid query string true "Contact JID"
-// @Success 200 {object} shared.APIResponse{data=GetProfilePictureResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=GetProfilePictureResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/contacts/avatar [get]
 func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get profile picture")
@@ -254,10 +254,10 @@ func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Reques
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param request body GetUserInfoRequest true "User JIDs to get info"
-// @Success 200 {object} shared.APIResponse{data=GetUserInfoResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=GetUserInfoResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/contacts/info [post]
 func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get user info")
@@ -269,7 +269,7 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request body
-	var req dto.GetUserInfoRequest
+	var req contracts.GetUserInfoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
@@ -319,10 +319,10 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // @Param limit query int false "Limit (default: 50, max: 100)"
 // @Param offset query int false "Offset (default: 0)"
 // @Param search query string false "Search term"
-// @Success 200 {object} shared.APIResponse{data=ListContactsResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=ListContactsResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/contacts [get]
 func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "list contacts")
@@ -357,7 +357,7 @@ func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Criar request para o service
-	req := &dto.ListContactsRequest{
+	req := &contracts.ListContactsRequest{
 		Limit:  limit,
 		Offset: offset,
 	}
@@ -393,10 +393,10 @@ func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse{data=SyncContactsResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=SyncContactsResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/contacts/sync [post]
 func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "sync contacts")
@@ -415,7 +415,7 @@ func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Criar request para o service
-	req := &dto.SyncContactsRequest{
+	req := &contracts.SyncContactsRequest{
 		Force: false, // Por padrão, não forçar
 	}
 
@@ -448,10 +448,10 @@ func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param jid query string true "Contact JID"
-// @Success 200 {object} shared.APIResponse{data=BusinessProfileResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=BusinessProfileResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/contacts/business [get]
 func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get business profile")
@@ -507,10 +507,10 @@ func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Reque
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param request body CheckWhatsAppRequest true "Phone numbers to check"
-// @Success 200 {object} shared.APIResponse{data=CheckWhatsAppResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=CheckWhatsAppResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/contacts/is-on-whatsapp [post]
 func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 	// Reutilizar a lógica do CheckWhatsApp
@@ -524,10 +524,10 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.APIResponse{data=[]ContactInfo}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=[]ContactInfo}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/contacts/all [get]
 func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get all contacts")
@@ -585,10 +585,10 @@ func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) 
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param jid query string true "Contact JID"
-// @Success 200 {object} shared.APIResponse{data=GetProfilePictureResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=GetProfilePictureResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/contacts/profile-picture-info [get]
 func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Request) {
 	// Reutilizar a lógica do GetProfilePicture
@@ -604,10 +604,10 @@ func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Re
 // @Produce json
 // @Param sessionId path string true "Session ID"
 // @Param request body GetUserInfoRequest true "User JIDs to get detailed info"
-// @Success 200 {object} shared.APIResponse{data=GetUserInfoResponse}
-// @Failure 400 {object} shared.APIResponse
-// @Failure 404 {object} shared.APIResponse
-// @Failure 500 {object} shared.APIResponse
+// @Success 200 {object} shared.SuccessResponse{data=GetUserInfoResponse}
+// @Failure 400 {object} shared.SuccessResponse
+// @Failure 404 {object} shared.SuccessResponse
+// @Failure 500 {object} shared.SuccessResponse
 // @Router /sessions/{sessionId}/contacts/detailed-info [post]
 func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Request) {
 	// Reutilizar a lógica do GetUserInfo

@@ -5,7 +5,7 @@ import (
 
 	"zpwoot/internal/adapters/server/shared"
 	"zpwoot/internal/services"
-	"zpwoot/internal/services/shared/dto"
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/platform/logger"
 )
 
@@ -30,8 +30,8 @@ func NewSessionHandler(sessionService *services.SessionService, logger *logger.L
 // @Security ApiKeyAuth
 // @Accept json
 // @Produce json
-// @Param request body dto.CreateSessionRequest true "Session creation request with optional qrCode flag"
-// @Success 201 {object} shared.SuccessResponse{data=dto.CreateSessionResponse} "Session created successfully. If qrCode was true, includes QR code data."
+// @Param request body contracts.CreateSessionRequest true "Session creation request with optional qrCode flag"
+// @Success 201 {object} shared.SuccessResponse{data=contracts.CreateSessionResponse} "Session created successfully. If qrCode was true, includes QR code data."
 // @Failure 400 {object} shared.ErrorResponse "Bad Request"
 // @Failure 409 {object} shared.ErrorResponse "Session already exists"
 // @Failure 500 {object} shared.ErrorResponse "Internal Server Error"
@@ -40,7 +40,7 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "create session")
 
 	// Parse e validar request
-	var req dto.CreateSessionRequest
+	var req contracts.CreateSessionRequest
 	if err := h.ParseAndValidateJSON(r, &req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request format", err.Error())
 		return
@@ -75,7 +75,7 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 // @Param deviceJid query string false "Filter by device JID"
 // @Param limit query int false "Number of sessions to return (default: 20)"
 // @Param offset query int false "Number of sessions to skip (default: 0)"
-// @Success 200 {object} shared.SuccessResponse{data=dto.ListSessionsResponse} "Sessions retrieved successfully"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.ListSessionsResponse} "Sessions retrieved successfully"
 // @Failure 400 {object} shared.ErrorResponse "Bad Request"
 // @Failure 500 {object} shared.ErrorResponse "Internal Server Error"
 // @Router /sessions/list [get]
@@ -99,7 +99,7 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	deviceJID := h.GetQueryString(r, "deviceJid")
 
 	// Montar request
-	req := &dto.ListSessionsRequest{
+	req := &contracts.ListSessionsRequest{
 		Limit:  limit,
 		Offset: offset,
 	}
@@ -137,7 +137,7 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse{data=dto.SessionInfoResponse} "Session information retrieved successfully"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SessionInfoResponse} "Session information retrieved successfully"
 // @Failure 404 {object} shared.ErrorResponse "Session not found"
 // @Failure 500 {object} shared.ErrorResponse "Internal Server Error"
 // @Router /sessions/{sessionId}/info [get]
@@ -210,7 +210,7 @@ func (h *SessionHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse{data=dto.ConnectSessionResponse} "Session connection initiated successfully with QR code if needed, or confirmation if already connected"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.ConnectSessionResponse} "Session connection initiated successfully with QR code if needed, or confirmation if already connected"
 // @Failure 404 {object} shared.ErrorResponse "Session not found"
 // @Failure 500 {object} shared.ErrorResponse "Internal Server Error"
 // @Router /sessions/{sessionId}/connect [post]
@@ -285,7 +285,7 @@ func (h *SessionHandler) DisconnectSession(w http.ResponseWriter, r *http.Reques
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse{data=dto.QRCodeResponse} "QR code generated successfully with base64 image"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.QRCodeResponse} "QR code generated successfully with base64 image"
 // @Failure 404 {object} shared.ErrorResponse "Session not found"
 // @Failure 500 {object} shared.ErrorResponse "Internal Server Error"
 // @Router /sessions/{sessionId}/qr [get]
@@ -323,7 +323,7 @@ func (h *SessionHandler) GetQRCode(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse{data=dto.QRCodeResponse} "QR code generated successfully"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.QRCodeResponse} "QR code generated successfully"
 // @Failure 404 {object} shared.ErrorResponse "Session not found"
 // @Failure 500 {object} shared.ErrorResponse "Internal Server Error"
 // @Router /sessions/{sessionId}/qr/generate [post]
@@ -362,7 +362,7 @@ func (h *SessionHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request) 
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.SetProxyRequest true "Proxy configuration"
+// @Param request body contracts.SetProxyRequest true "Proxy configuration"
 // @Success 200 {object} shared.SuccessResponse "Proxy configured successfully"
 // @Failure 400 {object} shared.ErrorResponse "Bad Request"
 // @Failure 404 {object} shared.ErrorResponse "Session not found"
@@ -379,7 +379,7 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse e validar request
-	var req dto.SetProxyRequest
+	var req contracts.SetProxyRequest
 	if err := h.ParseAndValidateJSON(r, &req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request format", err.Error())
 		return
@@ -409,7 +409,7 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Success 200 {object} shared.SuccessResponse{data=dto.ProxyResponse} "Proxy configuration retrieved successfully"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.ProxyResponse} "Proxy configuration retrieved successfully"
 // @Failure 404 {object} shared.ErrorResponse "Session not found"
 // @Failure 500 {object} shared.ErrorResponse "Internal Server Error"
 // @Router /sessions/{sessionId}/proxy [get]
@@ -446,7 +446,7 @@ func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 // @Tags Sessions
 // @Security ApiKeyAuth
 // @Produce json
-// @Success 200 {object} shared.SuccessResponse{data=dto.SessionStatsResponse} "Session statistics retrieved successfully"
+// @Success 200 {object} shared.SuccessResponse{data=contracts.SessionStatsResponse} "Session statistics retrieved successfully"
 // @Failure 500 {object} shared.ErrorResponse "Internal Server Error"
 // @Router /sessions/stats [get]
 func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request) {
@@ -524,7 +524,7 @@ func (h *SessionHandler) LogoutSession(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param sessionId path string true "Session ID"
-// @Param request body dto.PairPhoneRequest true "Phone pairing request"
+// @Param request body contracts.PairPhoneRequest true "Phone pairing request"
 // @Success 200 {object} shared.SuccessResponse "Phone pairing initiated successfully"
 // @Failure 400 {object} shared.ErrorResponse "Bad Request"
 // @Failure 404 {object} shared.ErrorResponse "Session not found"
@@ -541,7 +541,7 @@ func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse e validar request
-	var req dto.PairPhoneRequest
+	var req contracts.PairPhoneRequest
 	if err := h.ParseAndValidateJSON(r, &req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request format", err.Error())
 		return

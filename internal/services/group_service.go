@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"zpwoot/internal/core/group"
-	"zpwoot/internal/services/shared/dto"
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/internal/services/shared/validation"
 	"zpwoot/platform/logger"
 )
@@ -37,7 +37,7 @@ func NewGroupService(
 }
 
 // CreateGroup cria um novo grupo WhatsApp
-func (s *GroupService) CreateGroup(ctx context.Context, sessionID string, req *dto.CreateGroupRequest) (*dto.CreateGroupResponse, error) {
+func (s *GroupService) CreateGroup(ctx context.Context, sessionID string, req *contracts.CreateGroupRequest) (*contracts.CreateGroupResponse, error) {
 	s.logger.InfoWithFields("Creating group", map[string]interface{}{
 		"session_id":      sessionID,
 		"group_name":      req.Name,
@@ -79,7 +79,7 @@ func (s *GroupService) CreateGroup(ctx context.Context, sessionID string, req *d
 		// Não retornar erro aqui pois o grupo foi criado no WhatsApp
 	}
 
-	response := &dto.CreateGroupResponse{
+	response := &contracts.CreateGroupResponse{
 		GroupJID:     groupInfo.GroupJID,
 		Name:         groupInfo.Name,
 		Description:  groupInfo.Description,
@@ -99,7 +99,7 @@ func (s *GroupService) CreateGroup(ctx context.Context, sessionID string, req *d
 }
 
 // ListGroups lista todos os grupos de uma sessão
-func (s *GroupService) ListGroups(ctx context.Context, sessionID string) (*dto.ListGroupsResponse, error) {
+func (s *GroupService) ListGroups(ctx context.Context, sessionID string) (*contracts.ListGroupsResponse, error) {
 	s.logger.InfoWithFields("Listing groups", map[string]interface{}{
 		"session_id": sessionID,
 	})
@@ -111,9 +111,9 @@ func (s *GroupService) ListGroups(ctx context.Context, sessionID string) (*dto.L
 	}
 
 	// Converter para response
-	groups := make([]dto.GroupInfo, len(groupInfos))
+	groups := make([]contracts.GroupInfo, len(groupInfos))
 	for i, groupInfo := range groupInfos {
-		groups[i] = dto.GroupInfo{
+		groups[i] = contracts.GroupInfo{
 			GroupJID:     groupInfo.GroupJID,
 			Name:         groupInfo.Name,
 			Description:  groupInfo.Description,
@@ -123,7 +123,7 @@ func (s *GroupService) ListGroups(ctx context.Context, sessionID string) (*dto.L
 		}
 	}
 
-	response := &dto.ListGroupsResponse{
+	response := &contracts.ListGroupsResponse{
 		Groups:  groups,
 		Count:   len(groups),
 		Success: true,
@@ -139,7 +139,7 @@ func (s *GroupService) ListGroups(ctx context.Context, sessionID string) (*dto.L
 }
 
 // GetGroupInfo obtém informações detalhadas de um grupo
-func (s *GroupService) GetGroupInfo(ctx context.Context, sessionID, groupJID string) (*dto.GetGroupInfoResponse, error) {
+func (s *GroupService) GetGroupInfo(ctx context.Context, sessionID, groupJID string) (*contracts.GetGroupInfoResponse, error) {
 	s.logger.InfoWithFields("Getting group info", map[string]interface{}{
 		"session_id": sessionID,
 		"group_jid":  groupJID,
@@ -152,9 +152,9 @@ func (s *GroupService) GetGroupInfo(ctx context.Context, sessionID, groupJID str
 	}
 
 	// Converter participantes
-	participants := make([]dto.ParticipantInfo, len(groupInfo.Participants))
+	participants := make([]contracts.ParticipantInfo, len(groupInfo.Participants))
 	for i, p := range groupInfo.Participants {
-		participants[i] = dto.ParticipantInfo{
+		participants[i] = contracts.ParticipantInfo{
 			JID:      p.JID,
 			Role:     string(p.Role),
 			JoinedAt: p.JoinedAt,
@@ -162,13 +162,13 @@ func (s *GroupService) GetGroupInfo(ctx context.Context, sessionID, groupJID str
 		}
 	}
 
-	response := &dto.GetGroupInfoResponse{
+	response := &contracts.GetGroupInfoResponse{
 		GroupJID:     groupInfo.GroupJID,
 		Name:         groupInfo.Name,
 		Description:  groupInfo.Description,
 		Owner:        groupInfo.Owner,
 		Participants: participants,
-		Settings: dto.GroupSettings{
+		Settings: contracts.GroupSettings{
 			Announce:         groupInfo.Settings.Announce,
 			Restrict:         groupInfo.Settings.Restrict,
 			JoinApprovalMode: groupInfo.Settings.JoinApprovalMode,
@@ -192,7 +192,7 @@ func (s *GroupService) GetGroupInfo(ctx context.Context, sessionID, groupJID str
 }
 
 // UpdateGroupParticipants gerencia participantes do grupo
-func (s *GroupService) UpdateGroupParticipants(ctx context.Context, sessionID string, req *dto.UpdateParticipantsRequest) (*dto.UpdateParticipantsResponse, error) {
+func (s *GroupService) UpdateGroupParticipants(ctx context.Context, sessionID string, req *contracts.UpdateParticipantsRequest) (*contracts.UpdateParticipantsResponse, error) {
 	s.logger.InfoWithFields("Updating group participants", map[string]interface{}{
 		"session_id":   sessionID,
 		"group_jid":    req.GroupJID,
@@ -240,7 +240,7 @@ func (s *GroupService) UpdateGroupParticipants(ctx context.Context, sessionID st
 		return nil, fmt.Errorf("failed to %s participants: %w", req.Action, err)
 	}
 
-	response := &dto.UpdateParticipantsResponse{
+	response := &contracts.UpdateParticipantsResponse{
 		GroupJID:     req.GroupJID,
 		Action:       req.Action,
 		Participants: req.Participants,
@@ -259,7 +259,7 @@ func (s *GroupService) UpdateGroupParticipants(ctx context.Context, sessionID st
 }
 
 // SetGroupName altera o nome do grupo
-func (s *GroupService) SetGroupName(ctx context.Context, sessionID string, req *dto.SetGroupNameRequest) (*dto.SetGroupNameResponse, error) {
+func (s *GroupService) SetGroupName(ctx context.Context, sessionID string, req *contracts.SetGroupNameRequest) (*contracts.SetGroupNameResponse, error) {
 	s.logger.InfoWithFields("Setting group name", map[string]interface{}{
 		"session_id": sessionID,
 		"group_jid":  req.GroupJID,
@@ -281,7 +281,7 @@ func (s *GroupService) SetGroupName(ctx context.Context, sessionID string, req *
 		return nil, fmt.Errorf("failed to set group name: %w", err)
 	}
 
-	response := &dto.SetGroupNameResponse{
+	response := &contracts.SetGroupNameResponse{
 		GroupJID: req.GroupJID,
 		Name:     req.Name,
 		Success:  true,

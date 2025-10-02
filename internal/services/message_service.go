@@ -9,7 +9,7 @@ import (
 
 	"zpwoot/internal/core/messaging"
 	"zpwoot/internal/core/session"
-	"zpwoot/internal/services/shared/dto"
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/internal/services/shared/validation"
 	"zpwoot/platform/logger"
 )
@@ -83,7 +83,7 @@ type ListMessagesRequest struct {
 
 // ListMessagesResponse DTO para resposta de listagem
 type ListMessagesResponse struct {
-	Messages []*dto.MessageDTO `json:"messages"`
+	Messages []*contracts.MessageDTO `json:"messages"`
 	Total    int64             `json:"total"`
 	Limit    int               `json:"limit"`
 	Offset   int               `json:"offset"`
@@ -157,7 +157,7 @@ func (s *MessageService) CreateMessage(ctx context.Context, req *CreateMessageRe
 }
 
 // GetMessage busca uma mensagem por ID
-func (s *MessageService) GetMessage(ctx context.Context, messageID string) (*dto.MessageDTO, error) {
+func (s *MessageService) GetMessage(ctx context.Context, messageID string) (*contracts.MessageDTO, error) {
 	// Parse message ID
 	id, err := uuid.Parse(messageID)
 	if err != nil {
@@ -200,7 +200,7 @@ func (s *MessageService) ListMessages(ctx context.Context, req *ListMessagesRequ
 	}
 
 	// Converter para DTOs
-	messageDTOs := make([]*dto.MessageDTO, len(messages))
+	messageDTOs := make([]*contracts.MessageDTO, len(messages))
 	for i, message := range messages {
 		messageDTOs[i] = s.messageToDTO(message)
 	}
@@ -244,7 +244,7 @@ func (s *MessageService) UpdateSyncStatus(ctx context.Context, req *UpdateSyncSt
 }
 
 // GetPendingSyncMessages busca mensagens pendentes de sincronização
-func (s *MessageService) GetPendingSyncMessages(ctx context.Context, sessionID string, limit int) ([]*dto.MessageDTO, error) {
+func (s *MessageService) GetPendingSyncMessages(ctx context.Context, sessionID string, limit int) ([]*contracts.MessageDTO, error) {
 	// Parse session ID
 	id, err := uuid.Parse(sessionID)
 	if err != nil {
@@ -258,7 +258,7 @@ func (s *MessageService) GetPendingSyncMessages(ctx context.Context, sessionID s
 	}
 
 	// Converter para DTOs
-	messageDTOs := make([]*dto.MessageDTO, len(messages))
+	messageDTOs := make([]*contracts.MessageDTO, len(messages))
 	for i, message := range messages {
 		messageDTOs[i] = s.messageToDTO(message)
 	}
@@ -284,7 +284,7 @@ func (s *MessageService) GetMessageStats(ctx context.Context, sessionID *string)
 // ===== WHATSAPP MESSAGE SENDING METHODS =====
 
 // SendTextMessage envia uma mensagem de texto via WhatsApp
-func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, content string) (*dto.SendMessageResponse, error) {
+func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, content string) (*contracts.SendMessageResponse, error) {
 	// Validar parâmetros
 	if sessionID == "" || to == "" || content == "" {
 		return nil, fmt.Errorf("sessionID, to, and content are required")
@@ -319,7 +319,7 @@ func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, con
 	}
 
 	// Criar resposta
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: result.MessageID,
 		To:        result.To,
 		Status:    result.Status,
@@ -336,7 +336,7 @@ func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, con
 }
 
 // SendMediaMessage envia uma mensagem de mídia via WhatsApp
-func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, mediaURL, caption, mediaType string) (*dto.SendMessageResponse, error) {
+func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, mediaURL, caption, mediaType string) (*contracts.SendMessageResponse, error) {
 	// Validar parâmetros
 	if sessionID == "" || to == "" || mediaURL == "" {
 		return nil, fmt.Errorf("sessionID, to, and mediaURL are required")
@@ -373,7 +373,7 @@ func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, me
 	}
 
 	// Criar resposta
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: result.MessageID,
 		To:        result.To,
 		Status:    result.Status,
@@ -391,32 +391,32 @@ func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, me
 }
 
 // SendImageMessage envia uma mensagem de imagem via WhatsApp
-func (s *MessageService) SendImageMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*dto.SendMessageResponse, error) {
+func (s *MessageService) SendImageMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*contracts.SendMessageResponse, error) {
 	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "image")
 }
 
 // SendAudioMessage envia uma mensagem de áudio via WhatsApp
-func (s *MessageService) SendAudioMessage(ctx context.Context, sessionID, to, file, caption string) (*dto.SendMessageResponse, error) {
+func (s *MessageService) SendAudioMessage(ctx context.Context, sessionID, to, file, caption string) (*contracts.SendMessageResponse, error) {
 	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "audio")
 }
 
 // SendVideoMessage envia uma mensagem de vídeo via WhatsApp
-func (s *MessageService) SendVideoMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*dto.SendMessageResponse, error) {
+func (s *MessageService) SendVideoMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*contracts.SendMessageResponse, error) {
 	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "video")
 }
 
 // SendDocumentMessage envia uma mensagem de documento via WhatsApp
-func (s *MessageService) SendDocumentMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*dto.SendMessageResponse, error) {
+func (s *MessageService) SendDocumentMessage(ctx context.Context, sessionID, to, file, caption, filename string) (*contracts.SendMessageResponse, error) {
 	return s.SendMediaMessage(ctx, sessionID, to, file, caption, "document")
 }
 
 // SendStickerMessage envia uma mensagem de sticker via WhatsApp
-func (s *MessageService) SendStickerMessage(ctx context.Context, sessionID, to, file string) (*dto.SendMessageResponse, error) {
+func (s *MessageService) SendStickerMessage(ctx context.Context, sessionID, to, file string) (*contracts.SendMessageResponse, error) {
 	return s.SendMediaMessage(ctx, sessionID, to, file, "", "sticker")
 }
 
 // SendLocationMessage envia uma mensagem de localização via WhatsApp
-func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to string, latitude, longitude float64, address string) (*dto.SendMessageResponse, error) {
+func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to string, latitude, longitude float64, address string) (*contracts.SendMessageResponse, error) {
 	// Validar parâmetros
 	if sessionID == "" || to == "" {
 		return nil, fmt.Errorf("sessionID and to are required")
@@ -453,7 +453,7 @@ func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to 
 	}
 
 	// Criar resposta
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: result.MessageID,
 		To:        result.To,
 		Status:    result.Status,
@@ -470,7 +470,7 @@ func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to 
 }
 
 // SendContactMessage envia uma mensagem de contato via WhatsApp
-func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, contactName, contactPhone string) (*dto.SendMessageResponse, error) {
+func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, contactName, contactPhone string) (*contracts.SendMessageResponse, error) {
 	// Validar parâmetros
 	if sessionID == "" || to == "" || contactName == "" || contactPhone == "" {
 		return nil, fmt.Errorf("sessionID, to, contactName, and contactPhone are required")
@@ -506,7 +506,7 @@ func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, 
 	}
 
 	// Criar resposta
-	response := &dto.SendMessageResponse{
+	response := &contracts.SendMessageResponse{
 		MessageID: result.MessageID,
 		To:        result.To,
 		Status:    result.Status,
@@ -523,8 +523,8 @@ func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, 
 }
 
 // messageToDTO converte uma mensagem do domínio para DTO
-func (s *MessageService) messageToDTO(message *messaging.Message) *dto.MessageDTO {
-	return &dto.MessageDTO{
+func (s *MessageService) messageToDTO(message *messaging.Message) *contracts.MessageDTO {
+	return &contracts.MessageDTO{
 		ID:               message.ID.String(),
 		SessionID:        message.SessionID.String(),
 		ZpMessageID:      message.ZpMessageID,

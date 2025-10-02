@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	// External dependencies
+	"go.mau.fi/whatsmeow/store/sqlstore"
+	_ "github.com/lib/pq" // PostgreSQL driver for sqlstore
+
 	// Core business logic
 	"zpwoot/internal/core/session"
 	"zpwoot/internal/core/messaging"

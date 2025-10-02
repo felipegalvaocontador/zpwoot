@@ -11,13 +11,11 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 type ChatwootHandler struct {
 	*shared.BaseHandler
 	messageService *services.MessageService
 	sessionService *services.SessionService
 }
-
 
 func NewChatwootHandler(
 	messageService *services.MessageService,
@@ -31,14 +29,13 @@ func NewChatwootHandler(
 	}
 }
 
-
 type ChatwootWebhookPayload struct {
-	Event        string                    `json:"event"`
-	Account      *ChatwootAccount          `json:"account,omitempty"`
-	Conversation *ChatwootConversation     `json:"conversation,omitempty"`
-	Message      *ChatwootMessage          `json:"message,omitempty"`
-	Contact      *ChatwootContact          `json:"contact,omitempty"`
-	Inbox        *ChatwootInbox            `json:"inbox,omitempty"`
+	Event        string                `json:"event"`
+	Account      *ChatwootAccount      `json:"account,omitempty"`
+	Conversation *ChatwootConversation `json:"conversation,omitempty"`
+	Message      *ChatwootMessage      `json:"message,omitempty"`
+	Contact      *ChatwootContact      `json:"contact,omitempty"`
+	Inbox        *ChatwootInbox        `json:"inbox,omitempty"`
 }
 
 type ChatwootAccount struct {
@@ -70,7 +67,6 @@ type ChatwootInbox struct {
 	Name string `json:"name"`
 }
 
-
 func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "receive chatwoot webhook")
 
@@ -80,21 +76,17 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-
 	var payload ChatwootWebhookPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid webhook payload")
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
-
 
 	h.GetLogger().InfoWithFields("Chatwoot webhook received", map[string]interface{}{
 		"session_id": sessionID,
@@ -121,7 +113,6 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 	h.GetWriter().WriteSuccess(w, nil, "Webhook processed successfully")
 }
 
-
 // @Summary Create Chatwoot configuration
 // @Description Create a new Chatwoot configuration for the session
 // @Tags Chatwoot
@@ -142,13 +133,11 @@ func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("create chatwoot config", map[string]interface{}{
 		"session_id": sessionID,
@@ -156,7 +145,6 @@ func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration created successfully")
 }
-
 
 // @Summary Find Chatwoot configuration
 // @Description Find the current Chatwoot configuration for the session
@@ -177,13 +165,11 @@ func (h *ChatwootHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("get chatwoot config", map[string]interface{}{
 		"session_id": sessionID,
@@ -191,7 +177,6 @@ func (h *ChatwootHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration retrieved successfully")
 }
-
 
 func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "update chatwoot config")
@@ -202,13 +187,11 @@ func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("update chatwoot config", map[string]interface{}{
 		"session_id": sessionID,
@@ -216,7 +199,6 @@ func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration updated successfully")
 }
-
 
 func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "delete chatwoot config")
@@ -227,13 +209,11 @@ func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("delete chatwoot config", map[string]interface{}{
 		"session_id": sessionID,
@@ -241,7 +221,6 @@ func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot configuration deleted successfully")
 }
-
 
 func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "test chatwoot connection")
@@ -252,13 +231,11 @@ func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("test chatwoot connection", map[string]interface{}{
 		"session_id": sessionID,
@@ -266,7 +243,6 @@ func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request)
 
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot connection test completed successfully")
 }
-
 
 func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "auto-create chatwoot inbox")
@@ -277,13 +253,11 @@ func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("auto-create chatwoot inbox", map[string]interface{}{
 		"session_id": sessionID,
@@ -291,7 +265,6 @@ func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request
 
 	h.GetWriter().WriteSuccess(w, nil, "Chatwoot inbox created successfully")
 }
-
 
 func (h *ChatwootHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get chatwoot stats")
@@ -302,13 +275,11 @@ func (h *ChatwootHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("get chatwoot stats", map[string]interface{}{
 		"session_id": sessionID,

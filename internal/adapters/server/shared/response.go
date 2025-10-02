@@ -7,13 +7,11 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 type SuccessResponse struct {
 	Data    interface{} `json:"data,omitempty"`
 	Message string      `json:"message,omitempty" example:"Operation completed successfully"`
 	Success bool        `json:"success" example:"true"`
 } // @name SuccessResponse
-
 
 type ErrorResponse struct {
 	Details interface{} `json:"details,omitempty"`
@@ -22,20 +20,17 @@ type ErrorResponse struct {
 	Success bool        `json:"success" example:"false"`
 } // @name ErrorResponse
 
-
 type ValidationError struct {
 	Field   string `json:"field" example:"name"`
 	Message string `json:"message" example:"Name is required"`
 	Value   string `json:"value,omitempty" example:""`
 }
 
-
 type ValidationErrorResponse struct {
 	Error   string            `json:"error" example:"Validation failed"`
 	Details []ValidationError `json:"details"`
 	Success bool              `json:"success" example:"false"`
 }
-
 
 type PaginationResponse struct {
 	Total   int  `json:"total" example:"100"`
@@ -47,7 +42,6 @@ type PaginationResponse struct {
 	HasPrev bool `json:"hasPrev" example:"false"`
 }
 
-
 type HealthResponse struct {
 	Status  string `json:"status" example:"ok"`
 	Service string `json:"service" example:"zpwoot"`
@@ -55,11 +49,9 @@ type HealthResponse struct {
 	Uptime  string `json:"uptime,omitempty" example:"2h30m15s"`
 } // @name HealthResponse
 
-
 type ResponseWriter struct {
 	logger *logger.Logger
 }
-
 
 func NewResponseWriter(logger *logger.Logger) *ResponseWriter {
 	return &ResponseWriter{
@@ -67,60 +59,50 @@ func NewResponseWriter(logger *logger.Logger) *ResponseWriter {
 	}
 }
 
-
 func (rw *ResponseWriter) WriteSuccess(w http.ResponseWriter, data interface{}, message ...string) {
 	response := NewSuccessResponse(data, message...)
 	rw.writeJSON(w, http.StatusOK, response)
 }
-
 
 func (rw *ResponseWriter) WriteCreated(w http.ResponseWriter, data interface{}, message ...string) {
 	response := NewSuccessResponse(data, message...)
 	rw.writeJSON(w, http.StatusCreated, response)
 }
 
-
 func (rw *ResponseWriter) WriteError(w http.ResponseWriter, statusCode int, message string, details ...interface{}) {
 	response := NewErrorResponse(message, details...)
 	rw.writeJSON(w, statusCode, response)
 }
 
-
 func (rw *ResponseWriter) WriteBadRequest(w http.ResponseWriter, message string, details ...interface{}) {
 	rw.WriteError(w, http.StatusBadRequest, message, details...)
 }
-
 
 func (rw *ResponseWriter) WriteUnauthorized(w http.ResponseWriter, message string) {
 	rw.WriteError(w, http.StatusUnauthorized, message)
 }
 
-
 func (rw *ResponseWriter) WriteNotFound(w http.ResponseWriter, message string) {
 	rw.WriteError(w, http.StatusNotFound, message)
 }
 
-
 func (rw *ResponseWriter) WriteConflict(w http.ResponseWriter, message string) {
 	rw.WriteError(w, http.StatusConflict, message)
 }
-
 
 func (rw *ResponseWriter) WriteValidationError(w http.ResponseWriter, errors []ValidationError) {
 	response := NewValidationErrorResponse(errors)
 	rw.writeJSON(w, http.StatusBadRequest, response)
 }
 
-
 func (rw *ResponseWriter) WriteInternalError(w http.ResponseWriter, message string) {
 	rw.WriteError(w, http.StatusInternalServerError, message)
 }
 
-
 func (rw *ResponseWriter) writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	
+
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		rw.logger.ErrorWithFields("Failed to encode JSON response", map[string]interface{}{
 			"error":       err.Error(),
@@ -128,9 +110,6 @@ func (rw *ResponseWriter) writeJSON(w http.ResponseWriter, statusCode int, data 
 		})
 	}
 }
-
-
-
 
 func NewSuccessResponse(data interface{}, message ...string) *SuccessResponse {
 	response := &SuccessResponse{
@@ -145,7 +124,6 @@ func NewSuccessResponse(data interface{}, message ...string) *SuccessResponse {
 	return response
 }
 
-
 func NewErrorResponse(message string, details ...interface{}) *ErrorResponse {
 	response := &ErrorResponse{
 		Success: false,
@@ -159,7 +137,6 @@ func NewErrorResponse(message string, details ...interface{}) *ErrorResponse {
 	return response
 }
 
-
 func NewValidationErrorResponse(errors []ValidationError) *ValidationErrorResponse {
 	return &ValidationErrorResponse{
 		Success: false,
@@ -167,7 +144,6 @@ func NewValidationErrorResponse(errors []ValidationError) *ValidationErrorRespon
 		Details: errors,
 	}
 }
-
 
 func NewPaginationResponse(total, limit, offset int) *PaginationResponse {
 	page := (offset / limit) + 1
@@ -184,7 +160,6 @@ func NewPaginationResponse(total, limit, offset int) *PaginationResponse {
 	}
 }
 
-
 func NewHealthResponse(service, version, uptime string) *HealthResponse {
 	return &HealthResponse{
 		Status:  "ok",
@@ -194,23 +169,17 @@ func NewHealthResponse(service, version, uptime string) *HealthResponse {
 	}
 }
 
-
-
-
 func IsSuccessStatus(statusCode int) bool {
 	return statusCode >= 200 && statusCode < 300
 }
-
 
 func IsClientError(statusCode int) bool {
 	return statusCode >= 400 && statusCode < 500
 }
 
-
 func IsServerError(statusCode int) bool {
 	return statusCode >= 500 && statusCode < 600
 }
-
 
 func GetStatusText(statusCode int) string {
 	return http.StatusText(statusCode)

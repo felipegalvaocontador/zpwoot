@@ -5,7 +5,6 @@ import (
 	"fmt"
 )
 
-
 var (
 	ErrNotFound      = errors.New("resource not found")
 	ErrAlreadyExists = errors.New("resource already exists")
@@ -15,15 +14,13 @@ var (
 	ErrInternal      = errors.New("internal error")
 )
 
-
 var (
-	ErrSessionNotFound           = errors.New("session not found")
-	ErrSessionNameAlreadyExists  = errors.New("session name already exists")
-	ErrSessionAlreadyConnected   = errors.New("session already connected")
-	ErrSessionNotConnected       = errors.New("session not connected")
-	ErrSessionInvalidState       = errors.New("session in invalid state")
+	ErrSessionNotFound          = errors.New("session not found")
+	ErrSessionNameAlreadyExists = errors.New("session name already exists")
+	ErrSessionAlreadyConnected  = errors.New("session already connected")
+	ErrSessionNotConnected      = errors.New("session not connected")
+	ErrSessionInvalidState      = errors.New("session in invalid state")
 )
-
 
 type DomainError struct {
 	Code    string
@@ -42,7 +39,6 @@ func (e *DomainError) Unwrap() error {
 	return e.Cause
 }
 
-
 func NewDomainError(code, message string, cause error) *DomainError {
 	return &DomainError{
 		Code:    code,
@@ -50,7 +46,6 @@ func NewDomainError(code, message string, cause error) *DomainError {
 		Cause:   cause,
 	}
 }
-
 
 type ValidationError struct {
 	Field   string
@@ -60,7 +55,6 @@ type ValidationError struct {
 func (e *ValidationError) Error() string {
 	return fmt.Sprintf("validation error on field '%s': %s", e.Field, e.Message)
 }
-
 
 func NewValidationError(field, message string) *ValidationError {
 	return &ValidationError{

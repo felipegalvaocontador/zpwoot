@@ -18,18 +18,15 @@ const (
 	authenticatedContextKey contextKey = "authenticated"
 )
 
-
 func APIKeyAuth(cfg *config.Config, log *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
 
-
 			if isPublicRoute(path) {
 				next.ServeHTTP(w, r)
 				return
 			}
-
 
 			apiKey := extractAPIKey(r)
 			if apiKey == "" {
@@ -43,7 +40,6 @@ func APIKeyAuth(cfg *config.Config, log *logger.Logger) func(http.Handler) http.
 				return
 			}
 
-
 			if !isValidAPIKey(apiKey, cfg) {
 				log.WarnWithFields("Invalid API key", map[string]interface{}{
 					"path":    path,
@@ -56,7 +52,6 @@ func APIKeyAuth(cfg *config.Config, log *logger.Logger) func(http.Handler) http.
 				return
 			}
 
-
 			log.DebugWithFields("API key authenticated", map[string]interface{}{
 				"path":    path,
 				"method":  r.Method,
@@ -64,16 +59,13 @@ func APIKeyAuth(cfg *config.Config, log *logger.Logger) func(http.Handler) http.
 				"api_key": maskAPIKey(apiKey),
 			})
 
-
 			ctx := context.WithValue(r.Context(), apiKeyContextKey, apiKey)
 			ctx = context.WithValue(ctx, authenticatedContextKey, true)
-
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
-
 
 func isPublicRoute(path string) bool {
 	publicRoutes := []string{
@@ -91,7 +83,6 @@ func isPublicRoute(path string) bool {
 	return false
 }
 
-
 func extractAPIKey(r *http.Request) string {
 
 	authHeader := r.Header.Get("Authorization")
@@ -103,10 +94,8 @@ func extractAPIKey(r *http.Request) string {
 		return authHeader
 	}
 
-
 	return r.Header.Get("X-API-Key")
 }
-
 
 func isValidAPIKey(apiKey string, cfg *config.Config) bool {
 
@@ -114,12 +103,8 @@ func isValidAPIKey(apiKey string, cfg *config.Config) bool {
 		return true
 	}
 
-
-
-
 	return false
 }
-
 
 func writeUnauthorizedResponse(w http.ResponseWriter, message, code string) {
 	w.Header().Set("Content-Type", "application/json")
@@ -135,7 +120,6 @@ func writeUnauthorizedResponse(w http.ResponseWriter, message, code string) {
 	json.NewEncoder(w).Encode(response)
 }
 
-
 func maskAPIKey(apiKey string) string {
 	if len(apiKey) <= 8 {
 		return strings.Repeat("*", len(apiKey))
@@ -143,4 +127,3 @@ func maskAPIKey(apiKey string) string {
 
 	return apiKey[:4] + strings.Repeat("*", len(apiKey)-8) + apiKey[len(apiKey)-4:]
 }
-

@@ -14,31 +14,25 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 type EventHandler struct {
 	gateway     *Gateway
 	sessionName string
 	logger      *logger.Logger
 
-
 	qrGenerator *QRGenerator
-
 
 	webhookHandler  WebhookEventHandler
 	chatwootManager ChatwootManager
 }
 
-
 type WebhookEventHandler interface {
 	HandleWhatsmeowEvent(evt interface{}, sessionID string) error
 }
-
 
 type ChatwootManager interface {
 	IsEnabled(sessionID string) bool
 	ProcessWhatsAppMessage(sessionID, messageID, from, content, messageType string, timestamp time.Time, fromMe bool) error
 }
-
 
 func NewEventHandler(gateway *Gateway, sessionName string, logger *logger.Logger) *EventHandler {
 	return &EventHandler{
@@ -49,25 +43,20 @@ func NewEventHandler(gateway *Gateway, sessionName string, logger *logger.Logger
 	}
 }
 
-
 func (h *EventHandler) SetWebhookHandler(handler WebhookEventHandler) {
 	h.webhookHandler = handler
 }
-
 
 func (h *EventHandler) SetChatwootManager(manager ChatwootManager) {
 	h.chatwootManager = manager
 }
 
-
 func (h *EventHandler) HandleEvent(evt interface{}, sessionID string) {
 
 	h.deliverToWebhook(evt, sessionID)
 
-
 	h.handleEventInternal(evt, sessionID)
 }
-
 
 func (h *EventHandler) handleEventInternal(evt interface{}, sessionID string) {
 	switch v := evt.(type) {
@@ -94,7 +83,6 @@ func (h *EventHandler) handleEventInternal(evt interface{}, sessionID string) {
 	}
 }
 
-
 func (h *EventHandler) deliverToWebhook(evt interface{}, sessionID string) {
 	if h.webhookHandler == nil {
 		return
@@ -120,15 +108,11 @@ func (h *EventHandler) deliverToWebhook(evt interface{}, sessionID string) {
 	}()
 }
 
-
-
-
 func (h *EventHandler) handleConnected(_ *events.Connected, sessionID string) {
 	h.logger.InfoWithFields("WhatsApp connected", map[string]interface{}{
 		"module":     "events",
 		"session_id": sessionID,
 	})
-
 
 	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
@@ -139,12 +123,10 @@ func (h *EventHandler) handleConnected(_ *events.Connected, sessionID string) {
 	}
 }
 
-
 func (h *EventHandler) handleDisconnected(_ *events.Disconnected, sessionID string) {
 	h.logger.WarnWithFields("WhatsApp disconnected", map[string]interface{}{
 		"session_id": sessionID,
 	})
-
 
 	if err := h.gateway.UpdateSessionStatus(sessionID, "disconnected"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
@@ -155,13 +137,11 @@ func (h *EventHandler) handleDisconnected(_ *events.Disconnected, sessionID stri
 	}
 }
 
-
 func (h *EventHandler) handleLoggedOut(evt *events.LoggedOut, sessionID string) {
 	h.logger.WarnWithFields("WhatsApp logged out", map[string]interface{}{
 		"session_id": sessionID,
 		"reason":     evt.Reason,
 	})
-
 
 	if err := h.gateway.UpdateSessionStatus(sessionID, "logged_out"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
@@ -172,12 +152,10 @@ func (h *EventHandler) handleLoggedOut(evt *events.LoggedOut, sessionID string) 
 	}
 }
 
-
 func (h *EventHandler) handleQREvent(sessionID string) {
 	h.logger.InfoWithFields("QR code event received", map[string]interface{}{
 		"session_id": sessionID,
 	})
-
 
 	if err := h.gateway.UpdateSessionStatus(sessionID, "qr_code"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
@@ -188,7 +166,6 @@ func (h *EventHandler) handleQREvent(sessionID string) {
 	}
 }
 
-
 func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
 	h.logger.InfoWithFields("QR code event with data received", map[string]interface{}{
 		"session_id":   sessionID,
@@ -197,9 +174,7 @@ func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
 		"expires_at":   evt.ExpiresAt,
 	})
 
-
 	h.qrGenerator.DisplayQRCodeInTerminal(evt.QRCode, evt.SessionName)
-
 
 	if err := h.gateway.UpdateSessionStatus(sessionID, "qr_code"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
@@ -208,7 +183,6 @@ func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
 			"error":      err.Error(),
 		})
 	}
-
 
 	if err := h.gateway.UpdateSessionQRCode(sessionID, evt.QRCode, evt.ExpiresAt); err != nil {
 		h.logger.ErrorWithFields("Failed to update QR code in database", map[string]interface{}{
@@ -219,7 +193,6 @@ func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
 	}
 }
 
-
 func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID string) {
 	deviceJID := evt.ID.String()
 
@@ -228,7 +201,6 @@ func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID stri
 		"device_jid": deviceJID,
 	})
 
-
 	if err := h.gateway.UpdateSessionDeviceJID(sessionID, deviceJID); err != nil {
 		h.logger.ErrorWithFields("Failed to update session device JID", map[string]interface{}{
 			"session_id": sessionID,
@@ -236,7 +208,6 @@ func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID stri
 			"error":      err.Error(),
 		})
 	}
-
 
 	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status after pairing", map[string]interface{}{
@@ -247,24 +218,20 @@ func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID stri
 	}
 }
 
-
 func (h *EventHandler) handlePairError(evt *events.PairError, sessionID string) {
 	h.logger.ErrorWithFields("WhatsApp pairing failed", map[string]interface{}{
 		"session_id": sessionID,
 		"error":      evt.Error.Error(),
 	})
 
-
 }
-
 
 func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 	h.logger.InfoWithFields("Message received", map[string]interface{}{
-		"module": "events",
-		"type":   evt.Info.Type,
+		"module":  "events",
+		"type":    evt.Info.Type,
 		"from_me": evt.Info.IsFromMe,
 	})
-
 
 	if err := h.saveMessageToDatabase(evt, sessionID); err != nil {
 		h.logger.ErrorWithFields("Failed to save message to database", map[string]interface{}{
@@ -274,12 +241,10 @@ func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
 		})
 	}
 
-
 	if h.chatwootManager != nil && h.chatwootManager.IsEnabled(sessionID) {
 		h.processMessageForChatwoot(evt, sessionID)
 	}
 }
-
 
 func (h *EventHandler) handleReceipt(evt *events.Receipt, sessionID string) {
 	h.logger.DebugWithFields("Receipt received", map[string]interface{}{
@@ -289,9 +254,7 @@ func (h *EventHandler) handleReceipt(evt *events.Receipt, sessionID string) {
 		"timestamp":  evt.Timestamp,
 	})
 
-
 }
-
 
 func (h *EventHandler) handleOtherEvents(evt interface{}, sessionID string) {
 	switch v := evt.(type) {
@@ -325,16 +288,13 @@ func (h *EventHandler) handleOtherEvents(evt interface{}, sessionID string) {
 	}
 }
 
-
 func (h *EventHandler) processMessageForChatwoot(evt *events.Message, sessionID string) {
 	messageID := evt.Info.ID
 	from := evt.Info.Sender.String()
 	timestamp := evt.Info.Timestamp
 	fromMe := evt.Info.IsFromMe
 
-
 	content, messageType := h.extractMessageContentString(evt.Message)
-
 
 	contactNumber := h.extractContactNumber(from)
 
@@ -362,22 +322,18 @@ func (h *EventHandler) processMessageForChatwoot(evt *events.Message, sessionID 
 	}
 }
 
-
 func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (string, string) {
 	if message == nil {
 		return "", "unknown"
 	}
 
-
 	if message.Conversation != nil {
 		return *message.Conversation, "text"
 	}
 
-
 	if message.ExtendedTextMessage != nil && message.ExtendedTextMessage.Text != nil {
 		return *message.ExtendedTextMessage.Text, "text"
 	}
-
 
 	if message.ImageMessage != nil {
 		caption := ""
@@ -387,11 +343,9 @@ func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (stri
 		return caption, "image"
 	}
 
-
 	if message.AudioMessage != nil {
 		return "[Audio]", "audio"
 	}
-
 
 	if message.VideoMessage != nil {
 		caption := ""
@@ -401,7 +355,6 @@ func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (stri
 		return caption, "video"
 	}
 
-
 	if message.DocumentMessage != nil {
 		filename := ""
 		if message.DocumentMessage.FileName != nil {
@@ -410,16 +363,13 @@ func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (stri
 		return fmt.Sprintf("[Document: %s]", filename), "document"
 	}
 
-
 	if message.StickerMessage != nil {
 		return "[Sticker]", "sticker"
 	}
 
-
 	if message.LocationMessage != nil {
 		return "[Location]", "location"
 	}
-
 
 	if message.ContactMessage != nil {
 		name := ""
@@ -432,7 +382,6 @@ func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (stri
 	return "[Unknown message type]", "unknown"
 }
 
-
 func (h *EventHandler) extractContactNumber(jid string) string {
 
 	parts := strings.Split(jid, "@")
@@ -442,9 +391,6 @@ func (h *EventHandler) extractContactNumber(jid string) string {
 	return jid
 }
 
-
-
-
 func (h *EventHandler) handlePresence(evt *events.Presence, sessionID string) {
 	h.logger.DebugWithFields("Presence update", map[string]interface{}{
 		"session_id": sessionID,
@@ -452,7 +398,6 @@ func (h *EventHandler) handlePresence(evt *events.Presence, sessionID string) {
 		"presence":   evt.Unavailable,
 	})
 }
-
 
 func (h *EventHandler) handleChatPresence(evt *events.ChatPresence, sessionID string) {
 	h.logger.DebugWithFields("Chat presence update", map[string]interface{}{
@@ -462,7 +407,6 @@ func (h *EventHandler) handleChatPresence(evt *events.ChatPresence, sessionID st
 	})
 }
 
-
 func (h *EventHandler) handleHistorySync(evt *events.HistorySync, sessionID string) {
 	h.logger.InfoWithFields("History sync", map[string]interface{}{
 		"session_id": sessionID,
@@ -471,13 +415,11 @@ func (h *EventHandler) handleHistorySync(evt *events.HistorySync, sessionID stri
 	})
 }
 
-
 func (h *EventHandler) handleAppState(_ *events.AppState) {
 	h.logger.DebugWithFields("App state update", map[string]interface{}{
 		"name": "app_state",
 	})
 }
-
 
 func (h *EventHandler) handleAppStateSyncComplete(evt *events.AppStateSyncComplete, sessionID string) {
 	h.logger.InfoWithFields("App state sync complete", map[string]interface{}{
@@ -486,20 +428,17 @@ func (h *EventHandler) handleAppStateSyncComplete(evt *events.AppStateSyncComple
 	})
 }
 
-
 func (h *EventHandler) handleKeepAliveTimeout(_ *events.KeepAliveTimeout, sessionID string) {
 	h.logger.WarnWithFields("Keep alive timeout", map[string]interface{}{
 		"session_id": sessionID,
 	})
 }
 
-
 func (h *EventHandler) handleKeepAliveRestored(_ *events.KeepAliveRestored, sessionID string) {
 	h.logger.InfoWithFields("Keep alive restored", map[string]interface{}{
 		"session_id": sessionID,
 	})
 }
-
 
 func (h *EventHandler) handleContact(evt *events.Contact, sessionID string) {
 	h.logger.DebugWithFields("Contact update", map[string]interface{}{
@@ -508,14 +447,12 @@ func (h *EventHandler) handleContact(evt *events.Contact, sessionID string) {
 	})
 }
 
-
 func (h *EventHandler) handleGroupInfo(evt *events.GroupInfo, sessionID string) {
 	h.logger.DebugWithFields("Group info update", map[string]interface{}{
 		"session_id": sessionID,
 		"jid":        evt.JID.String(),
 	})
 }
-
 
 func (h *EventHandler) handlePicture(evt *events.Picture, sessionID string) {
 	h.logger.DebugWithFields("Picture update", map[string]interface{}{
@@ -524,7 +461,6 @@ func (h *EventHandler) handlePicture(evt *events.Picture, sessionID string) {
 	})
 }
 
-
 func (h *EventHandler) handleBusinessName(evt *events.BusinessName, sessionID string) {
 	h.logger.DebugWithFields("Business name update", map[string]interface{}{
 		"session_id": sessionID,
@@ -532,16 +468,12 @@ func (h *EventHandler) handleBusinessName(evt *events.BusinessName, sessionID st
 	})
 }
 
-
-
-
 func (h *EventHandler) saveMessageToDatabase(evt *events.Message, sessionID string) error {
 
 	message, err := h.convertWhatsmeowMessage(evt, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to convert message: %w", err)
 	}
-
 
 	if err := h.gateway.SaveReceivedMessage(message); err != nil {
 		return fmt.Errorf("failed to save message: %w", err)
@@ -556,20 +488,16 @@ func (h *EventHandler) saveMessageToDatabase(evt *events.Message, sessionID stri
 	return nil
 }
 
-
 func (h *EventHandler) convertWhatsmeowMessage(evt *events.Message, sessionID string) (*messaging.Message, error) {
 
 	contentMap := h.extractMessageContent(evt.Message)
 
-
 	contentStr := fmt.Sprintf("%v", contentMap)
-
 
 	sessionUUID, err := uuid.Parse(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid session ID: %w", err)
 	}
-
 
 	message := &messaging.Message{
 		ID:          uuid.New(),
@@ -588,7 +516,6 @@ func (h *EventHandler) convertWhatsmeowMessage(evt *events.Message, sessionID st
 
 	return message, nil
 }
-
 
 func (h *EventHandler) extractMessageContent(message *waE2E.Message) map[string]interface{} {
 	content := make(map[string]interface{})

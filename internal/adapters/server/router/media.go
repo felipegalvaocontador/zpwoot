@@ -8,7 +8,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 func setupMediaRoutes(r chi.Router, sessionService *services.SessionService, appLogger *logger.Logger) {
 	mediaHandler := handler.NewMediaHandler(sessionService, appLogger)
 
@@ -18,9 +17,7 @@ func setupMediaRoutes(r chi.Router, sessionService *services.SessionService, app
 		r.Get("/info", mediaHandler.GetMediaInfo)
 		r.Get("/list", mediaHandler.ListCachedMedia)
 
-
 		r.Post("/clear-cache", mediaHandler.ClearCache)
-
 
 		r.Get("/stats", mediaHandler.GetStats)
 	})

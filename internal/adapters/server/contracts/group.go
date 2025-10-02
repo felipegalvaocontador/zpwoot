@@ -4,15 +4,11 @@ import (
 	"time"
 )
 
-
-
-
 type CreateGroupRequest struct {
 	Name         string   `json:"name" validate:"required,min=1,max=25"`
 	Description  string   `json:"description,omitempty" validate:"max=512"`
 	Participants []string `json:"participants" validate:"required,min=1,max=256"`
 }
-
 
 type UpdateParticipantsRequest struct {
 	GroupJID     string   `json:"group_jid" validate:"required"`
@@ -20,25 +16,21 @@ type UpdateParticipantsRequest struct {
 	Participants []string `json:"participants" validate:"required,min=1"`
 }
 
-
 type SetGroupNameRequest struct {
 	GroupJID string `json:"group_jid" validate:"required"`
 	Name     string `json:"name" validate:"required,min=1,max=25"`
 }
-
 
 type SetGroupDescriptionRequest struct {
 	GroupJID    string `json:"group_jid" validate:"required"`
 	Description string `json:"description" validate:"max=512"`
 }
 
-
 type SetGroupPhotoRequest struct {
 	GroupJID  string `json:"group_jid" validate:"required"`
 	PhotoData []byte `json:"photo_data" validate:"required"`
 	MimeType  string `json:"mime_type" validate:"required"`
 }
-
 
 type UpdateGroupSettingsRequest struct {
 	GroupJID         string `json:"group_jid" validate:"required"`
@@ -49,42 +41,33 @@ type UpdateGroupSettingsRequest struct {
 	Locked           *bool  `json:"locked,omitempty"`
 }
 
-
 type GetInviteLinkRequest struct {
 	GroupJID string `json:"group_jid" validate:"required"`
 }
-
 
 type JoinGroupViaLinkRequest struct {
 	InviteLink string `json:"invite_link" validate:"required"`
 }
 
-
 type LeaveGroupRequest struct {
 	GroupJID string `json:"group_jid" validate:"required"`
 }
-
 
 type GetGroupInfoFromInviteRequest struct {
 	GroupJID string `json:"group_jid" validate:"required"`
 	Code     string `json:"code" validate:"required"`
 }
 
-
 type JoinGroupWithInviteRequest struct {
 	GroupJID string `json:"group_jid" validate:"required"`
 	Code     string `json:"code" validate:"required"`
 }
-
 
 type GroupRequestActionRequest struct {
 	GroupJID      string   `json:"group_jid" validate:"required"`
 	RequesterJIDs []string `json:"requester_jids" validate:"required,min=1"`
 	Action        string   `json:"action" validate:"required,oneof=approve reject"`
 }
-
-
-
 
 type CreateGroupResponse struct {
 	GroupJID     string    `json:"group_jid"`
@@ -96,14 +79,12 @@ type CreateGroupResponse struct {
 	Message      string    `json:"message"`
 }
 
-
 type ListGroupsResponse struct {
 	Groups  []GroupInfo `json:"groups"`
 	Count   int         `json:"count"`
 	Success bool        `json:"success"`
 	Message string      `json:"message"`
 }
-
 
 type GroupInfo struct {
 	GroupJID     string    `json:"group_jid"`
@@ -113,7 +94,6 @@ type GroupInfo struct {
 	Participants int       `json:"participants"`
 	CreatedAt    time.Time `json:"created_at"`
 }
-
 
 type GetGroupInfoResponse struct {
 	GroupJID     string            `json:"group_jid"`
@@ -128,14 +108,12 @@ type GetGroupInfoResponse struct {
 	Message      string            `json:"message"`
 }
 
-
 type ParticipantInfo struct {
 	JID      string    `json:"jid"`
 	Role     string    `json:"role"`
 	JoinedAt time.Time `json:"joined_at"`
 	Status   string    `json:"status"`
 }
-
 
 type GroupSettings struct {
 	Announce         bool   `json:"announce"`
@@ -145,7 +123,6 @@ type GroupSettings struct {
 	Locked           bool   `json:"locked"`
 }
 
-
 type UpdateParticipantsResponse struct {
 	GroupJID     string   `json:"group_jid"`
 	Action       string   `json:"action"`
@@ -154,14 +131,12 @@ type UpdateParticipantsResponse struct {
 	Message      string   `json:"message"`
 }
 
-
 type SetGroupNameResponse struct {
 	GroupJID string `json:"group_jid"`
 	Name     string `json:"name"`
 	Success  bool   `json:"success"`
 	Message  string `json:"message"`
 }
-
 
 type SetGroupDescriptionResponse struct {
 	GroupJID    string `json:"group_jid"`
@@ -170,13 +145,11 @@ type SetGroupDescriptionResponse struct {
 	Message     string `json:"message"`
 }
 
-
 type SetGroupPhotoResponse struct {
 	GroupJID string `json:"group_jid"`
 	Success  bool   `json:"success"`
 	Message  string `json:"message"`
 }
-
 
 type UpdateGroupSettingsResponse struct {
 	GroupJID string        `json:"group_jid"`
@@ -185,14 +158,12 @@ type UpdateGroupSettingsResponse struct {
 	Message  string        `json:"message"`
 }
 
-
 type GetInviteLinkResponse struct {
 	GroupJID   string `json:"group_jid"`
 	InviteLink string `json:"invite_link"`
 	Success    bool   `json:"success"`
 	Message    string `json:"message"`
 }
-
 
 type JoinGroupResponse struct {
 	GroupJID string `json:"group_jid"`
@@ -202,7 +173,6 @@ type JoinGroupResponse struct {
 	Message  string `json:"message"`
 }
 
-
 type LeaveGroupResponse struct {
 	GroupJID string `json:"group_jid"`
 	Status   string `json:"status"`
@@ -210,22 +180,19 @@ type LeaveGroupResponse struct {
 	Message  string `json:"message"`
 }
 
-
 type GetGroupRequestParticipantsResponse struct {
-	GroupJID     string               `json:"group_jid"`
-	Participants []GroupRequestInfo   `json:"participants"`
-	Count        int                  `json:"count"`
-	Success      bool                 `json:"success"`
-	Message      string               `json:"message"`
+	GroupJID     string             `json:"group_jid"`
+	Participants []GroupRequestInfo `json:"participants"`
+	Count        int                `json:"count"`
+	Success      bool               `json:"success"`
+	Message      string             `json:"message"`
 }
-
 
 type GroupRequestInfo struct {
 	RequesterJID string    `json:"requester_jid"`
 	RequestedAt  time.Time `json:"requested_at"`
 	Status       string    `json:"status"`
 }
-
 
 type UpdateGroupRequestParticipantsResponse struct {
 	GroupJID      string   `json:"group_jid"`
@@ -235,15 +202,13 @@ type UpdateGroupRequestParticipantsResponse struct {
 	Message       string   `json:"message"`
 }
 
-
 type GetGroupInfoFromInviteResponse struct {
-	GroupJID    string    `json:"group_jid"`
-	Code        string    `json:"code"`
-	GroupInfo   GroupInfo `json:"group_info"`
-	Success     bool      `json:"success"`
-	Message     string    `json:"message"`
+	GroupJID  string    `json:"group_jid"`
+	Code      string    `json:"code"`
+	GroupInfo GroupInfo `json:"group_info"`
+	Success   bool      `json:"success"`
+	Message   string    `json:"message"`
 }
-
 
 type JoinGroupWithInviteResponse struct {
 	GroupJID string `json:"group_jid"`
@@ -253,7 +218,6 @@ type JoinGroupWithInviteResponse struct {
 	Message  string `json:"message"`
 }
 
-
 type SetGroupJoinApprovalModeResponse struct {
 	GroupJID         string `json:"group_jid"`
 	JoinApprovalMode string `json:"join_approval_mode"`
@@ -261,14 +225,12 @@ type SetGroupJoinApprovalModeResponse struct {
 	Message          string `json:"message"`
 }
 
-
 type SetGroupMemberAddModeResponse struct {
 	GroupJID      string `json:"group_jid"`
 	MemberAddMode string `json:"member_add_mode"`
 	Success       bool   `json:"success"`
 	Message       string `json:"message"`
 }
-
 
 type GetGroupInfoFromLinkResponse struct {
 	InviteLink string    `json:"invite_link"`

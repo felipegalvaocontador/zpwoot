@@ -17,11 +17,9 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 type QRGenerator struct {
 	logger *logger.Logger
 }
-
 
 func NewQRGenerator(logger *logger.Logger) *QRGenerator {
 	return &QRGenerator{
@@ -29,44 +27,34 @@ func NewQRGenerator(logger *logger.Logger) *QRGenerator {
 	}
 }
 
-
 func (g *QRGenerator) Generate(ctx context.Context, sessionName string) (*session.QRCodeResponse, error) {
-
 
 	return nil, fmt.Errorf("QR code generation is handled by WhatsApp events")
 }
 
-
 func (g *QRGenerator) GenerateQRCode(data string) (string, error) {
-
 
 	return data, nil
 }
-
 
 func (g *QRGenerator) GenerateQRCodeImage(data string) (string, error) {
 	g.logger.DebugWithFields("Generating QR code image", map[string]interface{}{
 		"data_length": len(data),
 	})
 
-
 	qr, err := qrcode.New(data, qrcode.Medium)
 	if err != nil {
 		return "", fmt.Errorf("failed to create QR code: %w", err)
 	}
 
-
 	qr.DisableBorder = false
 
-
 	img := qr.Image(256)
-
 
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
 		return "", fmt.Errorf("failed to encode QR code image: %w", err)
 	}
-
 
 	base64Image := base64.StdEncoding.EncodeToString(buf.Bytes())
 	dataURI := fmt.Sprintf("data:image/png;base64,%s", base64Image)
@@ -78,7 +66,6 @@ func (g *QRGenerator) GenerateQRCodeImage(data string) (string, error) {
 	return dataURI, nil
 }
 
-
 func (g *QRGenerator) GenerateQRCodePNG(data string, size int) ([]byte, error) {
 	if size <= 0 {
 		size = 256
@@ -89,15 +76,12 @@ func (g *QRGenerator) GenerateQRCodePNG(data string, size int) ([]byte, error) {
 		"size":        size,
 	})
 
-
 	qr, err := qrcode.New(data, qrcode.Medium)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create QR code: %w", err)
 	}
 
-
 	qr.DisableBorder = false
-
 
 	pngBytes, err := qr.PNG(size)
 	if err != nil {
@@ -111,19 +95,15 @@ func (g *QRGenerator) GenerateQRCodePNG(data string, size int) ([]byte, error) {
 	return pngBytes, nil
 }
 
-
 func (g *QRGenerator) ValidateQRCode(data string) bool {
-
 
 	if len(data) < 10 {
 		return false
 	}
 
-
 	if data[0] < '0' || data[0] > '9' {
 		return false
 	}
-
 
 	atIndex := -1
 	for i, char := range data {
@@ -137,14 +117,12 @@ func (g *QRGenerator) ValidateQRCode(data string) bool {
 		return false
 	}
 
-
 	if atIndex >= len(data)-1 {
 		return false
 	}
 
 	return true
 }
-
 
 func (g *QRGenerator) GetQRCodeInfo(data string) map[string]interface{} {
 	info := map[string]interface{}{
@@ -155,7 +133,6 @@ func (g *QRGenerator) GetQRCodeInfo(data string) map[string]interface{} {
 	if !g.ValidateQRCode(data) {
 		return info
 	}
-
 
 	atIndex := -1
 	for i, char := range data {
@@ -174,23 +151,18 @@ func (g *QRGenerator) GetQRCodeInfo(data string) map[string]interface{} {
 	return info
 }
 
-
 func (g *QRGenerator) GenerateImage(ctx context.Context, qrCode string) ([]byte, error) {
 	return g.GenerateQRCodePNG(qrCode, 256)
 }
-
 
 func (g *QRGenerator) IsExpired(expiresAt time.Time) bool {
 	return time.Now().After(expiresAt)
 }
 
-
-
 func (g *QRGenerator) DisplayQRCodeInTerminal(qrCode, sessionID string) {
 
 	qrterminal.GenerateHalfBlock(qrCode, qrterminal.L, os.Stdout)
 	fmt.Printf("QR code for session %s:\n%s\n", strings.ToUpper(sessionID), qrCode)
-
 
 	g.logger.InfoWithFields("QR code displayed in terminal", map[string]interface{}{
 		"session_id": sessionID,

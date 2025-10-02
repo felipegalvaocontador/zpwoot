@@ -10,13 +10,10 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
-
 type Service struct {
 	repository Repository
 	logger     *logger.Logger
 }
-
 
 func NewService(repo Repository, logger *logger.Logger) *Service {
 	return &Service{
@@ -25,13 +22,11 @@ func NewService(repo Repository, logger *logger.Logger) *Service {
 	}
 }
 
-
 func (s *Service) CreateMessage(ctx context.Context, req *CreateMessageRequest) (*Message, error) {
 
 	if err := s.validateCreateRequest(req); err != nil {
 		return nil, fmt.Errorf("invalid create request: %w", err)
 	}
-
 
 	exists, err := s.repository.ExistsByZpMessageID(ctx, req.SessionID, req.ZpMessageID)
 	if err != nil {
@@ -40,7 +35,6 @@ func (s *Service) CreateMessage(ctx context.Context, req *CreateMessageRequest) 
 	if exists {
 		return nil, fmt.Errorf("message with zpMessageID %s already exists", req.ZpMessageID)
 	}
-
 
 	now := time.Now()
 	message := &Message{
@@ -58,7 +52,6 @@ func (s *Service) CreateMessage(ctx context.Context, req *CreateMessageRequest) 
 		UpdatedAt:   now,
 	}
 
-
 	if err := s.repository.Create(ctx, message); err != nil {
 		return nil, fmt.Errorf("failed to create message: %w", err)
 	}
@@ -74,7 +67,6 @@ func (s *Service) CreateMessage(ctx context.Context, req *CreateMessageRequest) 
 	return message, nil
 }
 
-
 func (s *Service) GetMessage(ctx context.Context, id uuid.UUID) (*Message, error) {
 	message, err := s.repository.GetByID(ctx, id)
 	if err != nil {
@@ -83,7 +75,6 @@ func (s *Service) GetMessage(ctx context.Context, id uuid.UUID) (*Message, error
 
 	return message, nil
 }
-
 
 func (s *Service) GetMessageByZpID(ctx context.Context, sessionID uuid.UUID, zpMessageID string) (*Message, error) {
 	message, err := s.repository.GetByZpMessageID(ctx, sessionID, zpMessageID)
@@ -94,13 +85,11 @@ func (s *Service) GetMessageByZpID(ctx context.Context, sessionID uuid.UUID, zpM
 	return message, nil
 }
 
-
 func (s *Service) UpdateSyncStatus(ctx context.Context, id uuid.UUID, status SyncStatus, cwMessageID, cwConversationID *int) error {
 
 	if !IsValidSyncStatus(string(status)) {
 		return fmt.Errorf("invalid sync status: %s", status)
 	}
-
 
 	if err := s.repository.UpdateSyncStatus(ctx, id, status, cwMessageID, cwConversationID); err != nil {
 		return fmt.Errorf("failed to update sync status: %w", err)
@@ -116,7 +105,6 @@ func (s *Service) UpdateSyncStatus(ctx context.Context, id uuid.UUID, status Syn
 	return nil
 }
 
-
 func (s *Service) MarkAsSynced(ctx context.Context, id uuid.UUID, cwMessageID, cwConversationID int) error {
 	if err := s.repository.MarkAsSynced(ctx, id, cwMessageID, cwConversationID); err != nil {
 		return fmt.Errorf("failed to mark message as synced: %w", err)
@@ -131,7 +119,6 @@ func (s *Service) MarkAsSynced(ctx context.Context, id uuid.UUID, cwMessageID, c
 	return nil
 }
 
-
 func (s *Service) MarkAsFailed(ctx context.Context, id uuid.UUID, errorReason string) error {
 	if err := s.repository.MarkAsFailed(ctx, id, errorReason); err != nil {
 		return fmt.Errorf("failed to mark message as failed: %w", err)
@@ -145,7 +132,6 @@ func (s *Service) MarkAsFailed(ctx context.Context, id uuid.UUID, errorReason st
 	return nil
 }
 
-
 func (s *Service) ListMessages(ctx context.Context, req *ListMessagesRequest) ([]*Message, int64, error) {
 
 	if err := s.validateListRequest(req); err != nil {
@@ -154,7 +140,6 @@ func (s *Service) ListMessages(ctx context.Context, req *ListMessagesRequest) ([
 
 	var messages []*Message
 	var err error
-
 
 	if req.SessionID != "" {
 		sessionID, err := uuid.Parse(req.SessionID)
@@ -175,7 +160,6 @@ func (s *Service) ListMessages(ctx context.Context, req *ListMessagesRequest) ([
 		return nil, 0, fmt.Errorf("failed to list messages: %w", err)
 	}
 
-
 	var total int64
 	if req.SessionID != "" {
 		sessionID, _ := uuid.Parse(req.SessionID)
@@ -195,7 +179,6 @@ func (s *Service) ListMessages(ctx context.Context, req *ListMessagesRequest) ([
 	return messages, total, nil
 }
 
-
 func (s *Service) GetPendingSyncMessages(ctx context.Context, sessionID uuid.UUID, limit int) ([]*Message, error) {
 	messages, err := s.repository.GetPendingSyncMessages(ctx, sessionID, limit)
 	if err != nil {
@@ -204,7 +187,6 @@ func (s *Service) GetPendingSyncMessages(ctx context.Context, sessionID uuid.UUI
 
 	return messages, nil
 }
-
 
 func (s *Service) GetStats(ctx context.Context) (*MessageStats, error) {
 	stats, err := s.repository.GetStats(ctx)
@@ -215,7 +197,6 @@ func (s *Service) GetStats(ctx context.Context) (*MessageStats, error) {
 	return stats, nil
 }
 
-
 func (s *Service) GetStatsBySession(ctx context.Context, sessionID uuid.UUID) (*MessageStats, error) {
 	stats, err := s.repository.GetStatsBySession(ctx, sessionID)
 	if err != nil {
@@ -224,7 +205,6 @@ func (s *Service) GetStatsBySession(ctx context.Context, sessionID uuid.UUID) (*
 
 	return stats, nil
 }
-
 
 func (s *Service) validateCreateRequest(req *CreateMessageRequest) error {
 	if req.SessionID == uuid.Nil {
@@ -248,7 +228,6 @@ func (s *Service) validateCreateRequest(req *CreateMessageRequest) error {
 
 	return nil
 }
-
 
 func (s *Service) validateListRequest(req *ListMessagesRequest) error {
 	if req.Limit <= 0 {

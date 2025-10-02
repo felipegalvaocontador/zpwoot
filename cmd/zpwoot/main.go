@@ -52,13 +52,10 @@ func main() {
 		os.Exit(1)
 	}
 
-
 	printBanner(cfg)
-
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
 
 	log := logger.NewFromAppConfig(cfg)
 	log.InfoWithFields("Starting zpwoot", map[string]interface{}{
@@ -66,20 +63,17 @@ func main() {
 		"version": appVersion,
 	})
 
-
 	db, err := database.NewFromAppConfig(cfg, log)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Failed to initialize database: %v", err))
 	}
 	defer db.Close()
 
-
 	if cfg.Database.AutoMigrate {
 		if err := runMigrations(db, log); err != nil {
 			log.Fatal(fmt.Sprintf("Failed to run migrations: %v", err))
 		}
 	}
-
 
 	containerConfig := &container.Config{
 		AppConfig: cfg,
@@ -92,11 +86,9 @@ func main() {
 		log.Fatal(fmt.Sprintf("Failed to initialize DI container: %v", err))
 	}
 
-
 	if err := diContainer.Start(ctx); err != nil {
 		log.Fatal(fmt.Sprintf("Failed to start container components: %v", err))
 	}
-
 
 	server := &http.Server{
 		Addr:         cfg.GetServerAddress(),
@@ -106,13 +98,10 @@ func main() {
 		IdleTimeout:  time.Duration(cfg.Server.IdleTimeout) * time.Second,
 	}
 
-
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-
 	errChan := make(chan error, 1)
-
 
 	go func() {
 		log.InfoWithFields("Server started", map[string]interface{}{
@@ -125,9 +114,7 @@ func main() {
 		}
 	}()
 
-
 	go connectOnStartup(diContainer, log)
-
 
 	select {
 	case sig := <-sigChan:
@@ -140,18 +127,15 @@ func main() {
 		})
 	}
 
-
 	log.Info("Initiating graceful shutdown...")
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
-
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.ErrorWithFields("Error shutting down HTTP server", map[string]interface{}{
 			"error": err.Error(),
 		})
 	}
-
 
 	if err := diContainer.Stop(shutdownCtx); err != nil {
 		log.ErrorWithFields("Error stopping container components", map[string]interface{}{
@@ -161,7 +145,6 @@ func main() {
 
 	log.Info("Application shutdown completed successfully")
 }
-
 
 func connectOnStartup(container *container.Container, logger *logger.Logger) {
 	const (
@@ -196,7 +179,6 @@ func connectOnStartup(container *container.Container, logger *logger.Logger) {
 	}
 }
 
-
 func getExistingSessions(ctx context.Context, sessionService *services.SessionService, limit int, logger *logger.Logger) []sessionInfo {
 	req := &contracts.ListSessionsRequest{
 		Limit:  limit,
@@ -225,7 +207,6 @@ func getExistingSessions(ctx context.Context, sessionService *services.SessionSe
 
 	return sessionsWithCredentials
 }
-
 
 func reconnectSessions(ctx context.Context, sessions []sessionInfo, sessionService *services.SessionService, logger *logger.Logger, delay time.Duration) reconnectStats {
 	stats := reconnectStats{}
@@ -271,12 +252,10 @@ type reconnectStats struct {
 	failed    int
 }
 
-
 func runMigrations(db *database.Database, log *logger.Logger) error {
 	migrator := database.NewMigrator(db, log)
 	return migrator.RunMigrations()
 }
-
 
 func printBanner(cfg *config.Config) {
 	fmt.Printf(`

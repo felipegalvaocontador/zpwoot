@@ -10,12 +10,10 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 type MediaHandler struct {
 	*shared.BaseHandler
 	sessionService *services.SessionService
 }
-
 
 func NewMediaHandler(
 	sessionService *services.SessionService,
@@ -26,7 +24,6 @@ func NewMediaHandler(
 		sessionService: sessionService,
 	}
 }
-
 
 // @Summary Download media from WhatsApp
 // @Description Download media file from WhatsApp message
@@ -48,13 +45,11 @@ func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("download media", map[string]interface{}{
 		"session_id": sessionID,
@@ -62,7 +57,6 @@ func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Media download initiated successfully")
 }
-
 
 // @Summary Get media information
 // @Description Get information about media files
@@ -82,13 +76,11 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("get media info", map[string]interface{}{
 		"session_id": sessionID,
@@ -96,7 +88,6 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Media information retrieved successfully")
 }
-
 
 // @Summary List cached media files
 // @Description List all cached media files for the session
@@ -116,13 +107,11 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("list cached media", map[string]interface{}{
 		"session_id": sessionID,
@@ -130,7 +119,6 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Cached media listed successfully")
 }
-
 
 // @Summary Clear media cache
 // @Description Clear all cached media files for the session
@@ -151,13 +139,11 @@ func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("clear media cache", map[string]interface{}{
 		"session_id": sessionID,
@@ -165,7 +151,6 @@ func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Media cache cleared successfully")
 }
-
 
 // @Summary Get media statistics
 // @Description Get statistics about media usage for the session
@@ -185,13 +170,11 @@ func (h *MediaHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("get media stats", map[string]interface{}{
 		"session_id": sessionID,

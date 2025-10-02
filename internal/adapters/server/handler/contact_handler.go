@@ -6,20 +6,18 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/internal/adapters/server/shared"
 	"zpwoot/internal/core/contact"
 	"zpwoot/internal/services"
-	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/platform/logger"
 )
-
 
 type ContactHandler struct {
 	*shared.BaseHandler
 	contactService *contact.Service
 	sessionService *services.SessionService
 }
-
 
 func NewContactHandler(
 	contactService *contact.Service,
@@ -33,19 +31,14 @@ func NewContactHandler(
 	}
 }
 
-
-
-
 type CheckWhatsAppRequest struct {
 	PhoneNumbers []string `json:"phoneNumbers" validate:"required,min=1,max=50"`
 }
-
 
 type CheckWhatsAppResponse struct {
 	Results []CheckWhatsAppResult `json:"results"`
 	Total   int                   `json:"total"`
 }
-
 
 type CheckWhatsAppResult struct {
 	PhoneNumber  string `json:"phoneNumber"`
@@ -54,7 +47,6 @@ type CheckWhatsAppResult struct {
 	Error        string `json:"error,omitempty"`
 }
 
-
 type GetProfilePictureResponse struct {
 	JID        string `json:"jid"`
 	PictureURL string `json:"pictureUrl,omitempty"`
@@ -62,17 +54,14 @@ type GetProfilePictureResponse struct {
 	HasPicture bool   `json:"hasPicture"`
 }
 
-
 type GetUserInfoRequest struct {
 	JIDs []string `json:"jids" validate:"required,min=1,max=20"`
 }
-
 
 type GetUserInfoResponse struct {
 	Results []UserInfoResult `json:"results"`
 	Total   int              `json:"total"`
 }
-
 
 type UserInfoResult struct {
 	JID          string `json:"jid"`
@@ -84,14 +73,12 @@ type UserInfoResult struct {
 	Error        string `json:"error,omitempty"`
 }
 
-
 type ListContactsResponse struct {
 	Contacts []ContactInfo `json:"contacts"`
 	Total    int           `json:"total"`
 	Limit    int           `json:"limit"`
 	Offset   int           `json:"offset"`
 }
-
 
 type ContactInfo struct {
 	JID          string `json:"jid"`
@@ -104,14 +91,12 @@ type ContactInfo struct {
 	IsOnWhatsApp bool   `json:"isOnWhatsApp"`
 }
 
-
 type SyncContactsResponse struct {
 	SyncedContacts int    `json:"syncedContacts"`
 	TotalContacts  int    `json:"totalContacts"`
 	Status         string `json:"status"`
 	Message        string `json:"message"`
 }
-
 
 type BusinessProfileResponse struct {
 	JID         string `json:"jid"`
@@ -123,9 +108,6 @@ type BusinessProfileResponse struct {
 	Address     string `json:"address,omitempty"`
 	IsBusiness  bool   `json:"isBusiness"`
 }
-
-
-
 
 // @Summary Check WhatsApp numbers
 // @Description Check if phone numbers are registered on WhatsApp
@@ -143,13 +125,11 @@ type BusinessProfileResponse struct {
 func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "check WhatsApp numbers")
 
-
 	sessionID := chi.URLParam(r, "sessionId")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
 	}
-
 
 	var req contracts.CheckWhatsAppRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -157,19 +137,16 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	if err := h.GetValidator().ValidateStruct(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
 		return
 	}
-
 
 	session, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	response, err := h.contactService.CheckWhatsApp(r.Context(), sessionID, &req)
 	if err != nil {
@@ -190,7 +167,6 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, response.Message)
 }
-
 
 // @Summary Get profile picture
 // @Description Get profile picture of a contact
@@ -219,14 +195,11 @@ func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-
 	session, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
-
 
 	response := GetProfilePictureResponse{
 		JID:        jid,
@@ -244,7 +217,6 @@ func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Reques
 
 	h.GetWriter().WriteSuccess(w, response, "Profile picture retrieved successfully")
 }
-
 
 // @Summary Get user info
 // @Description Get information about WhatsApp users
@@ -268,26 +240,22 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	var req contracts.GetUserInfoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
 	}
 
-
 	if err := h.GetValidator().ValidateStruct(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
 		return
 	}
-
 
 	session, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	response, err := h.contactService.GetUserInfo(r.Context(), sessionID, &req)
 	if err != nil {
@@ -308,7 +276,6 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, response.Message)
 }
-
 
 // @Summary List contacts
 // @Description List contacts with pagination and filters
@@ -333,11 +300,9 @@ func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	limit := parseIntQuery(r, "limit", 50)
 	offset := parseIntQuery(r, "offset", 0)
 	search := r.URL.Query().Get("search")
-
 
 	if limit > 100 {
 		limit = 100
@@ -349,19 +314,16 @@ func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-
 	session, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
 
-
 	req := &contracts.ListContactsRequest{
 		Limit:  limit,
 		Offset: offset,
 	}
-
 
 	response, err := h.contactService.ListContacts(r.Context(), sessionID, req)
 	if err != nil {
@@ -386,7 +348,6 @@ func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, response, response.Message)
 }
 
-
 // @Summary Sync contacts
 // @Description Sync contacts from the device
 // @Tags Contacts
@@ -407,18 +368,15 @@ func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	session, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
 
-
 	req := &contracts.SyncContactsRequest{
 		Force: false,
 	}
-
 
 	response, err := h.contactService.SyncContacts(r.Context(), sessionID, req)
 	if err != nil {
@@ -439,7 +397,6 @@ func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, response.Message)
 }
-
 
 // @Summary Get business profile
 // @Description Get business profile of a contact
@@ -468,14 +425,11 @@ func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-
 	session, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
-
 
 	response := BusinessProfileResponse{
 		JID:         jid,
@@ -498,7 +452,6 @@ func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Reque
 	h.GetWriter().WriteSuccess(w, response, "Business profile retrieved successfully")
 }
 
-
 // @Summary Check if numbers are on WhatsApp (batch)
 // @Description Check if multiple phone numbers are registered on WhatsApp
 // @Tags Contacts
@@ -516,7 +469,6 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 
 	h.CheckWhatsApp(w, r)
 }
-
 
 // @Summary Get all contacts
 // @Description Get all contacts without pagination
@@ -538,14 +490,11 @@ func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-
 	session, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
-
 
 	contacts := []ContactInfo{
 		{
@@ -577,7 +526,6 @@ func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) 
 	h.GetWriter().WriteSuccess(w, contacts, "All contacts retrieved successfully")
 }
 
-
 // @Summary Get profile picture info
 // @Description Get profile picture information of a contact
 // @Tags Contacts
@@ -594,7 +542,6 @@ func (h *ContactHandler) GetProfilePictureInfo(w http.ResponseWriter, r *http.Re
 
 	h.GetProfilePicture(w, r)
 }
-
 
 // @Summary Get detailed user info (batch)
 // @Description Get detailed information about WhatsApp users
@@ -613,5 +560,3 @@ func (h *ContactHandler) GetDetailedUserInfo(w http.ResponseWriter, r *http.Requ
 
 	h.GetUserInfo(w, r)
 }
-
-

@@ -8,7 +8,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 func setupChatwootRoutes(r chi.Router, messageService *services.MessageService, sessionService *services.SessionService, appLogger *logger.Logger) {
 	chatwootHandler := handler.NewChatwootHandler(messageService, sessionService, appLogger)
 
@@ -16,7 +15,6 @@ func setupChatwootRoutes(r chi.Router, messageService *services.MessageService, 
 
 		r.Post("/set", chatwootHandler.CreateConfig)
 		r.Get("/find", chatwootHandler.FindConfig)
-
 
 		r.Get("/", chatwootHandler.FindConfig)
 		r.Put("/", chatwootHandler.UpdateConfig)

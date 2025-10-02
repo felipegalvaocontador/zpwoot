@@ -10,12 +10,10 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 type WebhookHandler struct {
 	*shared.BaseHandler
 	sessionService *services.SessionService
 }
-
 
 func NewWebhookHandler(
 	sessionService *services.SessionService,
@@ -26,7 +24,6 @@ func NewWebhookHandler(
 		sessionService: sessionService,
 	}
 }
-
 
 // @Summary Set webhook configuration
 // @Description Configure webhook settings for the session
@@ -48,13 +45,11 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("set webhook config", map[string]interface{}{
 		"session_id": sessionID,
@@ -62,7 +57,6 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Webhook configuration set successfully")
 }
-
 
 // @Summary Get webhook configuration
 // @Description Get the current webhook configuration for the session
@@ -82,13 +76,11 @@ func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("find webhook config", map[string]interface{}{
 		"session_id": sessionID,
@@ -96,7 +88,6 @@ func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Webhook configuration retrieved successfully")
 }
-
 
 // @Summary Test webhook configuration
 // @Description Test the webhook configuration by sending a test event
@@ -117,13 +108,11 @@ func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	h.LogSuccess("test webhook", map[string]interface{}{
 		"session_id": sessionID,

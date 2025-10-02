@@ -11,19 +11,15 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
-
-
 type ProfilePictureInfo struct {
-	JID         string     `json:"jid"`
-	HasPicture  bool       `json:"has_picture"`
-	URL         string     `json:"url,omitempty"`
-	ID          string     `json:"id,omitempty"`
-	Type        string     `json:"type,omitempty"`
-	DirectPath  string     `json:"direct_path,omitempty"`
-	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+	JID        string     `json:"jid"`
+	HasPicture bool       `json:"has_picture"`
+	URL        string     `json:"url,omitempty"`
+	ID         string     `json:"id,omitempty"`
+	Type       string     `json:"type,omitempty"`
+	DirectPath string     `json:"direct_path,omitempty"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 }
-
 
 type UserInfo struct {
 	JID          string     `json:"jid"`
@@ -38,7 +34,6 @@ type UserInfo struct {
 	IsOnline     bool       `json:"is_online"`
 }
 
-
 type ContactInfo struct {
 	JID          string `json:"jid"`
 	PhoneNumber  string `json:"phone_number"`
@@ -47,7 +42,6 @@ type ContactInfo struct {
 	IsBusiness   bool   `json:"is_business"`
 	IsContact    bool   `json:"is_contact"`
 }
-
 
 type BusinessProfile struct {
 	JID          string `json:"jid"`
@@ -60,22 +54,16 @@ type BusinessProfile struct {
 	Address      string `json:"address,omitempty"`
 }
 
-
 type ContactGateway interface {
-
 	IsOnWhatsApp(ctx context.Context, sessionID string, phoneNumbers []string) (map[string]bool, error)
-	
 
 	GetProfilePictureInfo(ctx context.Context, sessionID, jid string, preview bool) (*ProfilePictureInfo, error)
 	GetUserInfo(ctx context.Context, sessionID string, jids []string) ([]*UserInfo, error)
-	
 
 	GetAllContacts(ctx context.Context, sessionID string) ([]*ContactInfo, error)
-	
 
 	GetBusinessProfile(ctx context.Context, sessionID, jid string) (*BusinessProfile, error)
 }
-
 
 type ContactRepository interface {
 	Create(ctx context.Context, contact *Contact) error
@@ -88,13 +76,11 @@ type ContactRepository interface {
 	UpdateSyncStatus(ctx context.Context, req *UpdateSyncStatusRequest) error
 }
 
-
 type Service struct {
 	gateway    ContactGateway
 	repository ContactRepository
 	logger     *logger.Logger
 }
-
 
 func NewService(gateway ContactGateway, repository ContactRepository, logger *logger.Logger) *Service {
 	return &Service{
@@ -104,13 +90,11 @@ func NewService(gateway ContactGateway, repository ContactRepository, logger *lo
 	}
 }
 
-
 func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *contracts.CheckWhatsAppRequest) (*contracts.CheckWhatsAppResponse, error) {
 	s.logger.InfoWithFields("Checking WhatsApp numbers", map[string]interface{}{
-		"session_id":   sessionID,
-		"phone_count":  len(req.PhoneNumbers),
+		"session_id":  sessionID,
+		"phone_count": len(req.PhoneNumbers),
 	})
-
 
 	if len(req.PhoneNumbers) == 0 {
 		return nil, fmt.Errorf("no phone numbers provided")
@@ -118,7 +102,6 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *cont
 	if len(req.PhoneNumbers) > 50 {
 		return nil, fmt.Errorf("maximum 50 phone numbers allowed")
 	}
-
 
 	results, err := s.gateway.IsOnWhatsApp(ctx, sessionID, req.PhoneNumbers)
 	if err != nil {
@@ -128,7 +111,6 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *cont
 		})
 		return nil, err
 	}
-
 
 	checkResults := make([]contracts.WhatsAppCheckResult, 0, len(req.PhoneNumbers))
 	foundCount := 0
@@ -162,14 +144,13 @@ func (s *Service) CheckWhatsApp(ctx context.Context, sessionID string, req *cont
 	}
 
 	s.logger.InfoWithFields("WhatsApp numbers checked successfully", map[string]interface{}{
-		"session_id":   sessionID,
-		"total":        response.Total,
-		"found":        response.Found,
+		"session_id": sessionID,
+		"total":      response.Total,
+		"found":      response.Found,
 	})
 
 	return response, nil
 }
-
 
 func (s *Service) GetProfilePictureInfo(ctx context.Context, sessionID string, req *contracts.GetProfilePictureInfoRequest) (*contracts.GetProfilePictureInfoResponse, error) {
 	s.logger.InfoWithFields("Getting profile picture info", map[string]interface{}{
@@ -177,7 +158,6 @@ func (s *Service) GetProfilePictureInfo(ctx context.Context, sessionID string, r
 		"jid":        req.JID,
 		"preview":    req.Preview,
 	})
-
 
 	info, err := s.gateway.GetProfilePictureInfo(ctx, sessionID, req.JID, req.Preview)
 	if err != nil {
@@ -204,13 +184,11 @@ func (s *Service) GetProfilePictureInfo(ctx context.Context, sessionID string, r
 	return response, nil
 }
 
-
 func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *contracts.GetUserInfoRequest) (*contracts.GetUserInfoResponse, error) {
 	s.logger.InfoWithFields("Getting user info", map[string]interface{}{
 		"session_id": sessionID,
 		"jid_count":  len(req.JIDs),
 	})
-
 
 	if len(req.JIDs) == 0 {
 		return nil, fmt.Errorf("no JIDs provided")
@@ -218,7 +196,6 @@ func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *contra
 	if len(req.JIDs) > 20 {
 		return nil, fmt.Errorf("maximum 20 JIDs allowed")
 	}
-
 
 	users, err := s.gateway.GetUserInfo(ctx, sessionID, req.JIDs)
 	if err != nil {
@@ -228,7 +205,6 @@ func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *contra
 		})
 		return nil, err
 	}
-
 
 	userInfos := make([]contracts.UserInfo, 0, len(users))
 	for _, user := range users {
@@ -258,7 +234,6 @@ func (s *Service) GetUserInfo(ctx context.Context, sessionID string, req *contra
 	return response, nil
 }
 
-
 func (s *Service) ListContacts(ctx context.Context, sessionID string, req *contracts.ListContactsRequest) (*contracts.ListContactsResponse, error) {
 	s.logger.InfoWithFields("Listing contacts", map[string]interface{}{
 		"session_id": sessionID,
@@ -266,18 +241,15 @@ func (s *Service) ListContacts(ctx context.Context, sessionID string, req *contr
 		"offset":     req.Offset,
 	})
 
-
 	listReq := &ListContactsRequest{
 		SessionID: sessionID,
 		Limit:     req.Limit,
 		Offset:    req.Offset,
 	}
 
-
 	if listReq.Limit == 0 {
 		listReq.Limit = 50
 	}
-
 
 	contacts, total, err := s.repository.List(ctx, listReq)
 	if err != nil {
@@ -287,7 +259,6 @@ func (s *Service) ListContacts(ctx context.Context, sessionID string, req *contr
 		})
 		return nil, err
 	}
-
 
 	contactInfos := make([]contracts.ContactDetails, 0, len(contacts))
 	for _, contact := range contacts {
@@ -315,13 +286,11 @@ func (s *Service) ListContacts(ctx context.Context, sessionID string, req *contr
 	return response, nil
 }
 
-
 func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *contracts.SyncContactsRequest) (*contracts.SyncContactsResponse, error) {
 	s.logger.InfoWithFields("Syncing contacts", map[string]interface{}{
 		"session_id": sessionID,
 		"force":      req.Force,
 	})
-
 
 	whatsappContacts, err := s.gateway.GetAllContacts(ctx, sessionID)
 	if err != nil {
@@ -340,7 +309,6 @@ func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *contr
 	syncedCount := 0
 	newCount := 0
 	updatedCount := 0
-
 
 	for _, whatsappContact := range whatsappContacts {
 
@@ -410,23 +378,21 @@ func (s *Service) SyncContacts(ctx context.Context, sessionID string, req *contr
 	}
 
 	s.logger.InfoWithFields("Contacts synced successfully", map[string]interface{}{
-		"session_id":     sessionID,
-		"total":          response.TotalContacts,
-		"synced":         response.SyncedCount,
-		"new":            response.NewCount,
-		"updated":        response.UpdatedCount,
+		"session_id": sessionID,
+		"total":      response.TotalContacts,
+		"synced":     response.SyncedCount,
+		"new":        response.NewCount,
+		"updated":    response.UpdatedCount,
 	})
 
 	return response, nil
 }
-
 
 func (s *Service) GetBusinessProfile(ctx context.Context, sessionID string, req *contracts.GetBusinessProfileRequest) (*contracts.GetBusinessProfileResponse, error) {
 	s.logger.InfoWithFields("Getting business profile", map[string]interface{}{
 		"session_id": sessionID,
 		"jid":        req.JID,
 	})
-
 
 	profile, err := s.gateway.GetBusinessProfile(ctx, sessionID, req.JID)
 	if err != nil {
@@ -453,7 +419,6 @@ func (s *Service) GetBusinessProfile(ctx context.Context, sessionID string, req 
 
 	return response, nil
 }
-
 
 func (s *Service) cleanPhoneNumber(phone string) string {
 	cleaned := strings.ReplaceAll(phone, "+", "")

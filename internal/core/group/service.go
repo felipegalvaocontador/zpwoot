@@ -6,20 +6,15 @@ import (
 	"strings"
 )
 
-
 type service struct {
 	validator Validator
 }
-
 
 func NewService(validator Validator) Service {
 	return &service{
 		validator: validator,
 	}
 }
-
-
-
 
 func (s *service) ValidateGroupCreation(req *CreateGroupRequest) error {
 	if req == nil {
@@ -41,7 +36,6 @@ func (s *service) ValidateGroupCreation(req *CreateGroupRequest) error {
 	return nil
 }
 
-
 func (s *service) ValidateGroupName(name string) error {
 	if name == "" {
 		return fmt.Errorf("group name cannot be empty")
@@ -51,14 +45,12 @@ func (s *service) ValidateGroupName(name string) error {
 		return fmt.Errorf("group name cannot exceed 25 characters")
 	}
 
-
 	if strings.Contains(name, "\n") || strings.Contains(name, "\r") {
 		return fmt.Errorf("group name cannot contain line breaks")
 	}
 
 	return nil
 }
-
 
 func (s *service) ValidateGroupDescription(description string) error {
 	if len(description) > 512 {
@@ -68,7 +60,6 @@ func (s *service) ValidateGroupDescription(description string) error {
 	return nil
 }
 
-
 func (s *service) ValidateParticipants(participants []string) error {
 	if len(participants) == 0 {
 		return fmt.Errorf("at least one participant is required")
@@ -77,7 +68,6 @@ func (s *service) ValidateParticipants(participants []string) error {
 	if len(participants) > 256 {
 		return fmt.Errorf("too many participants (max 256)")
 	}
-
 
 	seen := make(map[string]bool)
 	for _, participant := range participants {
@@ -95,12 +85,10 @@ func (s *service) ValidateParticipants(participants []string) error {
 	return nil
 }
 
-
 func (s *service) ValidateInviteLink(inviteLink string) error {
 	if inviteLink == "" {
 		return fmt.Errorf("invite link cannot be empty")
 	}
-
 
 	whatsappLinkPattern := `^https://chat\.whatsapp\.com/[A-Za-z0-9]+$`
 	matched, err := regexp.MatchString(whatsappLinkPattern, inviteLink)
@@ -115,12 +103,10 @@ func (s *service) ValidateInviteLink(inviteLink string) error {
 	return nil
 }
 
-
 func (s *service) ValidateJID(jid string) error {
 	if jid == "" {
 		return fmt.Errorf("JID cannot be empty")
 	}
-
 
 	jidPattern := `^[0-9]+@(s\.whatsapp\.net|g\.us)$`
 	matched, err := regexp.MatchString(jidPattern, jid)
@@ -135,9 +121,6 @@ func (s *service) ValidateJID(jid string) error {
 	return nil
 }
 
-
-
-
 func (s *service) CanPerformAction(userJID, groupJID string, action GroupAction, groupInfo *GroupInfo) error {
 	if groupInfo == nil {
 		return fmt.Errorf("group not found")
@@ -149,8 +132,8 @@ func (s *service) CanPerformAction(userJID, groupJID string, action GroupAction,
 
 	switch action {
 	case GroupActionAddParticipant, GroupActionPromoteParticipant, GroupActionDemoteParticipant,
-		 GroupActionSetName, GroupActionSetDescription, GroupActionSetPhoto,
-		 GroupActionSetSettings, GroupActionGetInviteLink, GroupActionRevokeInviteLink:
+		GroupActionSetName, GroupActionSetDescription, GroupActionSetPhoto,
+		GroupActionSetSettings, GroupActionGetInviteLink, GroupActionRevokeInviteLink:
 		if !groupInfo.IsParticipantAdmin(userJID) {
 			return fmt.Errorf("only group admins can perform this action")
 		}
@@ -178,7 +161,6 @@ func (s *service) CanPerformAction(userJID, groupJID string, action GroupAction,
 	return nil
 }
 
-
 func (s *service) IsGroupAdmin(userJID, groupJID string, groupInfo *GroupInfo) bool {
 	if groupInfo == nil {
 		return false
@@ -186,16 +168,12 @@ func (s *service) IsGroupAdmin(userJID, groupJID string, groupInfo *GroupInfo) b
 	return groupInfo.IsParticipantAdmin(userJID)
 }
 
-
 func (s *service) IsGroupOwner(userJID, groupJID string, groupInfo *GroupInfo) bool {
 	if groupInfo == nil {
 		return false
 	}
 	return groupInfo.Owner == userJID
 }
-
-
-
 
 func (s *service) ProcessParticipantChanges(req *UpdateParticipantsRequest, currentGroup *GroupInfo) error {
 	if req == nil || currentGroup == nil {
@@ -253,19 +231,16 @@ func (s *service) ProcessParticipantChanges(req *UpdateParticipantsRequest, curr
 	return nil
 }
 
-
 func (s *service) ProcessSettingsChanges(req *UpdateGroupSettingsRequest, currentGroup *GroupInfo) error {
 	if req == nil || currentGroup == nil {
 		return fmt.Errorf("invalid request or group info")
 	}
-
 
 	if req.JoinApprovalMode != "" {
 		if req.JoinApprovalMode != "auto" && req.JoinApprovalMode != "admin_approval" {
 			return fmt.Errorf("invalid join approval mode: %s", req.JoinApprovalMode)
 		}
 	}
-
 
 	if req.MemberAddMode != "" {
 		if req.MemberAddMode != "all_members" && req.MemberAddMode != "only_admins" {
@@ -276,13 +251,9 @@ func (s *service) ProcessSettingsChanges(req *UpdateGroupSettingsRequest, curren
 	return nil
 }
 
-
-
-
 func (s *service) NormalizeJID(jid string) string {
 
 	normalized := strings.ToLower(strings.TrimSpace(jid))
-
 
 	if !strings.Contains(normalized, "@") {
 		normalized += "@s.whatsapp.net"
@@ -290,7 +261,6 @@ func (s *service) NormalizeJID(jid string) string {
 
 	return normalized
 }
-
 
 func (s *service) ExtractPhoneNumber(jid string) string {
 	parts := strings.Split(jid, "@")
@@ -300,7 +270,6 @@ func (s *service) ExtractPhoneNumber(jid string) string {
 	return jid
 }
 
-
 func (s *service) FormatGroupJID(groupID string) string {
 	if strings.Contains(groupID, "@") {
 		return groupID
@@ -308,11 +277,7 @@ func (s *service) FormatGroupJID(groupID string) string {
 	return groupID + "@g.us"
 }
 
-
-
-
 type defaultValidator struct{}
-
 
 func NewDefaultValidator() Validator {
 	return &defaultValidator{}
@@ -364,15 +329,15 @@ func (v *defaultValidator) ValidateGroupSettings(settings *GroupSettings) error 
 		return fmt.Errorf("settings cannot be nil")
 	}
 
-	if settings.JoinApprovalMode != "" && 
-	   settings.JoinApprovalMode != "auto" && 
-	   settings.JoinApprovalMode != "admin_approval" {
+	if settings.JoinApprovalMode != "" &&
+		settings.JoinApprovalMode != "auto" &&
+		settings.JoinApprovalMode != "admin_approval" {
 		return fmt.Errorf("invalid join approval mode")
 	}
 
-	if settings.MemberAddMode != "" && 
-	   settings.MemberAddMode != "all_members" && 
-	   settings.MemberAddMode != "only_admins" {
+	if settings.MemberAddMode != "" &&
+		settings.MemberAddMode != "all_members" &&
+		settings.MemberAddMode != "only_admins" {
 		return fmt.Errorf("invalid member add mode")
 	}
 

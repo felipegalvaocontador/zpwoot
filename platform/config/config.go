@@ -9,40 +9,29 @@ import (
 	"github.com/joho/godotenv"
 )
 
-
 type Config struct {
-
 	App AppConfig `json:"app"`
-
 
 	Server ServerConfig `json:"server"`
 
-
 	Log LogConfig `json:"log"`
-
 
 	Database DatabaseConfig `json:"database"`
 
-
 	WhatsApp WhatsAppConfig `json:"whatsapp"`
-
 
 	Webhook WebhookConfig `json:"webhook"`
 
-
 	Security SecurityConfig `json:"security"`
-
 
 	Environment string `json:"environment"`
 }
-
 
 type AppConfig struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 	Debug   bool   `json:"debug"`
 }
-
 
 type ServerConfig struct {
 	Host         string `json:"host"`
@@ -53,14 +42,12 @@ type ServerConfig struct {
 	BaseURL      string `json:"base_url"`
 }
 
-
 type LogConfig struct {
 	Level  string `json:"level"`
 	Format string `json:"format"`
 	Output string `json:"output"`
 	Caller bool   `json:"caller"`
 }
-
 
 type DatabaseConfig struct {
 	URL             string `json:"url"`
@@ -71,7 +58,6 @@ type DatabaseConfig struct {
 	AutoMigrate     bool   `json:"auto_migrate"`
 }
 
-
 type WhatsAppConfig struct {
 	LogLevel     string `json:"log_level"`
 	StoreDir     string `json:"store_dir"`
@@ -81,17 +67,15 @@ type WhatsAppConfig struct {
 	ReconnectMax int    `json:"reconnect_max"`
 }
 
-
 type WebhookConfig struct {
-	GlobalURL    string `json:"global_url"`
-	Secret       string `json:"secret"`
-	Timeout      int    `json:"timeout"`
-	RetryMax     int    `json:"retry_max"`
-	RetryDelay   int    `json:"retry_delay"`
-	VerifySSL    bool   `json:"verify_ssl"`
-	UserAgent    string `json:"user_agent"`
+	GlobalURL  string `json:"global_url"`
+	Secret     string `json:"secret"`
+	Timeout    int    `json:"timeout"`
+	RetryMax   int    `json:"retry_max"`
+	RetryDelay int    `json:"retry_delay"`
+	VerifySSL  bool   `json:"verify_ssl"`
+	UserAgent  string `json:"user_agent"`
 }
-
 
 type SecurityConfig struct {
 	APIKey         string   `json:"api_key"`
@@ -99,7 +83,6 @@ type SecurityConfig struct {
 	RateLimit      int      `json:"rate_limit"`
 	RateLimitBurst int      `json:"rate_limit_burst"`
 }
-
 
 func Load() (*Config, error) {
 
@@ -149,13 +132,13 @@ func Load() (*Config, error) {
 		},
 
 		Webhook: WebhookConfig{
-			GlobalURL:    getEnv("GLOBAL_WEBHOOK_URL", ""),
-			Secret:       getEnv("WEBHOOK_SECRET", ""),
-			Timeout:      getEnvInt("WEBHOOK_TIMEOUT", 30),
-			RetryMax:     getEnvInt("WEBHOOK_RETRY_MAX", 3),
-			RetryDelay:   getEnvInt("WEBHOOK_RETRY_DELAY", 5),
-			VerifySSL:    getEnvBool("WEBHOOK_VERIFY_SSL", true),
-			UserAgent:    getEnv("WEBHOOK_USER_AGENT", "zpwoot/1.0"),
+			GlobalURL:  getEnv("GLOBAL_WEBHOOK_URL", ""),
+			Secret:     getEnv("WEBHOOK_SECRET", ""),
+			Timeout:    getEnvInt("WEBHOOK_TIMEOUT", 30),
+			RetryMax:   getEnvInt("WEBHOOK_RETRY_MAX", 3),
+			RetryDelay: getEnvInt("WEBHOOK_RETRY_DELAY", 5),
+			VerifySSL:  getEnvBool("WEBHOOK_VERIFY_SSL", true),
+			UserAgent:  getEnv("WEBHOOK_USER_AGENT", "zpwoot/1.0"),
 		},
 
 		Security: SecurityConfig{
@@ -168,14 +151,12 @@ func Load() (*Config, error) {
 		Environment: getEnv("NODE_ENV", "development"),
 	}
 
-
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
 	return config, nil
 }
-
 
 func (c *Config) Validate() error {
 	if c.Server.Port <= 0 || c.Server.Port > 65535 {
@@ -193,33 +174,25 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-
 func (c *Config) IsProduction() bool {
 	return c.Environment == "production"
 }
-
 
 func (c *Config) IsDevelopment() bool {
 	return c.Environment == "development"
 }
 
-
 func (c *Config) IsTest() bool {
 	return c.Environment == "test"
 }
-
 
 func (c *Config) GetServerAddress() string {
 	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
 }
 
-
 func (c *Config) HasWebhookSecret() bool {
 	return c.Webhook.Secret != ""
 }
-
-
-
 
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
@@ -227,7 +200,6 @@ func getEnv(key, defaultValue string) string {
 	}
 	return defaultValue
 }
-
 
 func getEnvInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
@@ -238,7 +210,6 @@ func getEnvInt(key string, defaultValue int) int {
 	return defaultValue
 }
 
-
 func getEnvBool(key string, defaultValue bool) bool {
 	if value := os.Getenv(key); value != "" {
 		if boolValue, err := strconv.ParseBool(value); err == nil {
@@ -247,7 +218,6 @@ func getEnvBool(key string, defaultValue bool) bool {
 	}
 	return defaultValue
 }
-
 
 func getEnvSlice(key string, defaultValue []string) []string {
 	if value := os.Getenv(key); value != "" {

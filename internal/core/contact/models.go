@@ -7,13 +7,9 @@ import (
 	"github.com/google/uuid"
 )
 
-
-
 type Contact struct {
-
 	ID        uuid.UUID `json:"id"`
 	SessionID uuid.UUID `json:"session_id"`
-
 
 	ZpJID       string `json:"zp_jid"`
 	ZpName      string `json:"zp_name"`
@@ -21,31 +17,25 @@ type Contact struct {
 	ZpShortName string `json:"zp_short_name"`
 	ZpAvatar    string `json:"zp_avatar"`
 
-
 	PhoneNumber string `json:"phone_number"`
 	Email       string `json:"email,omitempty"`
 	IsGroup     bool   `json:"is_group"`
 	IsBlocked   bool   `json:"is_blocked"`
 	IsBusiness  bool   `json:"is_business"`
 
-
 	CwContactID      *int `json:"cw_contact_id,omitempty"`
 	CwConversationID *int `json:"cw_conversation_id,omitempty"`
 
-
 	SyncStatus string     `json:"sync_status"`
 	SyncedAt   *time.Time `json:"synced_at,omitempty"`
-
 
 	LastSeen   *time.Time `json:"last_seen,omitempty"`
 	IsOnline   bool       `json:"is_online"`
 	LastStatus string     `json:"last_status,omitempty"`
 
-
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
-
 
 type ContactType string
 
@@ -55,7 +45,6 @@ const (
 	ContactTypeBusiness   ContactType = "business"
 )
 
-
 type SyncStatus string
 
 const (
@@ -63,7 +52,6 @@ const (
 	SyncStatusSynced  SyncStatus = "synced"
 	SyncStatusFailed  SyncStatus = "failed"
 )
-
 
 type CreateContactRequest struct {
 	SessionID   uuid.UUID `json:"session_id" validate:"required"`
@@ -78,20 +66,18 @@ type CreateContactRequest struct {
 	IsBusiness  bool      `json:"is_business"`
 }
 
-
 type UpdateContactRequest struct {
-	ID          uuid.UUID `json:"id" validate:"required"`
-	ZpName      string    `json:"zp_name"`
-	ZpPushName  string    `json:"zp_push_name"`
-	ZpShortName string    `json:"zp_short_name"`
-	ZpAvatar    string    `json:"zp_avatar"`
-	Email       string    `json:"email,omitempty" validate:"omitempty,email"`
-	IsBlocked   bool      `json:"is_blocked"`
+	ID          uuid.UUID  `json:"id" validate:"required"`
+	ZpName      string     `json:"zp_name"`
+	ZpPushName  string     `json:"zp_push_name"`
+	ZpShortName string     `json:"zp_short_name"`
+	ZpAvatar    string     `json:"zp_avatar"`
+	Email       string     `json:"email,omitempty" validate:"omitempty,email"`
+	IsBlocked   bool       `json:"is_blocked"`
 	LastSeen    *time.Time `json:"last_seen,omitempty"`
-	IsOnline    bool      `json:"is_online"`
-	LastStatus  string    `json:"last_status,omitempty"`
+	IsOnline    bool       `json:"is_online"`
+	LastStatus  string     `json:"last_status,omitempty"`
 }
-
 
 type UpdateSyncStatusRequest struct {
 	ID               uuid.UUID  `json:"id" validate:"required"`
@@ -101,7 +87,6 @@ type UpdateSyncStatusRequest struct {
 	SyncedAt         *time.Time `json:"synced_at,omitempty"`
 }
 
-
 type ListContactsRequest struct {
 	SessionID string `json:"session_id,omitempty" validate:"omitempty,uuid"`
 	IsGroup   *bool  `json:"is_group,omitempty"`
@@ -110,7 +95,6 @@ type ListContactsRequest struct {
 	Limit     int    `json:"limit" validate:"min=1,max=100"`
 	Offset    int    `json:"offset" validate:"min=0"`
 }
-
 
 type ContactStats struct {
 	TotalContacts      int64            `json:"total_contacts"`
@@ -129,7 +113,6 @@ type ContactStats struct {
 	ContactsThisMonth  int64            `json:"contacts_this_month"`
 }
 
-
 func IsValidSyncStatus(status string) bool {
 	switch SyncStatus(status) {
 	case SyncStatusPending, SyncStatusSynced, SyncStatusFailed:
@@ -139,26 +122,21 @@ func IsValidSyncStatus(status string) bool {
 	}
 }
 
-
 func (c *Contact) IsSynced() bool {
 	return c.SyncStatus == string(SyncStatusSynced) && c.CwContactID != nil
 }
-
 
 func (c *Contact) IsPending() bool {
 	return c.SyncStatus == string(SyncStatusPending)
 }
 
-
 func (c *Contact) IsFailed() bool {
 	return c.SyncStatus == string(SyncStatusFailed)
 }
 
-
 func (c *Contact) HasChatwootData() bool {
 	return c.CwContactID != nil
 }
-
 
 func (c *Contact) GetContactType() ContactType {
 	if c.IsGroup {
@@ -169,7 +147,6 @@ func (c *Contact) GetContactType() ContactType {
 	}
 	return ContactTypeIndividual
 }
-
 
 func (c *Contact) GetDisplayName() string {
 	if c.ZpName != "" {
@@ -184,7 +161,6 @@ func (c *Contact) GetDisplayName() string {
 	return c.PhoneNumber
 }
 
-
 func (c *Contact) GetCleanPhoneNumber() string {
 
 	phone := ""
@@ -196,20 +172,18 @@ func (c *Contact) GetCleanPhoneNumber() string {
 	return phone
 }
 
-
 func (c *Contact) IsOnlineNow() bool {
 	return c.IsOnline
 }
-
 
 func (c *Contact) GetLastSeenString() string {
 	if c.LastSeen == nil {
 		return "Nunca visto"
 	}
-	
+
 	now := time.Now()
 	diff := now.Sub(*c.LastSeen)
-	
+
 	if diff < time.Minute {
 		return "Agora"
 	} else if diff < time.Hour {

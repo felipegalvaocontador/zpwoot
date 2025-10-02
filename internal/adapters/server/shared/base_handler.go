@@ -14,13 +14,11 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 type BaseHandler struct {
-	logger     *logger.Logger
-	writer     *ResponseWriter
-	validator  *validation.Validator
+	logger    *logger.Logger
+	writer    *ResponseWriter
+	validator *validation.Validator
 }
-
 
 func NewBaseHandler(logger *logger.Logger) *BaseHandler {
 	return &BaseHandler{
@@ -30,23 +28,17 @@ func NewBaseHandler(logger *logger.Logger) *BaseHandler {
 	}
 }
 
-
 func (h *BaseHandler) GetLogger() *logger.Logger {
 	return h.logger
 }
-
 
 func (h *BaseHandler) GetWriter() *ResponseWriter {
 	return h.writer
 }
 
-
 func (h *BaseHandler) GetValidator() *validation.Validator {
 	return h.validator
 }
-
-
-
 
 func (h *BaseHandler) GetSessionIDFromURL(r *http.Request) (uuid.UUID, error) {
 	sessionIDStr := chi.URLParam(r, "sessionId")
@@ -54,16 +46,13 @@ func (h *BaseHandler) GetSessionIDFromURL(r *http.Request) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("session ID is required")
 	}
 
-
 	sessionID, err := uuid.Parse(sessionIDStr)
 	if err == nil {
 		return sessionID, nil
 	}
 
-
 	return uuid.Nil, fmt.Errorf("session_name:%s", sessionIDStr)
 }
-
 
 func (h *BaseHandler) GetSessionNameFromURL(r *http.Request) (string, error) {
 	sessionName := chi.URLParam(r, "sessionId")
@@ -73,7 +62,6 @@ func (h *BaseHandler) GetSessionNameFromURL(r *http.Request) (string, error) {
 	return sessionName, nil
 }
 
-
 func (h *BaseHandler) GetStringParam(r *http.Request, paramName string) (string, error) {
 	value := chi.URLParam(r, paramName)
 	if value == "" {
@@ -81,7 +69,6 @@ func (h *BaseHandler) GetStringParam(r *http.Request, paramName string) (string,
 	}
 	return value, nil
 }
-
 
 func (h *BaseHandler) GetIntParam(r *http.Request, paramName string) (int, error) {
 	valueStr := chi.URLParam(r, paramName)
@@ -97,9 +84,6 @@ func (h *BaseHandler) GetIntParam(r *http.Request, paramName string) (int, error
 	return value, nil
 }
 
-
-
-
 func (h *BaseHandler) GetQueryString(r *http.Request, paramName string, defaultValue ...string) string {
 	value := r.URL.Query().Get(paramName)
 	if value == "" && len(defaultValue) > 0 {
@@ -107,7 +91,6 @@ func (h *BaseHandler) GetQueryString(r *http.Request, paramName string, defaultV
 	}
 	return value
 }
-
 
 func (h *BaseHandler) GetQueryInt(r *http.Request, paramName string, defaultValue ...int) (int, error) {
 	valueStr := r.URL.Query().Get(paramName)
@@ -126,7 +109,6 @@ func (h *BaseHandler) GetQueryInt(r *http.Request, paramName string, defaultValu
 	return value, nil
 }
 
-
 func (h *BaseHandler) GetQueryBool(r *http.Request, paramName string, defaultValue ...bool) (bool, error) {
 	valueStr := r.URL.Query().Get(paramName)
 	if valueStr == "" {
@@ -144,9 +126,6 @@ func (h *BaseHandler) GetQueryBool(r *http.Request, paramName string, defaultVal
 	return value, nil
 }
 
-
-
-
 func (h *BaseHandler) ParseJSONBody(r *http.Request, dest interface{}) error {
 	if r.Body == nil {
 		return fmt.Errorf("request body is empty")
@@ -162,13 +141,11 @@ func (h *BaseHandler) ParseJSONBody(r *http.Request, dest interface{}) error {
 	return nil
 }
 
-
 func (h *BaseHandler) ParseAndValidateJSON(r *http.Request, dest interface{}) error {
 
 	if err := h.ParseJSONBody(r, dest); err != nil {
 		return err
 	}
-
 
 	if err := h.validator.ValidateStruct(dest); err != nil {
 		return err
@@ -176,9 +153,6 @@ func (h *BaseHandler) ParseAndValidateJSON(r *http.Request, dest interface{}) er
 
 	return nil
 }
-
-
-
 
 func (h *BaseHandler) GetPaginationParams(r *http.Request) (limit, offset int, err error) {
 	limit, err = h.GetQueryInt(r, "limit", 20)
@@ -190,7 +164,6 @@ func (h *BaseHandler) GetPaginationParams(r *http.Request) (limit, offset int, e
 	if err != nil {
 		return 0, 0, err
 	}
-
 
 	if limit < 1 {
 		limit = 20
@@ -205,21 +178,16 @@ func (h *BaseHandler) GetPaginationParams(r *http.Request) (limit, offset int, e
 	return limit, offset, nil
 }
 
-
-
-
 func (h *BaseHandler) HandleError(w http.ResponseWriter, err error, operation string) {
 	h.logger.ErrorWithFields(fmt.Sprintf("Failed to %s", operation), map[string]interface{}{
 		"error": err.Error(),
 	})
-
 
 	statusCode := h.getStatusCodeFromError(err)
 	message := h.getMessageFromError(err, operation)
 
 	h.writer.WriteError(w, statusCode, message)
 }
-
 
 func (h *BaseHandler) getStatusCodeFromError(err error) int {
 	switch {
@@ -251,7 +219,6 @@ func (h *BaseHandler) getStatusCodeFromError(err error) int {
 	}
 }
 
-
 func (h *BaseHandler) getMessageFromError(err error, operation string) string {
 	switch {
 	case err == session.ErrSessionNotFound:
@@ -270,9 +237,6 @@ func (h *BaseHandler) getMessageFromError(err error, operation string) string {
 	}
 }
 
-
-
-
 func (h *BaseHandler) LogRequest(r *http.Request, operation string) {
 	h.logger.InfoWithFields(fmt.Sprintf("Processing %s request", operation), map[string]interface{}{
 		"method":     r.Method,
@@ -283,18 +247,14 @@ func (h *BaseHandler) LogRequest(r *http.Request, operation string) {
 	})
 }
 
-
 func (h *BaseHandler) LogSuccess(operation string, details map[string]interface{}) {
 	if details == nil {
 		details = make(map[string]interface{})
 	}
 	details["operation"] = operation
-	
+
 	h.logger.InfoWithFields(fmt.Sprintf("%s completed successfully", operation), details)
 }
-
-
-
 
 func getClientIP(r *http.Request) string {
 
@@ -307,16 +267,14 @@ func getClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && 
-		   (s == substr || 
-		    len(s) > len(substr) && 
-		    (s[:len(substr)] == substr || 
-		     s[len(s)-len(substr):] == substr ||
-		     containsSubstring(s, substr)))
+	return len(s) >= len(substr) &&
+		(s == substr ||
+			len(s) > len(substr) &&
+				(s[:len(substr)] == substr ||
+					s[len(s)-len(substr):] == substr ||
+					containsSubstring(s, substr)))
 }
-
 
 func containsSubstring(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {

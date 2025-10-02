@@ -14,9 +14,7 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 var migrationsFS embed.FS
-
 
 type Migration struct {
 	AppliedAt *time.Time
@@ -26,12 +24,10 @@ type Migration struct {
 	Version   int
 }
 
-
 type Migrator struct {
 	db     *Database
 	logger *logger.Logger
 }
-
 
 func NewMigrator(db *Database, logger *logger.Logger) *Migrator {
 	return &Migrator{
@@ -39,7 +35,6 @@ func NewMigrator(db *Database, logger *logger.Logger) *Migrator {
 		logger: logger,
 	}
 }
-
 
 func (m *Migrator) RunMigrations() error {
 	if err := m.createMigrationsTable(); err != nil {
@@ -66,11 +61,8 @@ func (m *Migrator) RunMigrations() error {
 		}
 	}
 
-
-
 	return nil
 }
-
 
 func (m *Migrator) createMigrationsTable() error {
 	query := `
@@ -95,7 +87,6 @@ func (m *Migrator) createMigrationsTable() error {
 	return nil
 }
 
-
 func (m *Migrator) loadMigrations() ([]*Migration, error) {
 	entries, err := m.readMigrationDirectory()
 	if err != nil {
@@ -116,7 +107,6 @@ func (m *Migrator) loadMigrations() ([]*Migration, error) {
 	return migrations, nil
 }
 
-
 func (m *Migrator) readMigrationDirectory() ([]fs.DirEntry, error) {
 	entries, err := fs.ReadDir(migrationsFS, "migrations")
 	if err != nil {
@@ -124,7 +114,6 @@ func (m *Migrator) readMigrationDirectory() ([]fs.DirEntry, error) {
 	}
 	return entries, nil
 }
-
 
 func (m *Migrator) processMigrationFiles(entries []fs.DirEntry) (map[int]map[string]string, error) {
 	migrationFiles := make(map[int]map[string]string)
@@ -158,7 +147,6 @@ func (m *Migrator) processMigrationFiles(entries []fs.DirEntry) (map[int]map[str
 	return migrationFiles, nil
 }
 
-
 func (m *Migrator) extractVersionFromFilename(filename string) (int, error) {
 	parts := strings.Split(filename, "_")
 	if len(parts) < 2 {
@@ -173,7 +161,6 @@ func (m *Migrator) extractVersionFromFilename(filename string) (int, error) {
 	return version, nil
 }
 
-
 func (m *Migrator) readMigrationFile(filename string) (string, error) {
 	content, err := fs.ReadFile(migrationsFS, filepath.Join("migrations", filename))
 	if err != nil {
@@ -181,7 +168,6 @@ func (m *Migrator) readMigrationFile(filename string) (string, error) {
 	}
 	return string(content), nil
 }
-
 
 func (m *Migrator) categorizeMigrationFile(filename, content string, files map[string]string) {
 	if strings.Contains(filename, ".up.sql") {
@@ -196,7 +182,6 @@ func (m *Migrator) categorizeMigrationFile(filename, content string, files map[s
 		files["down"] = content
 	}
 }
-
 
 func (m *Migrator) buildMigrationObjects(migrationFiles map[int]map[string]string) []*Migration {
 	migrations := make([]*Migration, 0, len(migrationFiles))
@@ -221,7 +206,6 @@ func (m *Migrator) buildMigrationObjects(migrationFiles map[int]map[string]strin
 
 	return migrations
 }
-
 
 func (m *Migrator) getAppliedMigrations() (map[int]bool, error) {
 	query := `SELECT "version" FROM "zpMigrations" ORDER BY "version"`
@@ -248,11 +232,9 @@ func (m *Migrator) getAppliedMigrations() (map[int]bool, error) {
 	return applied, nil
 }
 
-
 func (m *Migrator) isMigrationApplied(version int, appliedMigrations map[int]bool) bool {
 	return appliedMigrations[version]
 }
-
 
 func (m *Migrator) executeMigration(migration *Migration) error {
 	m.logger.InfoWithFields("Applying migration", map[string]interface{}{
@@ -299,7 +281,6 @@ func (m *Migrator) executeMigration(migration *Migration) error {
 	return nil
 }
 
-
 func (m *Migrator) Rollback() error {
 	m.logger.Info("Rolling back last migration...")
 
@@ -321,7 +302,6 @@ func (m *Migrator) Rollback() error {
 	return m.executeRollback(targetMigration, version, name)
 }
 
-
 func (m *Migrator) getLastMigration() (int, string, error) {
 	query := `SELECT "version", "name" FROM "zpMigrations" ORDER BY "version" DESC LIMIT 1`
 
@@ -337,7 +317,6 @@ func (m *Migrator) getLastMigration() (int, string, error) {
 
 	return version, name, nil
 }
-
 
 func (m *Migrator) findTargetMigration(version int) (*Migration, error) {
 	migrations, err := m.loadMigrations()
@@ -356,7 +335,6 @@ func (m *Migrator) findTargetMigration(version int) (*Migration, error) {
 
 	return nil, fmt.Errorf("migration %d not found in files", version)
 }
-
 
 func (m *Migrator) executeRollback(targetMigration *Migration, version int, name string) error {
 	m.logger.InfoWithFields("Rolling back migration", map[string]interface{}{
@@ -399,7 +377,6 @@ func (m *Migrator) executeRollback(targetMigration *Migration, version int, name
 
 	return nil
 }
-
 
 func (m *Migrator) GetMigrationStatus() ([]*Migration, error) {
 	migrations, err := m.loadMigrations()

@@ -7,18 +7,16 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/internal/adapters/server/shared"
 	"zpwoot/internal/services"
-	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/platform/logger"
 )
-
 
 type SessionHandler struct {
 	*shared.BaseHandler
 	sessionService *services.SessionService
 }
-
 
 func NewSessionHandler(sessionService *services.SessionService, logger *logger.Logger) *SessionHandler {
 	return &SessionHandler{
@@ -27,13 +25,11 @@ func NewSessionHandler(sessionService *services.SessionService, logger *logger.L
 	}
 }
 
-
 func (h *SessionHandler) resolveSessionIdentifier(r *http.Request) (uuid.UUID, string, error) {
 	sessionIdentifier := chi.URLParam(r, "sessionId")
 	if sessionIdentifier == "" {
 		return uuid.Nil, "", fmt.Errorf("session identifier is required")
 	}
-
 
 	sessionID, err := h.sessionService.ResolveSessionID(r.Context(), sessionIdentifier)
 	if err != nil {
@@ -42,7 +38,6 @@ func (h *SessionHandler) resolveSessionIdentifier(r *http.Request) (uuid.UUID, s
 
 	return sessionID, sessionIdentifier, nil
 }
-
 
 // @Summary Create new session
 // @Description Create a new WhatsApp session with optional proxy configuration. If qrCode is true, returns QR code immediately for connection.
@@ -59,13 +54,11 @@ func (h *SessionHandler) resolveSessionIdentifier(r *http.Request) (uuid.UUID, s
 func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "create session")
 
-
 	var req contracts.CreateSessionRequest
 	if err := h.ParseAndValidateJSON(r, &req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request format", err.Error())
 		return
 	}
-
 
 	response, err := h.sessionService.CreateSession(r.Context(), &req)
 	if err != nil {
@@ -73,17 +66,14 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	h.LogSuccess("create session", map[string]interface{}{
 		"session_id":   response.ID,
 		"session_name": response.Name,
 		"has_qr_code":  response.QRCode != "",
 	})
 
-
 	h.GetWriter().WriteCreated(w, response, "Session created successfully")
 }
-
 
 // @Summary List sessions
 // @Description Get a list of all WhatsApp sessions with optional filtering
@@ -102,13 +92,11 @@ func (h *SessionHandler) CreateSession(w http.ResponseWriter, r *http.Request) {
 func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "list sessions")
 
-
 	limit, offset, err := h.GetPaginationParams(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid pagination parameters", err.Error())
 		return
 	}
-
 
 	isConnected, err := h.GetQueryBool(r, "isConnected")
 	if err != nil {
@@ -118,12 +106,10 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 
 	deviceJID := h.GetQueryString(r, "deviceJid")
 
-
 	req := &contracts.ListSessionsRequest{
 		Limit:  limit,
 		Offset: offset,
 	}
-
 
 	if r.URL.Query().Has("isConnected") {
 		req.IsConnected = &isConnected
@@ -132,13 +118,11 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 		req.DeviceJID = &deviceJID
 	}
 
-
 	response, err := h.sessionService.ListSessions(r.Context(), req)
 	if err != nil {
 		h.HandleError(w, err, "list sessions")
 		return
 	}
-
 
 	h.LogSuccess("list sessions", map[string]interface{}{
 		"total_sessions": response.Total,
@@ -146,10 +130,8 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 		"offset":         response.Offset,
 	})
 
-
 	h.GetWriter().WriteSuccess(w, response, "Sessions retrieved successfully")
 }
-
 
 // @Summary Get session information
 // @Description Get detailed information about a specific WhatsApp session
@@ -164,13 +146,11 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 func (h *SessionHandler) GetSessionInfo(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get session info")
 
-
 	sessionID, sessionIdentifier, err := h.resolveSessionIdentifier(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Session not found", err.Error())
 		return
 	}
-
 
 	response, err := h.sessionService.GetSession(r.Context(), sessionID.String())
 	if err != nil {
@@ -178,16 +158,13 @@ func (h *SessionHandler) GetSessionInfo(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-
 	h.LogSuccess("get session info", map[string]interface{}{
 		"session_identifier": sessionIdentifier,
 		"session_id":         sessionID.String(),
 	})
 
-
 	h.GetWriter().WriteSuccess(w, response, "Session information retrieved successfully")
 }
-
 
 // @Summary Delete session
 // @Description Delete a WhatsApp session and all associated data
@@ -202,29 +179,24 @@ func (h *SessionHandler) GetSessionInfo(w http.ResponseWriter, r *http.Request) 
 func (h *SessionHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "delete session")
 
-
 	sessionID, sessionIdentifier, err := h.resolveSessionIdentifier(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Session not found", err.Error())
 		return
 	}
 
-
 	if err := h.sessionService.DeleteSessionByNameOrID(r.Context(), sessionIdentifier); err != nil {
 		h.HandleError(w, err, "delete session")
 		return
 	}
-
 
 	h.LogSuccess("delete session", map[string]interface{}{
 		"session_identifier": sessionIdentifier,
 		"session_id":         sessionID.String(),
 	})
 
-
 	h.GetWriter().WriteSuccess(w, nil, "Session deleted successfully")
 }
-
 
 // @Summary Connect session
 // @Description Connect a WhatsApp session to start receiving messages. Automatically returns QR code (both string and base64 image) if device needs to be paired. If session is already connected, returns confirmation message.
@@ -239,20 +211,17 @@ func (h *SessionHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 func (h *SessionHandler) ConnectSession(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "connect session")
 
-
 	sessionID, sessionIdentifier, err := h.resolveSessionIdentifier(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Session not found", err.Error())
 		return
 	}
 
-
 	response, err := h.sessionService.ConnectSession(r.Context(), sessionID.String())
 	if err != nil {
 		h.HandleError(w, err, "connect session")
 		return
 	}
-
 
 	h.LogSuccess("connect session", map[string]interface{}{
 		"session_identifier": sessionIdentifier,
@@ -261,10 +230,8 @@ func (h *SessionHandler) ConnectSession(w http.ResponseWriter, r *http.Request) 
 		"has_qr":             response.QRCode != "",
 	})
 
-
 	h.GetWriter().WriteSuccess(w, response, response.Message)
 }
-
 
 // @Summary Disconnect session
 // @Description Disconnect from WhatsApp session
@@ -279,28 +246,23 @@ func (h *SessionHandler) ConnectSession(w http.ResponseWriter, r *http.Request) 
 func (h *SessionHandler) DisconnectSession(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "disconnect session")
 
-
 	sessionID, err := h.GetSessionIDFromURL(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
 		return
 	}
 
-
 	if err := h.sessionService.DisconnectSession(r.Context(), sessionID.String()); err != nil {
 		h.HandleError(w, err, "disconnect session")
 		return
 	}
 
-
 	h.LogSuccess("disconnect session", map[string]interface{}{
 		"session_id": sessionID.String(),
 	})
 
-
 	h.GetWriter().WriteSuccess(w, nil, "Session disconnected successfully")
 }
-
 
 // @Summary Get QR code
 // @Description Get QR code for WhatsApp session pairing. Returns both raw QR code string and base64 image.
@@ -315,13 +277,11 @@ func (h *SessionHandler) DisconnectSession(w http.ResponseWriter, r *http.Reques
 func (h *SessionHandler) GetQRCode(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get QR code")
 
-
 	sessionID, err := h.GetSessionIDFromURL(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
 		return
 	}
-
 
 	response, err := h.sessionService.GetQRCode(r.Context(), sessionID.String())
 	if err != nil {
@@ -329,16 +289,13 @@ func (h *SessionHandler) GetQRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	h.LogSuccess("get QR code", map[string]interface{}{
 		"session_id": sessionID.String(),
 		"expires_at": response.ExpiresAt,
 	})
 
-
 	h.GetWriter().WriteSuccess(w, response, "QR code retrieved successfully")
 }
-
 
 // @Summary Generate QR code
 // @Description Generate a new QR code for WhatsApp session pairing
@@ -353,13 +310,11 @@ func (h *SessionHandler) GetQRCode(w http.ResponseWriter, r *http.Request) {
 func (h *SessionHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "generate QR code")
 
-
 	sessionID, err := h.GetSessionIDFromURL(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
 		return
 	}
-
 
 	response, err := h.sessionService.GenerateQRCode(r.Context(), sessionID.String())
 	if err != nil {
@@ -367,16 +322,13 @@ func (h *SessionHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-
 	h.LogSuccess("generate QR code", map[string]interface{}{
 		"session_id": sessionID.String(),
 		"expires_at": response.ExpiresAt,
 	})
 
-
 	h.GetWriter().WriteSuccess(w, response, "QR code generated successfully")
 }
-
 
 // @Summary Set proxy
 // @Description Configure proxy settings for a WhatsApp session
@@ -394,13 +346,11 @@ func (h *SessionHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request) 
 func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "set proxy")
 
-
 	sessionID, err := h.GetSessionIDFromURL(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
 		return
 	}
-
 
 	var req contracts.SetProxyRequest
 	if err := h.ParseAndValidateJSON(r, &req); err != nil {
@@ -408,23 +358,19 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	if err := h.sessionService.SetProxy(r.Context(), sessionID.String(), &req); err != nil {
 		h.HandleError(w, err, "set proxy")
 		return
 	}
 
-
 	h.LogSuccess("set proxy", map[string]interface{}{
-		"session_id":  sessionID.String(),
-		"proxy_type":  req.ProxyConfig.Type,
-		"proxy_host":  req.ProxyConfig.Host,
+		"session_id": sessionID.String(),
+		"proxy_type": req.ProxyConfig.Type,
+		"proxy_host": req.ProxyConfig.Host,
 	})
-
 
 	h.GetWriter().WriteSuccess(w, nil, "Proxy configured successfully")
 }
-
 
 // @Summary Get proxy
 // @Description Get proxy configuration for a WhatsApp session
@@ -439,13 +385,11 @@ func (h *SessionHandler) SetProxy(w http.ResponseWriter, r *http.Request) {
 func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get proxy")
 
-
 	sessionID, err := h.GetSessionIDFromURL(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
 		return
 	}
-
 
 	response, err := h.sessionService.GetProxy(r.Context(), sessionID.String())
 	if err != nil {
@@ -453,16 +397,13 @@ func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	h.LogSuccess("get proxy", map[string]interface{}{
 		"session_id": sessionID.String(),
 		"has_proxy":  response.ProxyConfig != nil,
 	})
 
-
 	h.GetWriter().WriteSuccess(w, response, "Proxy configuration retrieved successfully")
 }
-
 
 // @Summary Get session statistics
 // @Description Get statistics about all sessions
@@ -475,13 +416,11 @@ func (h *SessionHandler) GetProxy(w http.ResponseWriter, r *http.Request) {
 func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get session stats")
 
-
 	response, err := h.sessionService.GetSessionStats(r.Context())
 	if err != nil {
 		h.HandleError(w, err, "get session stats")
 		return
 	}
-
 
 	h.LogSuccess("get session stats", map[string]interface{}{
 		"total":     response.Total,
@@ -489,10 +428,8 @@ func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request)
 		"offline":   response.Offline,
 	})
 
-
 	h.GetWriter().WriteSuccess(w, response, "Session statistics retrieved successfully")
 }
-
 
 // @Summary Logout session
 // @Description Logout from WhatsApp session and disconnect
@@ -507,14 +444,11 @@ func (h *SessionHandler) GetSessionStats(w http.ResponseWriter, r *http.Request)
 func (h *SessionHandler) LogoutSession(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "logout session")
 
-
 	sessionID, err := h.GetSessionIDFromURL(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
 		return
 	}
-
-
 
 	err = h.sessionService.DisconnectSession(r.Context(), sessionID.String())
 	if err != nil {
@@ -539,7 +473,6 @@ func (h *SessionHandler) LogoutSession(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, response, "Session logged out successfully")
 }
 
-
 // @Summary Pair phone number
 // @Description Pair WhatsApp session with phone number
 // @Tags Sessions
@@ -556,21 +489,17 @@ func (h *SessionHandler) LogoutSession(w http.ResponseWriter, r *http.Request) {
 func (h *SessionHandler) PairPhone(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "pair phone")
 
-
 	sessionID, err := h.GetSessionIDFromURL(r)
 	if err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid session ID", err.Error())
 		return
 	}
 
-
 	var req contracts.PairPhoneRequest
 	if err := h.ParseAndValidateJSON(r, &req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request format", err.Error())
 		return
 	}
-
-
 
 	h.LogSuccess("pair phone", map[string]interface{}{
 		"session_id":   sessionID.String(),

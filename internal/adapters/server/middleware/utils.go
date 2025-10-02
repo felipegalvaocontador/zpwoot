@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-
 func getClientIP(r *http.Request) string {
 
 	headers := []string{
@@ -25,7 +24,6 @@ func getClientIP(r *http.Request) string {
 			return ip
 		}
 	}
-
 
 	return r.RemoteAddr
 }

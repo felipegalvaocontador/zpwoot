@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-
 type Session struct {
 	ID              uuid.UUID    `json:"id"`
 	Name            string       `json:"name"`
@@ -23,7 +22,6 @@ type Session struct {
 	LastSeen        *time.Time   `json:"lastSeen,omitempty"`
 }
 
-
 type ProxyConfig struct {
 	Type     string `json:"type"`
 	Host     string `json:"host"`
@@ -32,7 +30,6 @@ type ProxyConfig struct {
 	Password string `json:"password,omitempty"`
 }
 
-
 type DeviceInfo struct {
 	Platform    string `json:"platform"`
 	DeviceModel string `json:"device_model"`
@@ -40,14 +37,12 @@ type DeviceInfo struct {
 	AppVersion  string `json:"app_version"`
 }
 
-
 type QRCodeResponse struct {
 	QRCode      string    `json:"qr_code"`
 	QRCodeImage string    `json:"qr_code_image,omitempty"`
 	ExpiresAt   time.Time `json:"expires_at"`
 	Timeout     int       `json:"timeout_seconds"`
 }
-
 
 type SessionStatus string
 
@@ -60,7 +55,6 @@ const (
 	StatusLoggedOut    SessionStatus = "logged_out"
 )
 
-
 func NewSession(name string) *Session {
 	now := time.Now()
 	return &Session{
@@ -71,7 +65,6 @@ func NewSession(name string) *Session {
 		UpdatedAt:   now,
 	}
 }
-
 
 func (s *Session) UpdateConnectionStatus(connected bool) {
 	s.IsConnected = connected
@@ -85,13 +78,11 @@ func (s *Session) UpdateConnectionStatus(connected bool) {
 	}
 }
 
-
 func (s *Session) SetConnectionError(err string) {
 	s.ConnectionError = &err
 	s.IsConnected = false
 	s.UpdatedAt = time.Now()
 }
-
 
 func (s *Session) SetQRCode(qrCode string, expiresAt time.Time) {
 	s.QRCode = &qrCode
@@ -99,13 +90,11 @@ func (s *Session) SetQRCode(qrCode string, expiresAt time.Time) {
 	s.UpdatedAt = time.Now()
 }
 
-
 func (s *Session) ClearQRCode() {
 	s.QRCode = nil
 	s.QRCodeExpiresAt = nil
 	s.UpdatedAt = time.Now()
 }
-
 
 func (s *Session) UpdateLastSeen() {
 	now := time.Now()
@@ -113,14 +102,12 @@ func (s *Session) UpdateLastSeen() {
 	s.UpdatedAt = now
 }
 
-
 func (s *Session) IsQRCodeExpired() bool {
 	if s.QRCodeExpiresAt == nil {
 		return true
 	}
 	return time.Now().After(*s.QRCodeExpiresAt)
 }
-
 
 func (s *Session) GetStatus() SessionStatus {
 	if s.IsConnected {
@@ -142,7 +129,6 @@ func (s *Session) GetStatus() SessionStatus {
 	return StatusCreated
 }
 
-
 func (s *Session) Validate() error {
 	if s.Name == "" {
 		return ErrInvalidSessionName
@@ -155,11 +141,9 @@ func (s *Session) Validate() error {
 	return nil
 }
 
-
 func (p *ProxyConfig) ToJSON() ([]byte, error) {
 	return json.Marshal(p)
 }
-
 
 func (p *ProxyConfig) FromJSON(data []byte) error {
 	return json.Unmarshal(data, p)

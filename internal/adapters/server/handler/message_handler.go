@@ -9,19 +9,17 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/internal/adapters/server/shared"
 	"zpwoot/internal/services"
-	"zpwoot/internal/adapters/server/contracts"
 	"zpwoot/platform/logger"
 )
-
 
 type MessageHandler struct {
 	*shared.BaseHandler
 	messageService *services.MessageService
 	sessionService *services.SessionService
 }
-
 
 func NewMessageHandler(
 	messageService *services.MessageService,
@@ -34,24 +32,6 @@ func NewMessageHandler(
 		sessionService: sessionService,
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // @Summary Send text message
 // @Description Send a text message via WhatsApp
@@ -89,19 +69,16 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-
 	var req contracts.SendTextMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
 	}
 
-
 	if err := h.GetValidator().ValidateStruct(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
 		return
 	}
-
 
 	response, err := h.messageService.SendTextMessage(r.Context(), sessionID, req.To, req.Content)
 	if err != nil {
@@ -123,7 +100,6 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 
 	h.GetWriter().WriteSuccess(w, response, "Text message sent successfully")
 }
-
 
 // @Summary Send media message
 // @Description Send a media message (image, video, audio, document) via WhatsApp
@@ -147,19 +123,16 @@ func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-
 	var req contracts.SendMediaMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
 	}
 
-
 	if err := h.GetValidator().ValidateStruct(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
 		return
 	}
-
 
 	response, err := h.messageService.SendMediaMessage(r.Context(), sessionID, req.To, req.MediaURL, req.Caption, req.Type)
 	if err != nil {
@@ -184,7 +157,6 @@ func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request
 	h.GetWriter().WriteSuccess(w, response, "Media message sent successfully")
 }
 
-
 // @Summary Send image message
 // @Description Send an image message via WhatsApp
 // @Tags Messages
@@ -207,19 +179,16 @@ func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	var req contracts.SendImageMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
 	}
 
-
 	if err := h.GetValidator().ValidateStruct(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
 		return
 	}
-
 
 	response, err := h.messageService.SendImageMessage(r.Context(), sessionID, req.To, req.File, req.Caption, req.Filename)
 	if err != nil {
@@ -243,7 +212,6 @@ func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, response, "Image message sent successfully")
 }
 
-
 // @Summary Send audio message
 // @Description Send an audio message via WhatsApp
 // @Tags Messages
@@ -266,19 +234,16 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	var req contracts.SendAudioMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
 	}
 
-
 	if err := h.GetValidator().ValidateStruct(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
 		return
 	}
-
 
 	response, err := h.messageService.SendAudioMessage(r.Context(), sessionID, req.To, req.File, req.Caption)
 	if err != nil {
@@ -301,7 +266,6 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Audio message sent successfully")
 }
-
 
 // @Summary Send video message
 // @Description Send a video message via WhatsApp
@@ -336,7 +300,6 @@ func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response, err := h.messageService.SendVideoMessage(r.Context(), sessionID, req.To, req.File, req.Caption, req.Filename)
 	if err != nil {
 		h.GetLogger().ErrorWithFields("Failed to send video message", map[string]interface{}{
@@ -358,7 +321,6 @@ func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Video message sent successfully")
 }
-
 
 // @Summary Send document message
 // @Description Send a document message via WhatsApp
@@ -393,7 +355,6 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response, err := h.messageService.SendDocumentMessage(r.Context(), sessionID, req.To, req.File, req.Caption, req.Filename)
 	if err != nil {
 		h.GetLogger().ErrorWithFields("Failed to send document message", map[string]interface{}{
@@ -415,7 +376,6 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Document message sent successfully")
 }
-
 
 // @Summary Send sticker message
 // @Description Send a sticker message via WhatsApp
@@ -450,7 +410,6 @@ func (h *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response, err := h.messageService.SendStickerMessage(r.Context(), sessionID, req.To, req.File)
 	if err != nil {
 		h.GetLogger().ErrorWithFields("Failed to send sticker message", map[string]interface{}{
@@ -471,7 +430,6 @@ func (h *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Sticker message sent successfully")
 }
-
 
 // @Summary Send location message
 // @Description Send a location message via WhatsApp
@@ -506,7 +464,6 @@ func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response, err := h.messageService.SendLocationMessage(r.Context(), sessionID, req.To, req.Latitude, req.Longitude, req.Address)
 	if err != nil {
 		h.GetLogger().ErrorWithFields("Failed to send location message", map[string]interface{}{
@@ -529,7 +486,6 @@ func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Location message sent successfully")
 }
-
 
 // @Summary Send contact message
 // @Description Send a contact message via WhatsApp
@@ -564,7 +520,6 @@ func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response, err := h.messageService.SendContactMessage(r.Context(), sessionID, req.To, req.ContactName, req.ContactPhone)
 	if err != nil {
 		h.GetLogger().ErrorWithFields("Failed to send contact message", map[string]interface{}{
@@ -586,7 +541,6 @@ func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Contact message sent successfully")
 }
-
 
 // @Summary Send contact list message
 // @Description Send a contact list message via WhatsApp
@@ -627,7 +581,6 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-
 	contactResults := make([]contracts.ContactResult, len(req.Contacts))
 	for i, contact := range req.Contacts {
 		contactResults[i] = contracts.ContactResult{
@@ -654,7 +607,6 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 
 	h.GetWriter().WriteSuccess(w, response, "Contact list sent successfully")
 }
-
 
 // @Summary Send business profile message
 // @Description Send a business profile message via WhatsApp
@@ -695,7 +647,6 @@ func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-
 	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
@@ -712,7 +663,6 @@ func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Requ
 
 	h.GetWriter().WriteSuccess(w, response, "Business profile sent successfully")
 }
-
 
 // @Summary Send button message
 // @Description Send a button message via WhatsApp
@@ -753,7 +703,6 @@ func (h *MessageHandler) SendButton(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
@@ -770,7 +719,6 @@ func (h *MessageHandler) SendButton(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Button message sent successfully")
 }
-
 
 // @Summary Send list message
 // @Description Send a list message via WhatsApp
@@ -811,12 +759,10 @@ func (h *MessageHandler) SendList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	totalRows := 0
 	for _, section := range req.Sections {
 		totalRows += len(section.Rows)
 	}
-
 
 	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
@@ -835,7 +781,6 @@ func (h *MessageHandler) SendList(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "List message sent successfully")
 }
-
 
 // @Summary Send poll message
 // @Description Send a poll message via WhatsApp
@@ -876,7 +821,6 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
@@ -885,18 +829,17 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.LogSuccess("send poll message", map[string]interface{}{
-		"session_id":         sessionID,
-		"session_name":       session.Session.Name,
-		"to":                 req.To,
-		"poll_name":          req.Name,
-		"option_count":       len(req.Options),
-		"selectable_count":   req.SelectableCount,
-		"allow_multiple":     req.AllowMultipleVote,
+		"session_id":       sessionID,
+		"session_name":     session.Session.Name,
+		"to":               req.To,
+		"poll_name":        req.Name,
+		"option_count":     len(req.Options),
+		"selectable_count": req.SelectableCount,
+		"allow_multiple":   req.AllowMultipleVote,
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Poll message sent successfully")
 }
-
 
 // @Summary Send reaction message
 // @Description Send a reaction to a message via WhatsApp
@@ -937,7 +880,6 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
@@ -955,7 +897,6 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Reaction sent successfully")
 }
-
 
 // @Summary Send presence status
 // @Description Send presence status (typing, recording, etc.) via WhatsApp
@@ -996,7 +937,6 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response := &contracts.SendMessageResponse{
 		MessageID: uuid.New().String(),
 		To:        req.To,
@@ -1013,7 +953,6 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Presence sent successfully")
 }
-
 
 // @Summary Edit message
 // @Description Edit a previously sent message via WhatsApp
@@ -1054,7 +993,6 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response := &contracts.SendMessageResponse{
 		MessageID: req.MessageID,
 		To:        req.To,
@@ -1072,7 +1010,6 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Message edited successfully")
 }
-
 
 // @Summary Revoke message
 // @Description Revoke a previously sent message via WhatsApp
@@ -1113,7 +1050,6 @@ func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	response := &contracts.SendMessageResponse{
 		MessageID: req.MessageID,
 		To:        req.To,
@@ -1130,7 +1066,6 @@ func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, response, "Message revoked successfully")
 }
-
 
 // @Summary Get poll results
 // @Description Get results of a poll message via WhatsApp
@@ -1160,8 +1095,6 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
-
 
 	voteResults := []contracts.PollVoteInfo{
 		{
@@ -1193,10 +1126,6 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 
 	h.GetWriter().WriteSuccess(w, response, "Poll results retrieved successfully")
 }
-
-
-
-
 
 // @Summary Mark messages as read
 // @Description Mark messages as read in WhatsApp
@@ -1240,7 +1169,6 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	stats, err := h.messageService.GetMessageStats(r.Context(), &sessionID)
 	if err != nil {
 		h.GetLogger().ErrorWithFields("Failed to get message stats", map[string]interface{}{
@@ -1259,7 +1187,6 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, stats, "Message statistics retrieved successfully")
 }
-
 
 // @Summary Get pending sync messages
 // @Description Get messages that are pending synchronization with Chatwoot
@@ -1281,7 +1208,6 @@ func (h *MessageHandler) GetPendingSyncMessages(w http.ResponseWriter, r *http.R
 		return
 	}
 
-
 	limit := parseIntQuery(r, "limit", 50)
 	if limit > 100 {
 		limit = 100
@@ -1290,13 +1216,11 @@ func (h *MessageHandler) GetPendingSyncMessages(w http.ResponseWriter, r *http.R
 		limit = 50
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
 
 	messages, err := h.messageService.GetPendingSyncMessages(r.Context(), sessionID, limit)
 	if err != nil {
@@ -1316,7 +1240,6 @@ func (h *MessageHandler) GetPendingSyncMessages(w http.ResponseWriter, r *http.R
 
 	h.GetWriter().WriteSuccess(w, messages, "Pending sync messages retrieved successfully")
 }
-
 
 // @Summary Delete message
 // @Description Delete a message from the system
@@ -1340,14 +1263,11 @@ func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
 	}
-
-
 
 	h.LogSuccess("delete message", map[string]interface{}{
 		"message_id": messageID,
@@ -1357,66 +1277,7 @@ func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Message deleted successfully")
 }
 
-
-// @Summary Mark messages as read
-// @Description Mark messages as read in WhatsApp
-// @Tags Messages
-// @Security ApiKeyAuth
-// @Accept json
-// @Produce json
-// @Param sessionId path string true "Session ID"
-// @Param request body contracts.MarkAsReadRequest true "Mark as read request"
-// @Success 200 {object} shared.SuccessResponse
-// @Failure 400 {object} shared.SuccessResponse
-// @Failure 404 {object} shared.SuccessResponse
-// @Failure 500 {object} shared.SuccessResponse
-// @Router /sessions/{sessionId}/messages/mark-read [post]
-func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
-	h.LogRequest(r, "mark messages as read")
-
-	sessionID := chi.URLParam(r, "sessionId")
-	if sessionID == "" {
-		h.GetWriter().WriteBadRequest(w, "Session ID is required")
-		return
-	}
-
-
-	var req contracts.MarkAsReadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.GetWriter().WriteBadRequest(w, "Invalid request body")
-		return
-	}
-
-
-	if err := h.GetValidator().ValidateStruct(&req); err != nil {
-		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
-		return
-	}
-
-
-	_, err := h.sessionService.GetSession(r.Context(), sessionID)
-	if err != nil {
-		h.GetWriter().WriteNotFound(w, "Session not found")
-		return
-	}
-
-
-
-	h.LogSuccess("mark messages as read", map[string]interface{}{
-		"session_id":      sessionID,
-		"chat_jid":        req.ChatJID,
-		"message_count":   len(req.MessageIDs),
-	})
-
-	response := &contracts.MarkAsReadResponse{
-		ChatJID:     req.ChatJID,
-		MarkedCount: len(req.MessageIDs),
-		Status:      "success",
-	}
-
-	h.GetWriter().WriteSuccess(w, response, "Messages marked as read successfully")
-}
-
+// Duplicate MarkAsRead method removed
 
 func parseIntQuery(r *http.Request, key string, defaultValue int) int {
 	value := r.URL.Query().Get(key)

@@ -12,7 +12,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 type Server struct {
 	config         *config.Config
 	logger         *logger.Logger
@@ -22,7 +21,6 @@ type Server struct {
 	groupService   *services.GroupService
 }
 
-
 type Config struct {
 	Config         *config.Config
 	Logger         *logger.Logger
@@ -30,7 +28,6 @@ type Config struct {
 	MessageService *services.MessageService
 	GroupService   *services.GroupService
 }
-
 
 func New(cfg *Config) *Server {
 	return &Server{
@@ -42,7 +39,6 @@ func New(cfg *Config) *Server {
 	}
 }
 
-
 func (s *Server) Start(ctx context.Context) error {
 
 	handler := router.SetupRoutes(
@@ -52,7 +48,6 @@ func (s *Server) Start(ctx context.Context) error {
 		s.messageService,
 		s.groupService,
 	)
-
 
 	s.httpServer = &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.config.Server.Port),
@@ -69,7 +64,6 @@ func (s *Server) Start(ctx context.Context) error {
 		"idle_timeout":  s.config.Server.IdleTimeout,
 	})
 
-
 	go func() {
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			s.logger.ErrorWithFields("HTTP server failed", map[string]interface{}{
@@ -85,14 +79,12 @@ func (s *Server) Start(ctx context.Context) error {
 	return nil
 }
 
-
 func (s *Server) Stop(ctx context.Context) error {
 	if s.httpServer == nil {
 		return nil
 	}
 
 	s.logger.Info("Stopping HTTP server...")
-
 
 	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -108,7 +100,6 @@ func (s *Server) Stop(ctx context.Context) error {
 	return nil
 }
 
-
 func (s *Server) Handler() http.Handler {
 	return router.SetupRoutes(
 		s.config,
@@ -119,14 +110,12 @@ func (s *Server) Handler() http.Handler {
 	)
 }
 
-
 func (s *Server) Address() string {
 	if s.httpServer != nil {
 		return s.httpServer.Addr
 	}
 	return fmt.Sprintf(":%d", s.config.Server.Port)
 }
-
 
 func (s *Server) IsRunning() bool {
 	return s.httpServer != nil

@@ -274,19 +274,14 @@ Obtém estatísticas da sessão.
 
 ## 💬 Messages
 
-### CRUD de Mensagens
-
-#### `POST /sessions/{sessionId}/messages`
-Cria/registra uma nova mensagem no sistema.
-
-#### `GET /sessions/{sessionId}/messages`
-Lista mensagens da sessão.
-
-#### `GET /sessions/{sessionId}/messages/{messageId}`
-Obtém detalhes de uma mensagem específica.
-
-#### `DELETE /sessions/{sessionId}/messages/{messageId}`
-Remove uma mensagem do sistema.
+### ⚠️ CRUD Operations Removed
+The following CRUD operations have been removed as they are not part of our WhatsApp gateway system:
+- ~~`POST /sessions/{sessionId}/messages`~~ - Create message
+- ~~`GET /sessions/{sessionId}/messages`~~ - List messages
+- ~~`GET /sessions/{sessionId}/messages/{messageId}`~~ - Get message
+- ~~`DELETE /sessions/{sessionId}/messages/{messageId}`~~ - Delete message
+- ~~`PUT /sessions/{sessionId}/messages/{messageId}/sync`~~ - Update sync status
+- ~~`GET /sessions/{sessionId}/messages/stats`~~ - Get message statistics
 
 ### Envio de Mensagens
 

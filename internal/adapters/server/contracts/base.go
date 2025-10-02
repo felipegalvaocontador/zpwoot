@@ -4,14 +4,10 @@ import (
 	"time"
 )
 
-
-
-
 type BaseRequest struct {
 	RequestID string    `json:"request_id,omitempty" example:"req-123"`
 	Timestamp time.Time `json:"timestamp,omitempty" example:"2024-01-01T12:00:00Z"`
 }
-
 
 type BaseResponse struct {
 	Success   bool        `json:"success" example:"true"`
@@ -20,7 +16,6 @@ type BaseResponse struct {
 	RequestID string      `json:"request_id,omitempty" example:"req-123"`
 	Timestamp time.Time   `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 }
-
 
 type ErrorResponse struct {
 	Success   bool        `json:"success" example:"false"`
@@ -31,14 +26,12 @@ type ErrorResponse struct {
 	Timestamp time.Time   `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 }
 
-
 type ValidationError struct {
 	Field   string `json:"field" example:"name"`
 	Message string `json:"message" example:"Name is required"`
 	Value   string `json:"value,omitempty" example:""`
 	Code    string `json:"code,omitempty" example:"REQUIRED"`
 }
-
 
 type ValidationErrorResponse struct {
 	Success   bool              `json:"success" example:"false"`
@@ -49,13 +42,11 @@ type ValidationErrorResponse struct {
 	Timestamp time.Time         `json:"timestamp" example:"2024-01-01T12:00:00Z"`
 }
 
-
 type PaginationRequest struct {
 	Limit  int `json:"limit" validate:"omitempty,min=1,max=100" example:"20"`
 	Offset int `json:"offset" validate:"omitempty,min=0" example:"0"`
 	Page   int `json:"page" validate:"omitempty,min=1" example:"1"`
 }
-
 
 type PaginationResponse struct {
 	Total   int  `json:"total" example:"100"`
@@ -67,34 +58,22 @@ type PaginationResponse struct {
 	HasPrev bool `json:"has_prev" example:"false"`
 }
 
-
 type ListResponse struct {
 	BaseResponse
 	Pagination *PaginationResponse `json:"pagination,omitempty"`
 }
 
-
-
-
 type SessionID string
-
 
 type MessageID string
 
-
 type GroupID string
-
 
 type ContactID string
 
-
 type PhoneNumber string
 
-
 type JID string
-
-
-
 
 type Status string
 
@@ -106,7 +85,6 @@ const (
 	StatusFailed    Status = "failed"
 	StatusCancelled Status = "cancelled"
 )
-
 
 type MessageType string
 
@@ -124,7 +102,6 @@ const (
 	MessageTypePoll     MessageType = "poll"
 )
 
-
 type ConnectionStatus string
 
 const (
@@ -135,9 +112,6 @@ const (
 	ConnectionStatusFailed       ConnectionStatus = "failed"
 )
 
-
-
-
 func NewBaseResponse(success bool, message string, data interface{}) *BaseResponse {
 	return &BaseResponse{
 		Success:   success,
@@ -146,7 +120,6 @@ func NewBaseResponse(success bool, message string, data interface{}) *BaseRespon
 		Timestamp: time.Now(),
 	}
 }
-
 
 func NewErrorResponse(error, code string, details interface{}) *ErrorResponse {
 	return &ErrorResponse{
@@ -158,7 +131,6 @@ func NewErrorResponse(error, code string, details interface{}) *ErrorResponse {
 	}
 }
 
-
 func NewValidationErrorResponse(errors []ValidationError) *ValidationErrorResponse {
 	return &ValidationErrorResponse{
 		Success:   false,
@@ -169,13 +141,12 @@ func NewValidationErrorResponse(errors []ValidationError) *ValidationErrorRespon
 	}
 }
 
-
 func NewPaginationResponse(total, limit, offset int) *PaginationResponse {
 	page := 1
 	if limit > 0 {
 		page = (offset / limit) + 1
 	}
-	
+
 	pages := 1
 	if limit > 0 && total > 0 {
 		pages = (total + limit - 1) / limit
@@ -192,9 +163,6 @@ func NewPaginationResponse(total, limit, offset int) *PaginationResponse {
 	}
 }
 
-
-
-
 func IsValidMessageType(msgType string) bool {
 	switch MessageType(msgType) {
 	case MessageTypeText, MessageTypeImage, MessageTypeAudio, MessageTypeVideo,
@@ -206,7 +174,6 @@ func IsValidMessageType(msgType string) bool {
 	}
 }
 
-
 func IsValidConnectionStatus(status string) bool {
 	switch ConnectionStatus(status) {
 	case ConnectionStatusConnected, ConnectionStatusDisconnected, ConnectionStatusConnecting,
@@ -216,7 +183,6 @@ func IsValidConnectionStatus(status string) bool {
 		return false
 	}
 }
-
 
 func IsValidStatus(status string) bool {
 	switch Status(status) {

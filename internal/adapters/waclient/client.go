@@ -18,11 +18,9 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 type WhatsmeowLogger struct {
 	logger *logger.Logger
 }
-
 
 func NewWhatsmeowLogger(logger *logger.Logger) waLog.Logger {
 	return &WhatsmeowLogger{logger: logger}
@@ -56,33 +54,26 @@ func (w *WhatsmeowLogger) Sub(module string) waLog.Logger {
 	return &WhatsmeowLogger{logger: w.logger}
 }
 
-
 type QRCodeEvent struct {
 	SessionName string
 	QRCode      string
 	ExpiresAt   time.Time
 }
 
-
 type Client struct {
-
 	sessionName string
-
 
 	client *whatsmeow.Client
 	device *store.Device
 
-
 	logger      *logger.Logger
 	qrGenerator *QRGenerator
 
-
-	mu            sync.RWMutex
-	isConnected   bool
-	isLoggedIn    bool
-	status        string
-	lastActivity  time.Time
-
+	mu           sync.RWMutex
+	isConnected  bool
+	isLoggedIn   bool
+	status       string
+	lastActivity time.Time
 
 	qrCode        string
 	qrCodeExpires time.Time
@@ -90,18 +81,14 @@ type Client struct {
 	qrContext     context.Context
 	qrCancel      context.CancelFunc
 
-
 	eventHandler  func(interface{})
 	eventHandlers []func(interface{})
 
-
 	proxyConfig *session.ProxyConfig
-
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
-
 
 func NewClient(sessionName string, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
 	if sessionName == "" {
@@ -112,18 +99,14 @@ func NewClient(sessionName string, container *sqlstore.Container, logger *logger
 		return nil, fmt.Errorf("sqlstore container cannot be nil")
 	}
 
-
 	deviceStore := container.NewDevice()
 	if deviceStore == nil {
 		return nil, fmt.Errorf("failed to create device store")
 	}
 
-
 	waLogger := NewWhatsmeowLogger(logger)
 
-
 	whatsmeowClient := whatsmeow.NewClient(deviceStore, waLogger)
-
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -140,14 +123,10 @@ func NewClient(sessionName string, container *sqlstore.Container, logger *logger
 		cancel:        cancel,
 	}
 
-
 	client.setupEventHandlers()
-
-
 
 	return client, nil
 }
-
 
 func NewClientWithDevice(sessionName string, deviceStore *store.Device, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
 	if sessionName == "" {
@@ -162,12 +141,9 @@ func NewClientWithDevice(sessionName string, deviceStore *store.Device, containe
 		return nil, fmt.Errorf("sqlstore container cannot be nil")
 	}
 
-
 	waLogger := NewWhatsmeowLogger(logger)
 
-
 	whatsmeowClient := whatsmeow.NewClient(deviceStore, waLogger)
-
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -184,7 +160,6 @@ func NewClientWithDevice(sessionName string, deviceStore *store.Device, containe
 		cancel:        cancel,
 	}
 
-
 	client.setupEventHandlers()
 
 	logger.InfoWithFields("WhatsApp client created with existing device", map[string]interface{}{
@@ -195,18 +170,13 @@ func NewClientWithDevice(sessionName string, deviceStore *store.Device, containe
 	return client, nil
 }
 
-
 func (c *Client) Connect() error {
 
-
-
 	c.stopQRProcess()
-
 
 	if c.client.IsConnected() {
 		c.client.Disconnect()
 	}
-
 
 	c.mu.Lock()
 	if c.cancel != nil {
@@ -217,12 +187,10 @@ func (c *Client) Connect() error {
 
 	c.setStatus("connecting")
 
-
 	go c.startConnectionLoop()
 
 	return nil
 }
-
 
 func (c *Client) startConnectionLoop() {
 	defer func() {
@@ -234,7 +202,6 @@ func (c *Client) startConnectionLoop() {
 		}
 	}()
 
-
 	isRegistered := c.isDeviceRegistered()
 
 	if !isRegistered {
@@ -244,11 +211,9 @@ func (c *Client) startConnectionLoop() {
 	}
 }
 
-
 func (c *Client) isDeviceRegistered() bool {
 	return c.device.ID != nil
 }
-
 
 func (c *Client) handleNewDeviceRegistration() {
 	qrChan, err := c.client.GetQRChannel(c.ctx)
@@ -274,7 +239,6 @@ func (c *Client) handleNewDeviceRegistration() {
 	c.handleQRLoop(qrChan)
 }
 
-
 func (c *Client) handleExistingDeviceConnection() {
 	err := c.client.Connect()
 	if err != nil {
@@ -286,9 +250,7 @@ func (c *Client) handleExistingDeviceConnection() {
 		return
 	}
 
-
 }
-
 
 func (c *Client) handleQRLoop(qrChan <-chan whatsmeow.QRChannelItem) {
 	c.mu.Lock()
@@ -326,10 +288,6 @@ func (c *Client) handleQRLoop(qrChan <-chan whatsmeow.QRChannelItem) {
 	}
 }
 
-
-
-
-
 func (c *Client) handleQRCode(qrCode string) {
 	c.mu.Lock()
 	c.qrCode = qrCode
@@ -341,15 +299,12 @@ func (c *Client) handleQRCode(qrCode string) {
 		"qr_code":      qrCode,
 	})
 
-
-
 	c.notifyEventHandlers(&QRCodeEvent{
 		SessionName: c.sessionName,
 		QRCode:      qrCode,
 		ExpiresAt:   c.qrCodeExpires,
 	})
 }
-
 
 func (c *Client) stopQRProcess() {
 	c.mu.Lock()
@@ -364,7 +319,6 @@ func (c *Client) stopQRProcess() {
 	c.qrCodeExpires = time.Time{}
 }
 
-
 func (c *Client) setStatus(status string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -378,18 +332,15 @@ func (c *Client) setStatus(status string) {
 	})
 }
 
-
 func (c *Client) setupEventHandlers() {
 	c.client.AddEventHandler(c.handleEvent)
 }
-
 
 func (c *Client) handleEvent(evt interface{}) {
 
 	c.mu.Lock()
 	c.lastActivity = time.Now()
 	c.mu.Unlock()
-
 
 	switch v := evt.(type) {
 	case *events.Connected:
@@ -412,10 +363,8 @@ func (c *Client) handleEvent(evt interface{}) {
 		})
 	}
 
-
 	c.notifyEventHandlers(evt)
 }
-
 
 func (c *Client) notifyEventHandlers(evt interface{}) {
 	c.mu.RLock()
@@ -438,7 +387,6 @@ func (c *Client) notifyEventHandlers(evt interface{}) {
 	}
 }
 
-
 func (c *Client) handleConnectedEvent(_ *events.Connected) {
 	c.mu.Lock()
 	c.isConnected = true
@@ -451,7 +399,6 @@ func (c *Client) handleConnectedEvent(_ *events.Connected) {
 		"session": c.sessionName,
 	})
 }
-
 
 func (c *Client) handleDisconnectedEvent(_ *events.Disconnected) {
 	c.mu.Lock()
@@ -466,7 +413,6 @@ func (c *Client) handleDisconnectedEvent(_ *events.Disconnected) {
 	})
 }
 
-
 func (c *Client) handleLoggedOutEvent(evt *events.LoggedOut) {
 	c.mu.Lock()
 	c.isLoggedIn = false
@@ -479,7 +425,6 @@ func (c *Client) handleLoggedOutEvent(evt *events.LoggedOut) {
 		"reason":       evt.Reason,
 	})
 }
-
 
 func (c *Client) handlePairSuccessEvent(evt *events.PairSuccess) {
 	c.mu.Lock()
@@ -495,7 +440,6 @@ func (c *Client) handlePairSuccessEvent(evt *events.PairSuccess) {
 	})
 }
 
-
 func (c *Client) handlePairErrorEvent(evt *events.PairError) {
 	c.setStatus("pair_error")
 
@@ -505,7 +449,6 @@ func (c *Client) handlePairErrorEvent(evt *events.PairError) {
 	})
 }
 
-
 func (c *Client) Disconnect() error {
 	c.logger.InfoWithFields("Starting client disconnection", map[string]interface{}{
 		"session_name": c.sessionName,
@@ -514,9 +457,7 @@ func (c *Client) Disconnect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-
 	c.stopQRProcess()
-
 
 	if c.client.IsConnected() {
 		c.logger.InfoWithFields("Disconnecting whatsmeow client", map[string]interface{}{
@@ -524,7 +465,6 @@ func (c *Client) Disconnect() error {
 		})
 		c.client.Disconnect()
 	}
-
 
 	if c.cancel != nil {
 		c.logger.InfoWithFields("Canceling client context", map[string]interface{}{
@@ -541,7 +481,6 @@ func (c *Client) Disconnect() error {
 
 	return nil
 }
-
 
 func (c *Client) Logout() error {
 	c.mu.Lock()
@@ -566,20 +505,17 @@ func (c *Client) Logout() error {
 	return nil
 }
 
-
 func (c *Client) IsConnected() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.isConnected
 }
 
-
 func (c *Client) IsLoggedIn() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.isLoggedIn
 }
-
 
 func (c *Client) GetQRCode() (string, error) {
 	c.mu.RLock()
@@ -593,7 +529,6 @@ func (c *Client) GetQRCode() (string, error) {
 		return "", fmt.Errorf("client is not connected")
 	}
 
-
 	if c.qrCode != "" && time.Now().Before(c.qrCodeExpires) {
 		return c.qrCode, nil
 	}
@@ -605,13 +540,11 @@ func (c *Client) GetQRCode() (string, error) {
 	return c.qrCode, nil
 }
 
-
 func (c *Client) SetProxy(proxy *session.ProxyConfig) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.proxyConfig = proxy
-
 
 	if c.isConnected {
 		if err := c.configureProxy(); err != nil {
@@ -622,13 +555,11 @@ func (c *Client) SetProxy(proxy *session.ProxyConfig) error {
 	return nil
 }
 
-
 func (c *Client) SetEventHandler(handler func(interface{})) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.eventHandler = handler
 }
-
 
 func (c *Client) GetJID() types.JID {
 	if c.client.Store.ID == nil {
@@ -637,19 +568,14 @@ func (c *Client) GetJID() types.JID {
 	return *c.client.Store.ID
 }
 
-
 func (c *Client) GetClient() *whatsmeow.Client {
 	return c.client
 }
-
-
-
 
 func (c *Client) configureProxy() error {
 	if c.proxyConfig == nil {
 		return nil
 	}
-
 
 	var proxyURL *url.URL
 	var err error
@@ -681,7 +607,6 @@ func (c *Client) configureProxy() error {
 		return fmt.Errorf("failed to parse proxy URL: %w", err)
 	}
 
-
 	c.client.SetProxyAddress(proxyURL.String())
 
 	c.logger.InfoWithFields("Proxy configured", map[string]interface{}{
@@ -694,19 +619,11 @@ func (c *Client) configureProxy() error {
 	return nil
 }
 
-
-
-
-
-
-
-
 func (c *Client) GetStatus() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.status
 }
-
 
 func (c *Client) AddEventHandler(handler func(interface{})) {
 	c.mu.Lock()

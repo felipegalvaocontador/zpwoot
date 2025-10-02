@@ -6,13 +6,9 @@ import (
 	"github.com/google/uuid"
 )
 
-
-
 type Message struct {
-
 	ID        uuid.UUID `json:"id"`
 	SessionID uuid.UUID `json:"session_id"`
-
 
 	ZpMessageID string    `json:"zp_message_id"`
 	ZpSender    string    `json:"zp_sender"`
@@ -22,19 +18,15 @@ type Message struct {
 	ZpType      string    `json:"zp_type"`
 	Content     string    `json:"content,omitempty"`
 
-
 	CwMessageID      *int `json:"cw_message_id,omitempty"`
 	CwConversationID *int `json:"cw_conversation_id,omitempty"`
-
 
 	SyncStatus string     `json:"sync_status"`
 	SyncedAt   *time.Time `json:"synced_at,omitempty"`
 
-
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
-
 
 type MessageType string
 
@@ -49,7 +41,6 @@ const (
 	MessageTypeSticker  MessageType = "sticker"
 )
 
-
 type SyncStatus string
 
 const (
@@ -57,7 +48,6 @@ const (
 	SyncStatusSynced  SyncStatus = "synced"
 	SyncStatusFailed  SyncStatus = "failed"
 )
-
 
 type CreateMessageRequest struct {
 	SessionID   uuid.UUID   `json:"session_id" validate:"required"`
@@ -70,15 +60,13 @@ type CreateMessageRequest struct {
 	Content     string      `json:"content,omitempty"`
 }
 
-
 type UpdateSyncStatusRequest struct {
-	ID               uuid.UUID   `json:"id" validate:"required"`
-	SyncStatus       SyncStatus  `json:"sync_status" validate:"required"`
-	CwMessageID      *int        `json:"cw_message_id,omitempty"`
-	CwConversationID *int        `json:"cw_conversation_id,omitempty"`
-	SyncedAt         *time.Time  `json:"synced_at,omitempty"`
+	ID               uuid.UUID  `json:"id" validate:"required"`
+	SyncStatus       SyncStatus `json:"sync_status" validate:"required"`
+	CwMessageID      *int       `json:"cw_message_id,omitempty"`
+	CwConversationID *int       `json:"cw_conversation_id,omitempty"`
+	SyncedAt         *time.Time `json:"synced_at,omitempty"`
 }
-
 
 type ListMessagesRequest struct {
 	SessionID string `json:"session_id,omitempty"`
@@ -86,7 +74,6 @@ type ListMessagesRequest struct {
 	Limit     int    `json:"limit" validate:"min=1,max=100"`
 	Offset    int    `json:"offset" validate:"min=0"`
 }
-
 
 type MessageStats struct {
 	TotalMessages     int64            `json:"total_messages"`
@@ -100,18 +87,16 @@ type MessageStats struct {
 	MessagesThisMonth int64            `json:"messages_this_month"`
 }
 
-
 func IsValidMessageType(msgType string) bool {
 	switch MessageType(msgType) {
-	case MessageTypeText, MessageTypeImage, MessageTypeAudio, 
-		 MessageTypeVideo, MessageTypeDocument, MessageTypeContact,
-		 MessageTypeLocation, MessageTypeSticker:
+	case MessageTypeText, MessageTypeImage, MessageTypeAudio,
+		MessageTypeVideo, MessageTypeDocument, MessageTypeContact,
+		MessageTypeLocation, MessageTypeSticker:
 		return true
 	default:
 		return false
 	}
 }
-
 
 func IsValidSyncStatus(status string) bool {
 	switch SyncStatus(status) {
@@ -122,31 +107,25 @@ func IsValidSyncStatus(status string) bool {
 	}
 }
 
-
 func (m *Message) IsSynced() bool {
 	return m.SyncStatus == string(SyncStatusSynced) && m.CwMessageID != nil
 }
-
 
 func (m *Message) IsPending() bool {
 	return m.SyncStatus == string(SyncStatusPending)
 }
 
-
 func (m *Message) IsFailed() bool {
 	return m.SyncStatus == string(SyncStatusFailed)
 }
-
 
 func (m *Message) HasChatwootData() bool {
 	return m.CwMessageID != nil && m.CwConversationID != nil
 }
 
-
 func (m *Message) GetMessageTypeString() string {
 	return m.ZpType
 }
-
 
 func (m *Message) GetSyncStatusString() string {
 	return m.SyncStatus

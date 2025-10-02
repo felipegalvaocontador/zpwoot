@@ -8,18 +8,14 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-
 type Validator struct {
 	validate *validator.Validate
 }
 
-
 func New() *Validator {
 	validate := validator.New()
 
-
 	registerCustomValidations(validate)
-
 
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
 		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
@@ -34,7 +30,6 @@ func New() *Validator {
 	}
 }
 
-
 func (v *Validator) ValidateStruct(s interface{}) error {
 	if err := v.validate.Struct(s); err != nil {
 		return v.formatValidationError(err)
@@ -42,14 +37,12 @@ func (v *Validator) ValidateStruct(s interface{}) error {
 	return nil
 }
 
-
 func (v *Validator) ValidateVar(field interface{}, tag string) error {
 	if err := v.validate.Var(field, tag); err != nil {
 		return v.formatValidationError(err)
 	}
 	return nil
 }
-
 
 func (v *Validator) formatValidationError(err error) error {
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
@@ -65,7 +58,6 @@ func (v *Validator) formatValidationError(err error) error {
 
 	return err
 }
-
 
 func (v *Validator) getErrorMessage(fieldError validator.FieldError) string {
 	field := fieldError.Field()
@@ -100,18 +92,14 @@ func (v *Validator) getErrorMessage(fieldError validator.FieldError) string {
 	}
 }
 
-
 func registerCustomValidations(validate *validator.Validate) {
 
 	validate.RegisterValidation("session_name", validateSessionName)
 
-
 	validate.RegisterValidation("proxy_type", validateProxyType)
-
 
 	validate.RegisterValidation("e164", validateE164)
 }
-
 
 func validateSessionName(fl validator.FieldLevel) bool {
 	name := fl.Field().String()
@@ -131,21 +119,17 @@ func validateSessionName(fl validator.FieldLevel) bool {
 	return true
 }
 
-
 func validateProxyType(fl validator.FieldLevel) bool {
 	proxyType := fl.Field().String()
 	return proxyType == "http" || proxyType == "socks5"
 }
 
-
 func validateE164(fl validator.FieldLevel) bool {
 	phone := fl.Field().String()
-
 
 	if !strings.HasPrefix(phone, "+") {
 		return false
 	}
-
 
 	digits := phone[1:]
 	if len(digits) < 7 || len(digits) > 15 {
@@ -160,7 +144,6 @@ func validateE164(fl validator.FieldLevel) bool {
 
 	return true
 }
-
 
 func IsValidSessionName(name string) bool {
 	validator := New()

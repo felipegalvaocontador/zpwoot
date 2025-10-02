@@ -11,35 +11,28 @@ import (
 	"zpwoot/platform/config"
 )
 
-
 type Logger struct {
 	logger zerolog.Logger
 	config config.LogConfig
 }
 
-
 func New(cfg config.LogConfig) *Logger {
 	return NewWithConfig(cfg)
 }
-
 
 func NewWithConfig(cfg config.LogConfig) *Logger {
 
 	cfg = validateLogConfig(cfg)
 
-
 	logLevel := parseLogLevel(cfg.Level)
 	zerolog.SetGlobalLevel(logLevel)
 
-
 	zerolog.TimeFieldFormat = time.RFC3339
-
 
 	var writer io.Writer = os.Stdout
 	if cfg.Output == "stderr" {
 		writer = os.Stderr
 	}
-
 
 	if cfg.Format == "console" {
 		consoleWriter := zerolog.ConsoleWriter{
@@ -47,7 +40,6 @@ func NewWithConfig(cfg config.LogConfig) *Logger {
 			TimeFormat: "15:04:05",
 			NoColor:    false,
 		}
-
 
 		if cfg.Caller {
 			consoleWriter.FormatCaller = func(i interface{}) string {
@@ -61,10 +53,8 @@ func NewWithConfig(cfg config.LogConfig) *Logger {
 		writer = consoleWriter
 	}
 
-
 	ctx := zerolog.New(writer).With().
 		Timestamp()
-
 
 	if cfg.Caller {
 		ctx = ctx.CallerWithSkipFrameCount(3)
@@ -78,11 +68,9 @@ func NewWithConfig(cfg config.LogConfig) *Logger {
 	}
 }
 
-
 func NewFromAppConfig(appConfig *config.Config) *Logger {
 	return New(appConfig.Log)
 }
-
 
 func (l *Logger) WithModule(module string) *Logger {
 	newLogger := l.logger.With().Str("component", module).Logger()
@@ -92,18 +80,13 @@ func (l *Logger) WithModule(module string) *Logger {
 	}
 }
 
-
-
-
 func (l *Logger) Debug(msg string) {
 	l.logger.Debug().Msg(msg)
 }
 
-
 func (l *Logger) Debugf(format string, args ...interface{}) {
 	l.logger.Debug().Msgf(format, args...)
 }
-
 
 func (l *Logger) DebugWithFields(msg string, fields map[string]interface{}) {
 	event := l.logger.Debug()
@@ -113,16 +96,13 @@ func (l *Logger) DebugWithFields(msg string, fields map[string]interface{}) {
 	event.Msg(msg)
 }
 
-
 func (l *Logger) Info(msg string) {
 	l.logger.Info().Msg(msg)
 }
 
-
 func (l *Logger) Infof(format string, args ...interface{}) {
 	l.logger.Info().Msgf(format, args...)
 }
-
 
 func (l *Logger) InfoWithFields(msg string, fields map[string]interface{}) {
 	event := l.logger.Info()
@@ -132,16 +112,13 @@ func (l *Logger) InfoWithFields(msg string, fields map[string]interface{}) {
 	event.Msg(msg)
 }
 
-
 func (l *Logger) Warn(msg string) {
 	l.logger.Warn().Msg(msg)
 }
 
-
 func (l *Logger) Warnf(format string, args ...interface{}) {
 	l.logger.Warn().Msgf(format, args...)
 }
-
 
 func (l *Logger) WarnWithFields(msg string, fields map[string]interface{}) {
 	event := l.logger.Warn()
@@ -151,16 +128,13 @@ func (l *Logger) WarnWithFields(msg string, fields map[string]interface{}) {
 	event.Msg(msg)
 }
 
-
 func (l *Logger) Error(msg string) {
 	l.logger.Error().Msg(msg)
 }
 
-
 func (l *Logger) Errorf(format string, args ...interface{}) {
 	l.logger.Error().Msgf(format, args...)
 }
-
 
 func (l *Logger) ErrorWithFields(msg string, fields map[string]interface{}) {
 	event := l.logger.Error()
@@ -170,18 +144,13 @@ func (l *Logger) ErrorWithFields(msg string, fields map[string]interface{}) {
 	event.Msg(msg)
 }
 
-
 func (l *Logger) Fatal(msg string) {
 	l.logger.Fatal().Msg(msg)
 }
 
-
 func (l *Logger) Fatalf(format string, args ...interface{}) {
 	l.logger.Fatal().Msgf(format, args...)
 }
-
-
-
 
 func (l *Logger) WithError(err error) *Logger {
 	return &Logger{
@@ -190,14 +159,12 @@ func (l *Logger) WithError(err error) *Logger {
 	}
 }
 
-
 func (l *Logger) WithField(key string, value interface{}) *Logger {
 	return &Logger{
 		logger: l.logger.With().Interface(key, value).Logger(),
 		config: l.config,
 	}
 }
-
 
 func (l *Logger) WithFields(fields map[string]interface{}) *Logger {
 	ctx := l.logger.With()
@@ -210,14 +177,12 @@ func (l *Logger) WithFields(fields map[string]interface{}) *Logger {
 	}
 }
 
-
 func (l *Logger) WithSession(sessionID string) *Logger {
 	return &Logger{
 		logger: l.logger.With().Str("session_id", sessionID).Logger(),
 		config: l.config,
 	}
 }
-
 
 func (l *Logger) WithRequest(requestID string) *Logger {
 	return &Logger{
@@ -226,14 +191,12 @@ func (l *Logger) WithRequest(requestID string) *Logger {
 	}
 }
 
-
 func (l *Logger) WithMessage(messageID string) *Logger {
 	return &Logger{
 		logger: l.logger.With().Str("message_id", messageID).Logger(),
 		config: l.config,
 	}
 }
-
 
 func (l *Logger) WithElapsed(start time.Time) *Logger {
 	elapsed := time.Since(start).Milliseconds()
@@ -243,52 +206,37 @@ func (l *Logger) WithElapsed(start time.Time) *Logger {
 	}
 }
 
-
-
-
 func (l *Logger) Event(event string) *zerolog.Event {
 	return l.logger.Info().Str("event", event)
 }
-
 
 func (l *Logger) EventDebug(event string) *zerolog.Event {
 	return l.logger.Debug().Str("event", event)
 }
 
-
 func (l *Logger) EventWarn(event string) *zerolog.Event {
 	return l.logger.Warn().Str("event", event)
 }
-
 
 func (l *Logger) EventError(event string) *zerolog.Event {
 	return l.logger.Error().Str("event", event)
 }
 
-
-
-
 func (l *Logger) GetZerologLogger() zerolog.Logger {
 	return l.logger
 }
-
 
 func (l *Logger) GetConfig() config.LogConfig {
 	return l.config
 }
 
-
 func (l *Logger) IsDebugEnabled() bool {
 	return l.logger.GetLevel() <= zerolog.DebugLevel
 }
 
-
 func (l *Logger) IsTraceEnabled() bool {
 	return l.logger.GetLevel() <= zerolog.TraceLevel
 }
-
-
-
 
 func parseLogLevel(level string) zerolog.Level {
 	switch strings.ToLower(level) {
@@ -313,7 +261,6 @@ func parseLogLevel(level string) zerolog.Level {
 	}
 }
 
-
 func validateLogConfig(cfg config.LogConfig) config.LogConfig {
 
 	validLevels := map[string]bool{
@@ -324,11 +271,9 @@ func validateLogConfig(cfg config.LogConfig) config.LogConfig {
 		cfg.Level = "info"
 	}
 
-
 	if cfg.Format != "console" && cfg.Format != "json" {
 		cfg.Format = "json"
 	}
-
 
 	if cfg.Output != "stdout" && cfg.Output != "stderr" && cfg.Output != "file" {
 		cfg.Output = "stdout"
@@ -337,14 +282,12 @@ func validateLogConfig(cfg config.LogConfig) config.LogConfig {
 	return cfg
 }
 
-
 func formatCaller(caller string) string {
 
 	if strings.Contains(caller, "/workspaces/zpwoot/") {
 		relativePath := strings.TrimPrefix(caller, "/workspaces/zpwoot/")
 		return relativePath
 	}
-
 
 	if strings.Contains(caller, "zpwoot/") {
 		parts := strings.Split(caller, "zpwoot/")
@@ -353,12 +296,8 @@ func formatCaller(caller string) string {
 		}
 	}
 
-
 	return filepath.Base(caller)
 }
-
-
-
 
 func DevelopmentConfig() config.LogConfig {
 	return config.LogConfig{
@@ -369,7 +308,6 @@ func DevelopmentConfig() config.LogConfig {
 	}
 }
 
-
 func ProductionConfig() config.LogConfig {
 	return config.LogConfig{
 		Level:  "info",
@@ -378,7 +316,6 @@ func ProductionConfig() config.LogConfig {
 		Caller: false,
 	}
 }
-
 
 func TestConfig() config.LogConfig {
 	return config.LogConfig{

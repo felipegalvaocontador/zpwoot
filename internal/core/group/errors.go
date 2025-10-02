@@ -2,9 +2,7 @@ package group
 
 import "errors"
 
-
 var (
-
 	ErrInvalidGroupName        = errors.New("invalid group name")
 	ErrInvalidGroupDescription = errors.New("invalid group description")
 	ErrInvalidParticipant      = errors.New("invalid participant")
@@ -12,21 +10,18 @@ var (
 	ErrInvalidJID              = errors.New("invalid JID")
 	ErrInvalidGroupSettings    = errors.New("invalid group settings")
 
-
-	ErrGroupNotFound           = errors.New("group not found")
-	ErrGroupAlreadyExists      = errors.New("group already exists")
-	ErrParticipantNotFound     = errors.New("participant not found")
+	ErrGroupNotFound            = errors.New("group not found")
+	ErrGroupAlreadyExists       = errors.New("group already exists")
+	ErrParticipantNotFound      = errors.New("participant not found")
 	ErrParticipantAlreadyExists = errors.New("participant already exists")
-	ErrNotGroupAdmin           = errors.New("user is not a group admin")
-	ErrNotGroupOwner           = errors.New("user is not the group owner")
-	ErrNotGroupParticipant     = errors.New("user is not a group participant")
-
+	ErrNotGroupAdmin            = errors.New("user is not a group admin")
+	ErrNotGroupOwner            = errors.New("user is not the group owner")
+	ErrNotGroupParticipant      = errors.New("user is not a group participant")
 
 	ErrCannotRemoveOwner       = errors.New("cannot remove group owner")
 	ErrCannotLeaveAsOwner      = errors.New("group owner cannot leave")
 	ErrCannotDemoteOwner       = errors.New("cannot demote group owner")
 	ErrInsufficientPermissions = errors.New("insufficient permissions")
-
 
 	ErrNoParticipants          = errors.New("no participants provided")
 	ErrTooManyParticipants     = errors.New("too many participants")
@@ -34,22 +29,18 @@ var (
 	ErrParticipantAlreadyAdmin = errors.New("participant is already an admin")
 	ErrParticipantNotAdmin     = errors.New("participant is not an admin")
 
+	ErrInviteLinkNotFound = errors.New("invite link not found")
+	ErrInviteLinkExpired  = errors.New("invite link expired")
+	ErrInviteLinkInactive = errors.New("invite link is inactive")
 
-	ErrInviteLinkNotFound      = errors.New("invite link not found")
-	ErrInviteLinkExpired       = errors.New("invite link expired")
-	ErrInviteLinkInactive      = errors.New("invite link is inactive")
-
-
-	ErrGroupRequestNotFound    = errors.New("group request not found")
-	ErrGroupRequestAlreadyExists = errors.New("group request already exists")
+	ErrGroupRequestNotFound         = errors.New("group request not found")
+	ErrGroupRequestAlreadyExists    = errors.New("group request already exists")
 	ErrGroupRequestAlreadyProcessed = errors.New("group request already processed")
 
-
-	ErrGroupLocked             = errors.New("group is locked")
-	ErrOperationNotAllowed     = errors.New("operation not allowed")
-	ErrInvalidAction           = errors.New("invalid action")
+	ErrGroupLocked         = errors.New("group is locked")
+	ErrOperationNotAllowed = errors.New("operation not allowed")
+	ErrInvalidAction       = errors.New("invalid action")
 )
-
 
 type GroupError struct {
 	Code    string
@@ -69,7 +60,6 @@ func (e *GroupError) Unwrap() error {
 	return e.Cause
 }
 
-
 func NewGroupError(code, message string, cause error) *GroupError {
 	return &GroupError{
 		Code:    code,
@@ -79,24 +69,21 @@ func NewGroupError(code, message string, cause error) *GroupError {
 	}
 }
 
-
 func (e *GroupError) WithContext(key string, value interface{}) *GroupError {
 	e.Context[key] = value
 	return e
 }
 
-
 const (
-	ErrCodeValidation     = "VALIDATION_ERROR"
-	ErrCodeNotFound       = "NOT_FOUND"
-	ErrCodeAlreadyExists  = "ALREADY_EXISTS"
-	ErrCodePermission     = "PERMISSION_DENIED"
-	ErrCodeOperation      = "OPERATION_FAILED"
-	ErrCodeInviteLink     = "INVITE_LINK_ERROR"
-	ErrCodeParticipant    = "PARTICIPANT_ERROR"
-	ErrCodeSettings       = "SETTINGS_ERROR"
+	ErrCodeValidation    = "VALIDATION_ERROR"
+	ErrCodeNotFound      = "NOT_FOUND"
+	ErrCodeAlreadyExists = "ALREADY_EXISTS"
+	ErrCodePermission    = "PERMISSION_DENIED"
+	ErrCodeOperation     = "OPERATION_FAILED"
+	ErrCodeInviteLink    = "INVITE_LINK_ERROR"
+	ErrCodeParticipant   = "PARTICIPANT_ERROR"
+	ErrCodeSettings      = "SETTINGS_ERROR"
 )
-
 
 func NewValidationError(message string, cause error) *GroupError {
 	return NewGroupError(ErrCodeValidation, message, cause)

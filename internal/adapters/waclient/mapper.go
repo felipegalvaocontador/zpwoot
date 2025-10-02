@@ -11,20 +11,16 @@ import (
 	"zpwoot/internal/core/session"
 )
 
-
 type MessageMapper struct{}
-
 
 func NewMessageMapper() *MessageMapper {
 	return &MessageMapper{}
 }
 
-
 func (m *MessageMapper) EventToWhatsAppMessage(evt *events.Message) *session.WhatsAppMessage {
 	if evt == nil {
 		return nil
 	}
-
 
 	content, messageType := m.extractMessageContent(evt.Message)
 
@@ -38,29 +34,25 @@ func (m *MessageMapper) EventToWhatsAppMessage(evt *events.Message) *session.Wha
 		Timestamp: evt.Info.Timestamp,
 		FromMe:    evt.Info.IsFromMe,
 		Metadata: map[string]interface{}{
-			"push_name":      evt.Info.PushName,
-			"message_type":   evt.Info.Type,
-			"category":       evt.Info.Category,
+			"push_name":    evt.Info.PushName,
+			"message_type": evt.Info.Type,
+			"category":     evt.Info.Category,
 		},
 	}
 }
-
 
 func (m *MessageMapper) extractMessageContent(message *waE2E.Message) (string, string) {
 	if message == nil {
 		return "", "unknown"
 	}
 
-
 	if message.Conversation != nil {
 		return *message.Conversation, "text"
 	}
 
-
 	if message.ExtendedTextMessage != nil && message.ExtendedTextMessage.Text != nil {
 		return *message.ExtendedTextMessage.Text, "text"
 	}
-
 
 	if message.ImageMessage != nil {
 		caption := ""
@@ -70,11 +62,9 @@ func (m *MessageMapper) extractMessageContent(message *waE2E.Message) (string, s
 		return caption, "image"
 	}
 
-
 	if message.AudioMessage != nil {
 		return "[Audio]", "audio"
 	}
-
 
 	if message.VideoMessage != nil {
 		caption := ""
@@ -84,7 +74,6 @@ func (m *MessageMapper) extractMessageContent(message *waE2E.Message) (string, s
 		return caption, "video"
 	}
 
-
 	if message.DocumentMessage != nil {
 		filename := ""
 		if message.DocumentMessage.FileName != nil {
@@ -93,16 +82,13 @@ func (m *MessageMapper) extractMessageContent(message *waE2E.Message) (string, s
 		return fmt.Sprintf("[Document: %s]", filename), "document"
 	}
 
-
 	if message.StickerMessage != nil {
 		return "[Sticker]", "sticker"
 	}
 
-
 	if message.LocationMessage != nil {
 		return "[Location]", "location"
 	}
-
 
 	if message.ContactMessage != nil {
 		name := ""
@@ -115,7 +101,6 @@ func (m *MessageMapper) extractMessageContent(message *waE2E.Message) (string, s
 	return "[Unknown message type]", "unknown"
 }
 
-
 func (m *MessageMapper) JIDToPhoneNumber(jid string) string {
 
 	parts := strings.Split(jid, "@")
@@ -124,7 +109,6 @@ func (m *MessageMapper) JIDToPhoneNumber(jid string) string {
 	}
 	return jid
 }
-
 
 func (m *MessageMapper) PhoneNumberToJID(phoneNumber string) types.JID {
 
@@ -140,7 +124,6 @@ func (m *MessageMapper) PhoneNumberToJID(phoneNumber string) types.JID {
 	}
 }
 
-
 func (m *MessageMapper) FormatJID(jid types.JID) string {
 	if jid.IsEmpty() {
 		return ""
@@ -148,16 +131,13 @@ func (m *MessageMapper) FormatJID(jid types.JID) string {
 	return jid.String()
 }
 
-
 func (m *MessageMapper) IsGroupJID(jid string) bool {
 	return strings.Contains(jid, "@g.us")
 }
 
-
 func (m *MessageMapper) IsBroadcastJID(jid string) bool {
 	return strings.Contains(jid, "@broadcast")
 }
-
 
 func (m *MessageMapper) ExtractGroupID(jid string) string {
 	if !m.IsGroupJID(jid) {
@@ -169,7 +149,6 @@ func (m *MessageMapper) ExtractGroupID(jid string) string {
 	}
 	return ""
 }
-
 
 func (m *MessageMapper) MessageTypeToString(msgType string) string {
 	switch msgType {

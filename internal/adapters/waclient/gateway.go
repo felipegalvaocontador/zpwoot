@@ -24,6 +24,10 @@ type Gateway struct {
 	clients       map[string]*Client
 	eventHandlers map[string][]session.EventHandler
 	mu            sync.RWMutex
+
+	// External integrations (baseado no legacy)
+	webhookHandler  WebhookEventHandler
+	chatwootManager ChatwootManager
 }
 
 // NewGateway cria nova instância do gateway WhatsApp
@@ -320,12 +324,49 @@ func (g *Gateway) getClient(sessionName string) *Client {
 	return g.clients[sessionName]
 }
 
-// setupEventHandlers configura handlers de eventos para um cliente
+// setupEventHandlers configura handlers de eventos para um cliente baseado no legacy
 func (g *Gateway) setupEventHandlers(client *Client, sessionName string) {
-	// Configurar handler interno para eventos do whatsmeow
-	client.SetEventHandler(func(evt interface{}) {
-		g.handleWhatsmeowEvent(evt, sessionName)
+	// Criar event handler baseado no legacy
+	eventHandler := NewEventHandler(g, sessionName, g.logger)
+
+	// Configurar webhook handler se disponível
+	if g.webhookHandler != nil {
+		eventHandler.SetWebhookHandler(g.webhookHandler)
+	}
+
+	// Configurar chatwoot manager se disponível
+	if g.chatwootManager != nil {
+		eventHandler.SetChatwootManager(g.chatwootManager)
+	}
+
+	// Configurar handler no cliente whatsmeow
+	client.GetClient().AddEventHandler(func(evt interface{}) {
+		eventHandler.HandleEvent(evt, sessionName)
 	})
+
+	g.logger.DebugWithFields("Event handlers configured", map[string]interface{}{
+		"session_name":     sessionName,
+		"webhook_enabled":  g.webhookHandler != nil,
+		"chatwoot_enabled": g.chatwootManager != nil,
+	})
+}
+
+// SetWebhookHandler configura webhook handler baseado no legacy
+func (g *Gateway) SetWebhookHandler(handler WebhookEventHandler) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.webhookHandler = handler
+	g.logger.Info("Webhook handler configured for WhatsApp gateway")
+}
+
+// SetChatwootManager configura Chatwoot manager baseado no legacy
+func (g *Gateway) SetChatwootManager(manager ChatwootManager) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.chatwootManager = manager
+	g.logger.Info("Chatwoot manager configured for WhatsApp gateway")
 }
 
 // handleWhatsmeowEvent processa eventos do whatsmeow e repassa para handlers registrados

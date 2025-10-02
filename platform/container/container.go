@@ -74,6 +74,35 @@ func New(cfg *Config) (*Container, error) {
 	return container, nil
 }
 
+// createWhatsAppContainer cria sqlstore.Container para WhatsApp baseado no legacy
+func (c *Container) createWhatsAppContainer() (*sqlstore.Container, error) {
+	c.logger.Debug("Creating WhatsApp sqlstore container...")
+
+	// Criar contexto para operações
+	ctx := context.Background()
+
+	// Criar logger compatível com sqlstore
+	waLogger := waclient.NewWhatsmeowLogger(c.logger)
+
+	// Criar container sqlstore para whatsmeow
+	container, err := sqlstore.New(ctx, "postgres", c.config.Database.URL, waLogger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create sqlstore container: %w", err)
+	}
+
+	// Executar migrações do sqlstore se necessário
+	err = container.Upgrade(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upgrade sqlstore: %w", err)
+	}
+
+	c.logger.InfoWithFields("WhatsApp sqlstore container created successfully", map[string]interface{}{
+		"database_url": c.config.Database.URL,
+	})
+
+	return container, nil
+}
+
 // initialize inicializa todos os componentes
 func (c *Container) initialize() error {
 	c.logger.Debug("Initializing container...")

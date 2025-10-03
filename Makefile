@@ -100,7 +100,7 @@ test-coverage: ## Run tests with coverage
 
 swagger: install-swag ## Generate Swagger documentation
 	@echo "Generating Swagger documentation..."
-	swag init -g cmd/zpwoot/main.go -o docs/swagger --parseDependency --parseInternal
+	@swag init -g cmd/zpwoot/main.go -o docs/swagger --parseDependency --parseInternal > /dev/null 2>&1
 	@echo "✅ Swagger docs generated at docs/swagger/"
 
 swagger-serve: swagger ## Generate docs and serve Swagger documentation locally

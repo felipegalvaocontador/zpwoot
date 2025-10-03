@@ -1789,3 +1789,16 @@ func (g *Gateway) SetEventHandler(handler session.EventHandler) {
 
 	g.logger.Debug("Global event handler registered")
 }
+
+func (g *Gateway) getEventHandlers(key string) []session.EventHandler {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	if handlers, exists := g.eventHandlers[key]; exists {
+		// Return a copy to avoid race conditions
+		result := make([]session.EventHandler, len(handlers))
+		copy(result, handlers)
+		return result
+	}
+	return nil
+}

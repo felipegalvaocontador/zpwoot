@@ -11,6 +11,7 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 
 	"zpwoot/internal/core/messaging"
+	"zpwoot/internal/core/session"
 	"zpwoot/platform/logger"
 )
 
@@ -114,6 +115,9 @@ func (h *EventHandler) handleConnected(_ *events.Connected, sessionID string) {
 		"session_id": sessionID,
 	})
 
+	// Call registered session event handlers
+	h.notifySessionConnected(sessionID)
+
 	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
 			"session_id": sessionID,
@@ -127,6 +131,9 @@ func (h *EventHandler) handleDisconnected(_ *events.Disconnected, sessionID stri
 	h.logger.WarnWithFields("WhatsApp disconnected", map[string]interface{}{
 		"session_id": sessionID,
 	})
+
+	// Call registered session event handlers
+	h.notifySessionDisconnected(sessionID, "disconnected")
 
 	if err := h.gateway.UpdateSessionStatus(sessionID, "disconnected"); err != nil {
 		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
@@ -556,4 +563,41 @@ func (h *EventHandler) extractMessageContent(message *waE2E.Message) map[string]
 	}
 
 	return content
+}
+
+// Helper methods to notify registered session event handlers
+func (h *EventHandler) notifySessionConnected(sessionID string) {
+	handlers := h.gateway.getEventHandlers("global")
+	for _, handler := range handlers {
+		go func(sessionHandler session.EventHandler) {
+			defer func() {
+				if r := recover(); r != nil {
+					h.logger.ErrorWithFields("Session event handler panic", map[string]interface{}{
+						"session_id": sessionID,
+						"event":      "connected",
+						"error":      r,
+					})
+				}
+			}()
+			sessionHandler.OnSessionConnected(h.sessionName, nil)
+		}(handler)
+	}
+}
+
+func (h *EventHandler) notifySessionDisconnected(sessionID, reason string) {
+	handlers := h.gateway.getEventHandlers("global")
+	for _, handler := range handlers {
+		go func(sessionHandler session.EventHandler) {
+			defer func() {
+				if r := recover(); r != nil {
+					h.logger.ErrorWithFields("Session event handler panic", map[string]interface{}{
+						"session_id": sessionID,
+						"event":      "disconnected",
+						"error":      r,
+					})
+				}
+			}()
+			sessionHandler.OnSessionDisconnected(h.sessionName, reason)
+		}(handler)
+	}
 }

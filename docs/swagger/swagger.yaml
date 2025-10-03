@@ -66,6 +66,17 @@ definitions:
         example: true
         type: boolean
     type: object
+  ContextInfo:
+    properties:
+      participant:
+        example: 5511999999999@s.whatsapp.net
+        type: string
+      stanzaId:
+        example: ABCD1234abcd
+        type: string
+    required:
+    - stanzaId
+    type: object
   CreateSessionRequest:
     properties:
       name:
@@ -728,30 +739,17 @@ definitions:
     type: object
   SendTextMessageRequest:
     properties:
-      content:
+      body:
         example: Hello, World!
         type: string
-      link_preview:
-        example: true
-        type: boolean
-      mentioned_jid:
-        example:
-        - '["5511888888888@s.whatsapp.net"]'
-        items:
-          type: string
-        type: array
-      reply_to:
-        example: 3EB0C767D71D
-        type: string
-      text:
-        example: Hello, World!
-        type: string
-      to:
+      contextInfo:
+        $ref: '#/definitions/ContextInfo'
+      remoteJid:
         example: 5511999999999@s.whatsapp.net
         type: string
     required:
-    - text
-    - to
+    - body
+    - remoteJid
     type: object
   SendVideoMessageRequest:
     properties:

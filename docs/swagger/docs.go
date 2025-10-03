@@ -3996,6 +3996,22 @@ const docTemplate = `{
                 }
             }
         },
+        "ContextInfo": {
+            "type": "object",
+            "required": [
+                "stanzaId"
+            ],
+            "properties": {
+                "participant": {
+                    "type": "string",
+                    "example": "5511999999999@s.whatsapp.net"
+                },
+                "stanzaId": {
+                    "type": "string",
+                    "example": "ABCD1234abcd"
+                }
+            }
+        },
         "CreateSessionRequest": {
             "type": "object",
             "required": [
@@ -4911,36 +4927,18 @@ const docTemplate = `{
         "SendTextMessageRequest": {
             "type": "object",
             "required": [
-                "text",
-                "to"
+                "body",
+                "remoteJid"
             ],
             "properties": {
-                "content": {
+                "body": {
                     "type": "string",
                     "example": "Hello, World!"
                 },
-                "link_preview": {
-                    "type": "boolean",
-                    "example": true
+                "contextInfo": {
+                    "$ref": "#/definitions/ContextInfo"
                 },
-                "mentioned_jid": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "[\"5511888888888@s.whatsapp.net\"]"
-                    ]
-                },
-                "reply_to": {
-                    "type": "string",
-                    "example": "3EB0C767D71D"
-                },
-                "text": {
-                    "type": "string",
-                    "example": "Hello, World!"
-                },
-                "to": {
+                "remoteJid": {
                     "type": "string",
                     "example": "5511999999999@s.whatsapp.net"
                 }

@@ -697,7 +697,7 @@ func (h *MessageHandler) SendButton(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	session, err := h.sessionService.GetSessionByNameOrID(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
@@ -815,7 +815,7 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	session, err := h.sessionService.GetSessionByNameOrID(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
@@ -874,7 +874,7 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	session, err := h.sessionService.GetSessionByNameOrID(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
@@ -1263,7 +1263,7 @@ func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	_, err := h.sessionService.GetSessionByNameOrID(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return

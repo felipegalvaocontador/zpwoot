@@ -24,6 +24,9 @@ type MessageService struct {
 
 	logger    *logger.Logger
 	validator *validation.Validator
+
+	// Add session service for ID resolution
+	sessionService *SessionService
 }
 
 func NewMessageService(
@@ -34,16 +37,37 @@ func NewMessageService(
 	whatsappGW session.WhatsAppGateway,
 	logger *logger.Logger,
 	validator *validation.Validator,
+	sessionService *SessionService,
 ) *MessageService {
 	return &MessageService{
-		messagingCore: messagingCore,
-		sessionCore:   sessionCore,
-		messageRepo:   messageRepo,
-		sessionRepo:   sessionRepo,
-		whatsappGW:    whatsappGW,
-		logger:        logger,
-		validator:     validator,
+		messagingCore:  messagingCore,
+		sessionCore:    sessionCore,
+		messageRepo:    messageRepo,
+		sessionRepo:    sessionRepo,
+		whatsappGW:     whatsappGW,
+		logger:         logger,
+		validator:      validator,
+		sessionService: sessionService,
 	}
+}
+
+// Helper method to resolve session ID from name or UUID
+func (s *MessageService) resolveSessionID(ctx context.Context, sessionIdentifier string) (uuid.UUID, *session.Session, error) {
+	sessionUUID, err := s.sessionService.ResolveSessionID(ctx, sessionIdentifier)
+	if err != nil {
+		return uuid.Nil, nil, fmt.Errorf("session not found: %w", err)
+	}
+
+	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
+	if err != nil {
+		return uuid.Nil, nil, fmt.Errorf("failed to get session info: %w", err)
+	}
+
+	if !sessionInfo.IsConnected {
+		return uuid.Nil, nil, fmt.Errorf("session %s is not connected", sessionIdentifier)
+	}
+
+	return sessionUUID, sessionInfo, nil
 }
 
 type CreateMessageRequest struct {
@@ -256,18 +280,9 @@ func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, con
 		return nil, fmt.Errorf("sessionID, to, and content are required")
 	}
 
-	sessionUUID, err := uuid.Parse(sessionID)
+	sessionUUID, sessionInfo, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid session ID: %w", err)
-	}
-
-	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
-	if err != nil {
-		return nil, fmt.Errorf("session not found: %w", err)
-	}
-
-	if !sessionInfo.IsConnected {
-		return nil, fmt.Errorf("session %s is not connected", sessionID)
+		return nil, err
 	}
 
 	s.logger.InfoWithFields("Sending text message via WhatsApp", map[string]interface{}{
@@ -303,18 +318,9 @@ func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, me
 		return nil, fmt.Errorf("sessionID, to, and mediaURL are required")
 	}
 
-	sessionUUID, err := uuid.Parse(sessionID)
+	sessionUUID, sessionInfo, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid session ID: %w", err)
-	}
-
-	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
-	if err != nil {
-		return nil, fmt.Errorf("session not found: %w", err)
-	}
-
-	if !sessionInfo.IsConnected {
-		return nil, fmt.Errorf("session %s is not connected", sessionID)
+		return nil, err
 	}
 
 	s.logger.InfoWithFields("Sending media message via WhatsApp", map[string]interface{}{
@@ -373,18 +379,9 @@ func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to 
 		return nil, fmt.Errorf("sessionID and to are required")
 	}
 
-	sessionUUID, err := uuid.Parse(sessionID)
+	sessionUUID, sessionInfo, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid session ID: %w", err)
-	}
-
-	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
-	if err != nil {
-		return nil, fmt.Errorf("session not found: %w", err)
-	}
-
-	if !sessionInfo.IsConnected {
-		return nil, fmt.Errorf("session %s is not connected", sessionID)
+		return nil, err
 	}
 
 	s.logger.InfoWithFields("Sending location message via WhatsApp", map[string]interface{}{
@@ -422,18 +419,9 @@ func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, 
 		return nil, fmt.Errorf("sessionID, to, contactName, and contactPhone are required")
 	}
 
-	sessionUUID, err := uuid.Parse(sessionID)
+	sessionUUID, sessionInfo, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid session ID: %w", err)
-	}
-
-	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
-	if err != nil {
-		return nil, fmt.Errorf("session not found: %w", err)
-	}
-
-	if !sessionInfo.IsConnected {
-		return nil, fmt.Errorf("session %s is not connected", sessionID)
+		return nil, err
 	}
 
 	s.logger.InfoWithFields("Sending contact message via WhatsApp", map[string]interface{}{

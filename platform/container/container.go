@@ -132,6 +132,7 @@ func (c *Container) initialize() error {
 		c.whatsappGateway,
 		c.logger,
 		validator,
+		c.sessionService,
 	)
 
 	c.groupService = services.NewGroupService(
@@ -145,6 +146,10 @@ func (c *Container) initialize() error {
 	sessionServiceAdapter := &sessionServiceAdapter{service: c.sessionService}
 	if gateway, ok := c.whatsappGateway.(*waclient.Gateway); ok {
 		gateway.SetSessionService(sessionServiceAdapter)
+
+		// Register the session event handler to properly update database
+		sessionEventHandler := session.NewSessionEventHandler(c.sessionCore)
+		gateway.SetEventHandler(sessionEventHandler)
 	}
 
 	c.logger.Debug("Container initialized successfully")

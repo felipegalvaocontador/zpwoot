@@ -164,6 +164,15 @@ func connectOnStartup(container *container.Container, logger *logger.Logger) {
 	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
+	// First, restore all sessions to register UUIDs
+	logger.Info("Restoring sessions and registering UUIDs...")
+	if err := sessionService.RestoreAllSessions(ctx); err != nil {
+		logger.ErrorWithFields("Failed to restore sessions", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	sessions := getExistingSessions(ctx, sessionService, sessionLimit, logger)
 	if len(sessions) == 0 {
 		return

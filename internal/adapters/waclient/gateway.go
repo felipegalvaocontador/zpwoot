@@ -151,6 +151,8 @@ func (g *Gateway) GetSessionUUID(sessionName string) string {
 	return g.sessionUUIDs[sessionName]
 }
 
+
+
 func (g *Gateway) CreateSession(ctx context.Context, sessionName string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -449,6 +451,23 @@ func (g *Gateway) RestoreAllSessions(ctx context.Context, sessionNames []string)
 			continue
 		}
 		successCount++
+
+		// Auto-connect restored sessions that have device JID
+		if deviceJID != "" {
+			go func(sName string) {
+				time.Sleep(2 * time.Second) // Give time for client to initialize
+				if err := g.ConnectSession(ctx, sName); err != nil {
+					g.logger.WarnWithFields("Failed to auto-connect restored session", map[string]interface{}{
+						"session_name": sName,
+						"error":        err.Error(),
+					})
+				} else {
+					g.logger.InfoWithFields("Auto-connected restored session", map[string]interface{}{
+						"session_name": sName,
+					})
+				}
+			}(sessionName)
+		}
 	}
 
 	g.logger.InfoWithFields("Session restoration completed", map[string]interface{}{
@@ -1776,7 +1795,12 @@ func (g *Gateway) SendTextMessage(ctx context.Context, sessionName, to, content 
 	return result, nil
 }
 
-func (g *Gateway) SendMediaMessage(ctx context.Context, sessionName, to, mediaURL, caption, mediaType string) (*session.MessageSendResult, error) {
+func (g *Gateway) SendMediaMessage(ctx context.Context, idOrName, to, mediaURL, caption, mediaType string) (*session.MessageSendResult, error) {
+	sessionName, err := g.resolveSessionName(idOrName)
+	if err != nil {
+		return nil, err
+	}
+
 	client := g.getClient(sessionName)
 	if client == nil {
 		return nil, fmt.Errorf("session %s not found", sessionName)
@@ -1837,7 +1861,12 @@ func (g *Gateway) SendMediaMessage(ctx context.Context, sessionName, to, mediaUR
 	return result, nil
 }
 
-func (g *Gateway) SendLocationMessage(ctx context.Context, sessionName, to string, latitude, longitude float64, address string) (*session.MessageSendResult, error) {
+func (g *Gateway) SendLocationMessage(ctx context.Context, idOrName, to string, latitude, longitude float64, address string) (*session.MessageSendResult, error) {
+	sessionName, err := g.resolveSessionName(idOrName)
+	if err != nil {
+		return nil, err
+	}
+
 	client := g.getClient(sessionName)
 	if client == nil {
 		return nil, fmt.Errorf("session %s not found", sessionName)
@@ -1899,7 +1928,12 @@ func (g *Gateway) SendLocationMessage(ctx context.Context, sessionName, to strin
 	return result, nil
 }
 
-func (g *Gateway) SendContactMessage(ctx context.Context, sessionName, to, contactName, contactPhone string) (*session.MessageSendResult, error) {
+func (g *Gateway) SendContactMessage(ctx context.Context, idOrName, to, contactName, contactPhone string) (*session.MessageSendResult, error) {
+	sessionName, err := g.resolveSessionName(idOrName)
+	if err != nil {
+		return nil, err
+	}
+
 	client := g.getClient(sessionName)
 	if client == nil {
 		return nil, fmt.Errorf("session %s not found", sessionName)

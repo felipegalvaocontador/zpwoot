@@ -166,7 +166,6 @@ func connectOnStartup(container *container.Container, logger *logger.Logger) {
 	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
-	startTime := time.Now()
 	logger.Info("Starting session restoration and auto-reconnect process...")
 
 	if err := sessionService.RestoreAllSessions(ctx); err != nil {
@@ -176,23 +175,8 @@ func connectOnStartup(container *container.Container, logger *logger.Logger) {
 		return
 	}
 
-	sessions := getExistingSessions(ctx, sessionService, sessionLimit, logger)
-	if len(sessions) == 0 {
-		logger.Info("No sessions available for auto-reconnect")
-		return
-	}
-
-	stats := reconnectSessions(ctx, sessions, sessionService, logger, reconnectDelay)
-
-	duration := time.Since(startTime)
-	logger.InfoWithFields("Auto-reconnect process completed", map[string]interface{}{
-		"duration":     duration.String(),
-		"total":        len(sessions),
-		"connected":    stats.connected,
-		"skipped":      stats.skipped,
-		"failed":       stats.failed,
-		"success_rate": fmt.Sprintf("%.1f%%", float64(stats.connected)/float64(len(sessions))*100),
-	})
+	// Auto-reconnection is now handled by the gateway during restoration
+	logger.Info("Auto-reconnection is handled automatically during session restoration")
 }
 
 func getExistingSessions(ctx context.Context, sessionService *services.SessionService, limit int, logger *logger.Logger) []sessionInfo {
@@ -255,7 +239,10 @@ func reconnectSessionsSequential(ctx context.Context, sessions []sessionInfo, se
 		default:
 		}
 
-		result, err := sessionService.ConnectSession(ctx, session.ID)
+		// Create timeout context for individual session connection
+		sessionCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		result, err := sessionService.ConnectSession(sessionCtx, session.ID)
+		cancel()
 		if err != nil {
 			stats.failed++
 		} else if result.Success {

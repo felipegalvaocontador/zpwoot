@@ -50,22 +50,17 @@ func NewMessageService(
 	}
 }
 
-func (s *MessageService) resolveSessionID(ctx context.Context, sessionIdentifier string) (uuid.UUID, *session.Session, error) {
-	sessionUUID, err := s.sessionService.ResolveSessionID(ctx, sessionIdentifier)
+func (s *MessageService) validateSession(ctx context.Context, sessionName string) (*session.Session, error) {
+	sessionInfo, err := s.sessionCore.GetSessionByName(ctx, sessionName)
 	if err != nil {
-		return uuid.Nil, nil, fmt.Errorf("session not found: %w", err)
-	}
-
-	sessionInfo, err := s.sessionCore.GetSession(ctx, sessionUUID)
-	if err != nil {
-		return uuid.Nil, nil, fmt.Errorf("failed to get session info: %w", err)
+		return nil, fmt.Errorf("session %s not found: %w", sessionName, err)
 	}
 
 	if !sessionInfo.IsConnected {
-		return uuid.Nil, nil, fmt.Errorf("session %s is not connected", sessionIdentifier)
+		return nil, fmt.Errorf("session %s is not connected", sessionName)
 	}
 
-	return sessionUUID, sessionInfo, nil
+	return sessionInfo, nil
 }
 
 type CreateMessageRequest struct {
@@ -272,24 +267,24 @@ func (s *MessageService) GetMessageStats(ctx context.Context, sessionID *string)
 	return s.messagingCore.GetStats(ctx)
 }
 
-func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, content string) (*contracts.SendMessageResponse, error) {
+func (s *MessageService) SendTextMessage(ctx context.Context, sessionName, to, content string) (*contracts.SendMessageResponse, error) {
 
-	if sessionID == "" || to == "" || content == "" {
-		return nil, fmt.Errorf("sessionID, to, and content are required")
+	if sessionName == "" || to == "" || content == "" {
+		return nil, fmt.Errorf("sessionName, to, and content are required")
 	}
 
-	_, _, err := s.resolveSessionID(ctx, sessionID)
+	_, err := s.validateSession(ctx, sessionName)
 	if err != nil {
 		return nil, err
 	}
 
 	s.logger.InfoWithFields("Sending text message via WhatsApp", map[string]interface{}{
-		"session_id":  sessionID,
-		"to":          to,
-		"content_len": len(content),
+		"session_name": sessionName,
+		"to":           to,
+		"content_len":  len(content),
 	})
 
-	result, err := s.whatsappGW.SendTextMessage(ctx, sessionID, to, content)
+	result, err := s.whatsappGW.SendTextMessage(ctx, sessionName, to, content)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send text message via WhatsApp Gateway: %w", err)
 	}
@@ -310,26 +305,26 @@ func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, con
 	return response, nil
 }
 
-func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, mediaURL, caption, mediaType string) (*contracts.SendMessageResponse, error) {
+func (s *MessageService) SendMediaMessage(ctx context.Context, sessionName, to, mediaURL, caption, mediaType string) (*contracts.SendMessageResponse, error) {
 
-	if sessionID == "" || to == "" || mediaURL == "" {
-		return nil, fmt.Errorf("sessionID, to, and mediaURL are required")
+	if sessionName == "" || to == "" || mediaURL == "" {
+		return nil, fmt.Errorf("sessionName, to, and mediaURL are required")
 	}
 
-	_, _, err := s.resolveSessionID(ctx, sessionID)
+	_, err := s.validateSession(ctx, sessionName)
 	if err != nil {
 		return nil, err
 	}
 
 	s.logger.InfoWithFields("Sending media message via WhatsApp", map[string]interface{}{
-		"session_id":  sessionID,
-		"to":          to,
-		"media_url":   mediaURL,
-		"media_type":  mediaType,
-		"has_caption": caption != "",
+		"session_name": sessionName,
+		"to":           to,
+		"media_url":    mediaURL,
+		"media_type":   mediaType,
+		"has_caption":  caption != "",
 	})
 
-	result, err := s.whatsappGW.SendMediaMessage(ctx, sessionID, to, mediaURL, caption, mediaType)
+	result, err := s.whatsappGW.SendMediaMessage(ctx, sessionName, to, mediaURL, caption, mediaType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send media message via WhatsApp Gateway: %w", err)
 	}
@@ -377,7 +372,7 @@ func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to 
 		return nil, fmt.Errorf("sessionID and to are required")
 	}
 
-	_, _, err := s.resolveSessionID(ctx, sessionID)
+	_, _, sessionName, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +385,7 @@ func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to 
 		"address":    address,
 	})
 
-	result, err := s.whatsappGW.SendLocationMessage(ctx, sessionID, to, latitude, longitude, address)
+	result, err := s.whatsappGW.SendLocationMessage(ctx, sessionName, to, latitude, longitude, address)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send location message via WhatsApp Gateway: %w", err)
 	}

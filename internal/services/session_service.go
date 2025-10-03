@@ -15,6 +15,7 @@ import (
 
 type SessionService struct {
 	coreService *session.Service
+	resolver    session.SessionResolver
 
 	repository session.Repository
 	gateway    session.WhatsAppGateway
@@ -26,6 +27,7 @@ type SessionService struct {
 
 func NewSessionService(
 	coreService *session.Service,
+	resolver session.SessionResolver,
 	repository session.Repository,
 	gateway session.WhatsAppGateway,
 	qrGen session.QRCodeGenerator,
@@ -34,6 +36,7 @@ func NewSessionService(
 ) *SessionService {
 	return &SessionService{
 		coreService: coreService,
+		resolver:    resolver,
 		repository:  repository,
 		gateway:     gateway,
 		qrGen:       qrGen,
@@ -148,22 +151,7 @@ func (s *SessionService) GetSession(ctx context.Context, sessionID string) (*con
 }
 
 func (s *SessionService) ResolveSessionID(ctx context.Context, idOrName string) (uuid.UUID, error) {
-
-	if id, err := uuid.Parse(idOrName); err == nil {
-
-		_, err := s.coreService.GetSession(ctx, id)
-		if err != nil {
-			return uuid.Nil, fmt.Errorf("session with ID %s not found: %w", idOrName, err)
-		}
-		return id, nil
-	}
-
-	sess, err := s.coreService.GetSessionByName(ctx, idOrName)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("session with name '%s' not found: %w", idOrName, err)
-	}
-
-	return sess.ID, nil
+	return s.resolver.ResolveToID(ctx, idOrName)
 }
 
 func (s *SessionService) RestoreAllSessions(ctx context.Context) error {

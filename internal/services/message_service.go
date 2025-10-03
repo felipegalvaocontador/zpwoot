@@ -17,6 +17,7 @@ import (
 type MessageService struct {
 	messagingCore *messaging.Service
 	sessionCore   *session.Service
+	resolver      session.SessionResolver
 
 	messageRepo messaging.Repository
 	sessionRepo session.Repository
@@ -31,6 +32,7 @@ type MessageService struct {
 func NewMessageService(
 	messagingCore *messaging.Service,
 	sessionCore *session.Service,
+	resolver session.SessionResolver,
 	messageRepo messaging.Repository,
 	sessionRepo session.Repository,
 	whatsappGW session.WhatsAppGateway,
@@ -41,6 +43,7 @@ func NewMessageService(
 	return &MessageService{
 		messagingCore:  messagingCore,
 		sessionCore:    sessionCore,
+		resolver:       resolver,
 		messageRepo:    messageRepo,
 		sessionRepo:    sessionRepo,
 		whatsappGW:     whatsappGW,
@@ -61,6 +64,22 @@ func (s *MessageService) validateSession(ctx context.Context, sessionName string
 	}
 
 	return sessionInfo, nil
+}
+
+// resolveSessionID resolve idOrName e retorna ID, nome e sessão
+func (s *MessageService) resolveSessionID(ctx context.Context, idOrName string) (uuid.UUID, string, *session.Session, error) {
+	resolved, err := s.resolver.Resolve(ctx, idOrName)
+	if err != nil {
+		return uuid.Nil, "", nil, err
+	}
+
+	// Converter para *session.Session
+	sessionPtr, ok := resolved.Session.(*session.Session)
+	if !ok {
+		return uuid.Nil, "", nil, fmt.Errorf("invalid session type")
+	}
+
+	return resolved.ID, resolved.Name, sessionPtr, nil
 }
 
 type CreateMessageRequest struct {

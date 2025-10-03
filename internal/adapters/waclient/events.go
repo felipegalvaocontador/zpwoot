@@ -115,7 +115,7 @@ func (h *EventHandler) handleConnected(_ *events.Connected, sessionID string) {
 		"session_id": sessionID,
 	})
 
-	// Call registered session event handlers
+
 	h.notifySessionConnected(sessionID)
 
 	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
@@ -132,7 +132,7 @@ func (h *EventHandler) handleDisconnected(_ *events.Disconnected, sessionID stri
 		"session_id": sessionID,
 	})
 
-	// Call registered session event handlers
+
 	h.notifySessionDisconnected(sessionID, "disconnected")
 
 	if err := h.gateway.UpdateSessionStatus(sessionID, "disconnected"); err != nil {
@@ -565,7 +565,7 @@ func (h *EventHandler) extractMessageContent(message *waE2E.Message) map[string]
 	return content
 }
 
-// Helper methods to notify registered session event handlers
+
 func (h *EventHandler) notifySessionConnected(sessionID string) {
 	handlers := h.gateway.getEventHandlers("global")
 	for _, handler := range handlers {

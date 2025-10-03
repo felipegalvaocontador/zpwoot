@@ -45,7 +45,7 @@ func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	_, err := h.sessionService.GetSessionByNameOrID(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
@@ -76,7 +76,7 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	_, err := h.sessionService.GetSessionByNameOrID(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
@@ -170,7 +170,7 @@ func (h *MediaHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.sessionService.GetSession(r.Context(), sessionID)
+	_, err := h.sessionService.GetSessionByNameOrID(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return

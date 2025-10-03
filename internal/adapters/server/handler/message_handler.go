@@ -1149,20 +1149,20 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse request body
+
 	var req contracts.MarkAsReadRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
 	}
 
-	// Validar request
+
 	if err := h.GetValidator().ValidateStruct(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
 		return
 	}
 
-	// Verificar se sessão existe
+
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
@@ -1277,7 +1277,7 @@ func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	h.GetWriter().WriteSuccess(w, nil, "Message deleted successfully")
 }
 
-// Duplicate MarkAsRead method removed
+
 
 func parseIntQuery(r *http.Request, key string, defaultValue int) int {
 	value := r.URL.Query().Get(key)

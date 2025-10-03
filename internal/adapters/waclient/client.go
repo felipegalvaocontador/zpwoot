@@ -54,160 +54,202 @@ func (w *WhatsmeowLogger) Sub(module string) waLog.Logger {
 	return &WhatsmeowLogger{logger: w.logger}
 }
 
+
+type ConnectionState int
+
+const (
+	StateDisconnected ConnectionState = iota
+	StateConnecting
+	StateConnected
+	StateLoggedIn
+	StateError
+)
+
+func (s ConnectionState) String() string {
+	switch s {
+	case StateDisconnected:
+		return "disconnected"
+	case StateConnecting:
+		return "connecting"
+	case StateConnected:
+		return "connected"
+	case StateLoggedIn:
+		return "logged_in"
+	case StateError:
+		return "error"
+	default:
+		return "unknown"
+	}
+}
+
 type QRCodeEvent struct {
 	SessionName string
 	QRCode      string
 	ExpiresAt   time.Time
 }
 
+
+type ClientConfig struct {
+	SessionName string
+	Device      *store.Device
+	Container   *sqlstore.Container
+	Logger      *logger.Logger
+	ProxyConfig *session.ProxyConfig
+}
+
 type Client struct {
+
 	sessionName string
-
-	client *whatsmeow.Client
-	device *store.Device
-
+	client      *whatsmeow.Client
+	device      *store.Device
 	logger      *logger.Logger
-	qrGenerator *QRGenerator
+
 
 	mu           sync.RWMutex
-	isConnected  bool
-	isLoggedIn   bool
-	status       string
+	state        ConnectionState
 	lastActivity time.Time
+	errorMessage string
 
-	qrCode        string
-	qrCodeExpires time.Time
-	qrChannel     <-chan whatsmeow.QRChannelItem
-	qrContext     context.Context
-	qrCancel      context.CancelFunc
 
-	eventHandler  func(interface{})
+	qrGenerator *QRGenerator
+
+
 	eventHandlers []func(interface{})
 
-	proxyConfig *session.ProxyConfig
 
 	ctx    context.Context
 	cancel context.CancelFunc
+
+
+	proxyConfig *session.ProxyConfig
 }
 
-func NewClient(sessionName string, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
-	if sessionName == "" {
-		return nil, fmt.Errorf("session name cannot be empty")
+func validateConfig(config ClientConfig) error {
+	if config.SessionName == "" {
+		return fmt.Errorf("session name cannot be empty")
+	}
+	if config.Container == nil {
+		return fmt.Errorf("container cannot be nil")
+	}
+	if config.Logger == nil {
+		return fmt.Errorf("logger cannot be nil")
+	}
+	return nil
+}
+
+
+func NewClient(config ClientConfig) (*Client, error) {
+	if err := validateConfig(config); err != nil {
+		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	if container == nil {
-		return nil, fmt.Errorf("sqlstore container cannot be nil")
+
+	device := config.Device
+	if device == nil {
+		deviceStore := config.Container.NewDevice()
+		if deviceStore == nil {
+			return nil, fmt.Errorf("failed to create device store")
+		}
+		device = deviceStore
 	}
 
-	deviceStore := container.NewDevice()
-	if deviceStore == nil {
-		return nil, fmt.Errorf("failed to create device store")
-	}
 
-	waLogger := NewWhatsmeowLogger(logger)
+	waLogger := NewWhatsmeowLogger(config.Logger)
+	whatsmeowClient := whatsmeow.NewClient(device, waLogger)
 
-	whatsmeowClient := whatsmeow.NewClient(deviceStore, waLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	client := &Client{
-		sessionName:   sessionName,
+		sessionName:   config.SessionName,
 		client:        whatsmeowClient,
-		device:        deviceStore,
-		logger:        logger,
-		qrGenerator:   NewQRGenerator(logger),
-		status:        "disconnected",
+		device:        device,
+		logger:        config.Logger,
+		state:         StateDisconnected,
 		lastActivity:  time.Now(),
+		qrGenerator:   NewQRGenerator(config.Logger),
 		eventHandlers: make([]func(interface{}), 0),
 		ctx:           ctx,
 		cancel:        cancel,
+		proxyConfig:   config.ProxyConfig,
 	}
 
 	client.setupEventHandlers()
 
-	return client, nil
-}
-
-func NewClientWithDevice(sessionName string, deviceStore *store.Device, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
-	if sessionName == "" {
-		return nil, fmt.Errorf("session name cannot be empty")
-	}
-
-	if deviceStore == nil {
-		return nil, fmt.Errorf("device store cannot be nil")
-	}
-
-	if container == nil {
-		return nil, fmt.Errorf("sqlstore container cannot be nil")
-	}
-
-	waLogger := NewWhatsmeowLogger(logger)
-
-	whatsmeowClient := whatsmeow.NewClient(deviceStore, waLogger)
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	client := &Client{
-		sessionName:   sessionName,
-		client:        whatsmeowClient,
-		device:        deviceStore,
-		logger:        logger,
-		qrGenerator:   NewQRGenerator(logger),
-		status:        "disconnected",
-		lastActivity:  time.Now(),
-		eventHandlers: make([]func(interface{}), 0),
-		ctx:           ctx,
-		cancel:        cancel,
-	}
-
-	client.setupEventHandlers()
-
-	logger.InfoWithFields("WhatsApp client created with existing device", map[string]interface{}{
-		"module":  "client",
-		"session": sessionName,
+	config.Logger.InfoWithFields("WhatsApp client created", map[string]interface{}{
+		"session_name": config.SessionName,
+		"has_device":   device.ID != nil,
 	})
 
 	return client, nil
 }
 
-func (c *Client) Connect() error {
 
-	c.stopQRProcess()
+func NewClientLegacy(sessionName string, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
+	config := ClientConfig{
+		SessionName: sessionName,
+		Container:   container,
+		Logger:      logger,
+	}
+	return NewClient(config)
+}
+
+
+func NewClientWithDevice(sessionName string, deviceStore *store.Device, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
+	config := ClientConfig{
+		SessionName: sessionName,
+		Device:      deviceStore,
+		Container:   container,
+		Logger:      logger,
+	}
+	return NewClient(config)
+}
+
+
+func (c *Client) Connect() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.state == StateConnecting || c.state == StateLoggedIn {
+		return nil
+	}
+
+	c.setState(StateConnecting)
+	c.clearError()
+
+
+	if c.cancel != nil {
+		c.cancel()
+	}
+	c.ctx, c.cancel = context.WithCancel(context.Background())
+
+
+	go c.performConnection()
+
+	return nil
+}
+
+
+func (c *Client) performConnection() {
+	defer func() {
+		if r := recover(); r != nil {
+			c.logger.ErrorWithFields("Connection panic", map[string]interface{}{
+				"session_name": c.sessionName,
+				"error":        r,
+			})
+			c.setError(fmt.Sprintf("connection panic: %v", r))
+		}
+	}()
+
 
 	if c.client.IsConnected() {
 		c.client.Disconnect()
 	}
 
-	c.mu.Lock()
-	if c.cancel != nil {
-		c.cancel()
-	}
-	c.ctx, c.cancel = context.WithCancel(context.Background())
-	c.mu.Unlock()
-
-	c.setStatus("connecting")
-
-	go c.startConnectionLoop()
-
-	return nil
-}
-
-func (c *Client) startConnectionLoop() {
-	defer func() {
-		if r := recover(); r != nil {
-			c.logger.ErrorWithFields("Connection loop panic", map[string]interface{}{
-				"session_name": c.sessionName,
-				"error":        r,
-			})
-		}
-	}()
-
-	isRegistered := c.isDeviceRegistered()
-
-	if !isRegistered {
-		c.handleNewDeviceRegistration()
+	if c.isDeviceRegistered() {
+		c.connectExistingDevice()
 	} else {
-		c.handleExistingDeviceConnection()
+		c.connectNewDevice()
 	}
 }
 
@@ -250,6 +292,20 @@ func (c *Client) handleExistingDeviceConnection() {
 		return
 	}
 
+
+	go func() {
+		time.Sleep(2 * time.Second)
+		if c.client.IsConnected() && c.client.IsLoggedIn() {
+			c.mu.Lock()
+			c.isLoggedIn = true
+			c.mu.Unlock()
+			c.setStatus("logged_in")
+
+			c.logger.InfoWithFields("Successfully authenticated", map[string]interface{}{
+				"module": "whatsmeow",
+			})
+		}
+	}()
 }
 
 func (c *Client) handleQRLoop(qrChan <-chan whatsmeow.QRChannelItem) {

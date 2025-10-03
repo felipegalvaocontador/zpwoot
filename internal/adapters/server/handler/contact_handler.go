@@ -195,7 +195,7 @@ func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	session, err := h.sessionService.GetSessionByNameOrID(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
@@ -368,7 +368,7 @@ func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	session, err := h.sessionService.GetSessionByNameOrID(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return
@@ -490,7 +490,7 @@ func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	session, err := h.sessionService.GetSession(r.Context(), sessionID)
+	session, err := h.sessionService.GetSessionByNameOrID(r.Context(), sessionID)
 	if err != nil {
 		h.GetWriter().WriteNotFound(w, "Session not found")
 		return

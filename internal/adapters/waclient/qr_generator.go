@@ -8,17 +8,29 @@ import (
 	"image/png"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mdp/qrterminal/v3"
 	"github.com/skip2/go-qrcode"
+	"go.mau.fi/whatsmeow"
 
 	"zpwoot/internal/core/session"
 	"zpwoot/platform/logger"
 )
 
+
 type QRGenerator struct {
 	logger *logger.Logger
+
+
+	mu            sync.RWMutex
+	qrCode        string
+	qrCodeExpires time.Time
+	isActive      bool
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func NewQRGenerator(logger *logger.Logger) *QRGenerator {
@@ -27,9 +39,155 @@ func NewQRGenerator(logger *logger.Logger) *QRGenerator {
 	}
 }
 
+
+func (g *QRGenerator) StartQRLoop(ctx context.Context, qrChan <-chan whatsmeow.QRChannelItem, sessionName string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+
+	g.stopInternal()
+
+
+	g.ctx, g.cancel = context.WithCancel(ctx)
+	g.isActive = true
+
+
+	go g.runQRLoop(qrChan, sessionName)
+}
+
+
+func (g *QRGenerator) Stop() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.stopInternal()
+}
+
+func (g *QRGenerator) stopInternal() {
+	if g.cancel != nil {
+		g.cancel()
+	}
+	g.isActive = false
+	g.qrCode = ""
+	g.qrCodeExpires = time.Time{}
+}
+
+func (g *QRGenerator) runQRLoop(qrChan <-chan whatsmeow.QRChannelItem, sessionName string) {
+	defer func() {
+		if r := recover(); r != nil {
+			g.logger.ErrorWithFields("QR loop panic", map[string]interface{}{
+				"session_name": sessionName,
+				"error":        r,
+			})
+		}
+		g.mu.Lock()
+		g.isActive = false
+		g.mu.Unlock()
+	}()
+
+	g.logger.InfoWithFields("QR loop started", map[string]interface{}{
+		"session_name": sessionName,
+	})
+
+	for {
+		select {
+		case <-g.ctx.Done():
+			g.logger.InfoWithFields("QR loop cancelled", map[string]interface{}{
+				"session_name": sessionName,
+			})
+			return
+
+		case evt, ok := <-qrChan:
+			if !ok {
+				g.logger.InfoWithFields("QR channel closed", map[string]interface{}{
+					"session_name": sessionName,
+				})
+				return
+			}
+
+			switch evt.Event {
+			case "code":
+				g.handleQRCode(evt.Code, sessionName)
+			case "timeout":
+				g.handleQRTimeout(sessionName)
+				return
+			case "success":
+				g.handleQRSuccess(sessionName)
+				return
+			}
+		}
+	}
+}
+
+func (g *QRGenerator) handleQRCode(code string, sessionName string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.qrCode = code
+	g.qrCodeExpires = time.Now().Add(30 * time.Second)
+
+	g.logger.InfoWithFields("QR code generated", map[string]interface{}{
+		"session_name": sessionName,
+		"expires_at":   g.qrCodeExpires,
+	})
+}
+
+func (g *QRGenerator) handleQRTimeout(sessionName string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.logger.WarnWithFields("QR code timeout", map[string]interface{}{
+		"session_name": sessionName,
+	})
+
+	g.qrCode = ""
+	g.qrCodeExpires = time.Time{}
+}
+
+func (g *QRGenerator) handleQRSuccess(sessionName string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.logger.InfoWithFields("QR code scan successful", map[string]interface{}{
+		"session_name": sessionName,
+	})
+
+	g.qrCode = ""
+	g.qrCodeExpires = time.Time{}
+}
+
 func (g *QRGenerator) Generate(ctx context.Context, sessionName string) (*session.QRCodeResponse, error) {
 
 	return nil, fmt.Errorf("QR code generation is handled by WhatsApp events")
+}
+
+
+func (g *QRGenerator) GetQRCode() (string, bool) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	if g.qrCode == "" {
+		return "", false
+	}
+
+	if time.Now().After(g.qrCodeExpires) {
+		return "", false
+	}
+
+	return g.qrCode, true
+}
+
+
+func (g *QRGenerator) IsActive() bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.isActive
+}
+
+
+func (g *QRGenerator) GetQRCodeExpiry() time.Time {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.qrCodeExpires
 }
 
 func (g *QRGenerator) GenerateQRCode(data string) (string, error) {

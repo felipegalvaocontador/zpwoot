@@ -1551,6 +1551,8 @@ func (g *Gateway) SendTextMessage(ctx context.Context, sessionName, to, content 
 		return nil, fmt.Errorf("session %s not found", sessionName)
 	}
 
+
+
 	if !client.IsLoggedIn() {
 		return nil, fmt.Errorf("session %s is not logged in", sessionName)
 	}
@@ -1795,7 +1797,7 @@ func (g *Gateway) getEventHandlers(key string) []session.EventHandler {
 	defer g.mu.RUnlock()
 
 	if handlers, exists := g.eventHandlers[key]; exists {
-		// Return a copy to avoid race conditions
+
 		result := make([]session.EventHandler, len(handlers))
 		copy(result, handlers)
 		return result

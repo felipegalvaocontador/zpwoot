@@ -25,7 +25,7 @@ type MessageService struct {
 	logger    *logger.Logger
 	validator *validation.Validator
 
-	// Add session service for ID resolution
+
 	sessionService *SessionService
 }
 
@@ -51,7 +51,7 @@ func NewMessageService(
 	}
 }
 
-// Helper method to resolve session ID from name or UUID
+
 func (s *MessageService) resolveSessionID(ctx context.Context, sessionIdentifier string) (uuid.UUID, *session.Session, error) {
 	sessionUUID, err := s.sessionService.ResolveSessionID(ctx, sessionIdentifier)
 	if err != nil {
@@ -280,7 +280,7 @@ func (s *MessageService) SendTextMessage(ctx context.Context, sessionID, to, con
 		return nil, fmt.Errorf("sessionID, to, and content are required")
 	}
 
-	sessionUUID, sessionInfo, err := s.resolveSessionID(ctx, sessionID)
+	_, _, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func (s *MessageService) SendMediaMessage(ctx context.Context, sessionID, to, me
 		return nil, fmt.Errorf("sessionID, to, and mediaURL are required")
 	}
 
-	sessionUUID, sessionInfo, err := s.resolveSessionID(ctx, sessionID)
+	_, _, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +379,7 @@ func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to 
 		return nil, fmt.Errorf("sessionID and to are required")
 	}
 
-	sessionUUID, sessionInfo, err := s.resolveSessionID(ctx, sessionID)
+	_, _, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +419,7 @@ func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, 
 		return nil, fmt.Errorf("sessionID, to, contactName, and contactPhone are required")
 	}
 
-	sessionUUID, sessionInfo, err := s.resolveSessionID(ctx, sessionID)
+	_, _, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}

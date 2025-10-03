@@ -147,7 +147,7 @@ func (c *Container) initialize() error {
 	if gateway, ok := c.whatsappGateway.(*waclient.Gateway); ok {
 		gateway.SetSessionService(sessionServiceAdapter)
 
-		// Register the session event handler to properly update database
+
 		sessionEventHandler := session.NewSessionEventHandler(c.sessionCore)
 		gateway.SetEventHandler(sessionEventHandler)
 	}

@@ -172,8 +172,6 @@ func NewClient(config ClientConfig) (*Client, error) {
 	return client, nil
 }
 
-
-
 func NewClientWithDevice(sessionName string, deviceStore *store.Device, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
 	config := ClientConfig{
 		SessionName: sessionName,
@@ -323,8 +321,6 @@ func (c *Client) setError(message string) {
 func (c *Client) clearError() {
 	c.errorMessage = ""
 }
-
-
 
 func (c *Client) setupEventHandlers() {
 	c.client.AddEventHandler(c.handleEvent)

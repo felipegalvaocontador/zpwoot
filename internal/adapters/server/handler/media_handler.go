@@ -39,7 +39,7 @@ func NewMediaHandler(
 func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "download media")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -70,7 +70,7 @@ func (h *MediaHandler) DownloadMedia(w http.ResponseWriter, r *http.Request) {
 func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get media info")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -101,7 +101,7 @@ func (h *MediaHandler) GetMediaInfo(w http.ResponseWriter, r *http.Request) {
 func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "list cached media")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -133,7 +133,7 @@ func (h *MediaHandler) ListCachedMedia(w http.ResponseWriter, r *http.Request) {
 func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "clear media cache")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -164,7 +164,7 @@ func (h *MediaHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 func (h *MediaHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get media stats")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return

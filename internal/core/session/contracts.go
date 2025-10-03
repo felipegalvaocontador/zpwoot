@@ -89,3 +89,20 @@ type QRCodeGenerator interface {
 	GenerateImage(ctx context.Context, qrCode string) ([]byte, error)
 	IsExpired(expiresAt time.Time) bool
 }
+
+// SessionResolver resolves session identifiers between public API (name) and internal logic (UUID)
+// This interface defines the contract for resolving session names to UUIDs
+type SessionResolver interface {
+	// ResolveToID resolves a session name to its UUID for internal operations
+	ResolveToID(ctx context.Context, sessionName string) (uuid.UUID, error)
+
+	// Resolve resolves a session name to complete session information
+	Resolve(ctx context.Context, sessionName string) (*ResolveResult, error)
+}
+
+// ResolveResult contains the resolved session information
+type ResolveResult struct {
+	ID      uuid.UUID
+	Name    string
+	Session *Session // Direct reference to Session entity
+}

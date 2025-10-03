@@ -115,8 +115,12 @@ func (c *Container) initialize() error {
 
 	validator := validation.New()
 
+	// Create session resolver
+	sessionResolver := services.NewSessionResolver(c.sessionRepo)
+
 	c.sessionService = services.NewSessionService(
 		c.sessionCore,
+		sessionResolver,
 		c.sessionRepo,
 		c.whatsappGateway,
 		qrGenerator,
@@ -127,6 +131,7 @@ func (c *Container) initialize() error {
 	c.messagingService = services.NewMessageService(
 		c.messagingCore,
 		c.sessionCore,
+		sessionResolver,
 		c.messageRepo,
 		c.sessionRepo,
 		c.whatsappGateway,

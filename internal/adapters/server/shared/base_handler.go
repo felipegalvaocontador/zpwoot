@@ -55,9 +55,9 @@ func (h *BaseHandler) GetSessionIDFromURL(r *http.Request) (uuid.UUID, error) {
 }
 
 func (h *BaseHandler) GetSessionNameFromURL(r *http.Request) (string, error) {
-	sessionName := chi.URLParam(r, "sessionId")
+	sessionName := chi.URLParam(r, "sessionName")
 	if sessionName == "" {
-		return "", fmt.Errorf("session identifier is required")
+		return "", fmt.Errorf("session name is required")
 	}
 	return sessionName, nil
 }

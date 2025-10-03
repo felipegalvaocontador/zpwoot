@@ -1795,12 +1795,7 @@ func (g *Gateway) SendTextMessage(ctx context.Context, sessionName, to, content 
 	return result, nil
 }
 
-func (g *Gateway) SendMediaMessage(ctx context.Context, idOrName, to, mediaURL, caption, mediaType string) (*session.MessageSendResult, error) {
-	sessionName, err := g.resolveSessionName(idOrName)
-	if err != nil {
-		return nil, err
-	}
-
+func (g *Gateway) SendMediaMessage(ctx context.Context, sessionName, to, mediaURL, caption, mediaType string) (*session.MessageSendResult, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
 		return nil, fmt.Errorf("session %s not found", sessionName)
@@ -1861,12 +1856,7 @@ func (g *Gateway) SendMediaMessage(ctx context.Context, idOrName, to, mediaURL, 
 	return result, nil
 }
 
-func (g *Gateway) SendLocationMessage(ctx context.Context, idOrName, to string, latitude, longitude float64, address string) (*session.MessageSendResult, error) {
-	sessionName, err := g.resolveSessionName(idOrName)
-	if err != nil {
-		return nil, err
-	}
-
+func (g *Gateway) SendLocationMessage(ctx context.Context, sessionName, to string, latitude, longitude float64, address string) (*session.MessageSendResult, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
 		return nil, fmt.Errorf("session %s not found", sessionName)
@@ -1928,12 +1918,7 @@ func (g *Gateway) SendLocationMessage(ctx context.Context, idOrName, to string, 
 	return result, nil
 }
 
-func (g *Gateway) SendContactMessage(ctx context.Context, idOrName, to, contactName, contactPhone string) (*session.MessageSendResult, error) {
-	sessionName, err := g.resolveSessionName(idOrName)
-	if err != nil {
-		return nil, err
-	}
-
+func (g *Gateway) SendContactMessage(ctx context.Context, sessionName, to, contactName, contactPhone string) (*session.MessageSendResult, error) {
 	client := g.getClient(sessionName)
 	if client == nil {
 		return nil, fmt.Errorf("session %s not found", sessionName)

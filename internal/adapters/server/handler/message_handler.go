@@ -63,7 +63,7 @@ func NewMessageHandler(
 func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send text message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -117,7 +117,7 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send media message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -173,7 +173,7 @@ func (h *MessageHandler) SendMediaMessage(w http.ResponseWriter, r *http.Request
 func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send image message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -228,7 +228,7 @@ func (h *MessageHandler) SendImage(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send audio message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -283,7 +283,7 @@ func (h *MessageHandler) SendAudio(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send video message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -338,7 +338,7 @@ func (h *MessageHandler) SendVideo(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send document message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -393,7 +393,7 @@ func (h *MessageHandler) SendDocument(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send sticker message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -447,7 +447,7 @@ func (h *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send location message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -503,7 +503,7 @@ func (h *MessageHandler) SendLocation(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send contact message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -558,7 +558,7 @@ func (h *MessageHandler) SendContact(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send contact list message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -624,7 +624,7 @@ func (h *MessageHandler) SendContactList(w http.ResponseWriter, r *http.Request)
 func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send business profile message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -680,7 +680,7 @@ func (h *MessageHandler) SendBusinessProfile(w http.ResponseWriter, r *http.Requ
 func (h *MessageHandler) SendButton(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send button message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -736,7 +736,7 @@ func (h *MessageHandler) SendButton(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendList(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send list message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -798,7 +798,7 @@ func (h *MessageHandler) SendList(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send poll message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -857,7 +857,7 @@ func (h *MessageHandler) SendPoll(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send reaction message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -914,7 +914,7 @@ func (h *MessageHandler) SendReaction(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "send presence message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -970,7 +970,7 @@ func (h *MessageHandler) SendPresence(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "edit message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -1027,7 +1027,7 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "revoke message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -1082,7 +1082,7 @@ func (h *MessageHandler) RevokeMessage(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get poll results")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	messageID := chi.URLParam(r, "messageId")
 
 	if sessionID == "" || messageID == "" {
@@ -1143,7 +1143,7 @@ func (h *MessageHandler) GetPollResults(w http.ResponseWriter, r *http.Request) 
 func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "mark messages as read")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -1199,7 +1199,7 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 func (h *MessageHandler) GetPendingSyncMessages(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get pending sync messages")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -1252,7 +1252,7 @@ func (h *MessageHandler) GetPendingSyncMessages(w http.ResponseWriter, r *http.R
 func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "delete message")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	messageID := chi.URLParam(r, "messageId")
 
 	if sessionID == "" || messageID == "" {

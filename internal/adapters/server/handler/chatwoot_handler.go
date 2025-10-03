@@ -70,7 +70,7 @@ type ChatwootInbox struct {
 func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "receive chatwoot webhook")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -127,7 +127,7 @@ func (h *ChatwootHandler) ReceiveWebhook(w http.ResponseWriter, r *http.Request)
 func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "create chatwoot config")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -159,7 +159,7 @@ func (h *ChatwootHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 func (h *ChatwootHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "find chatwoot config")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -181,7 +181,7 @@ func (h *ChatwootHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "update chatwoot config")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -203,7 +203,7 @@ func (h *ChatwootHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "delete chatwoot config")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -225,7 +225,7 @@ func (h *ChatwootHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "test chatwoot connection")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -247,7 +247,7 @@ func (h *ChatwootHandler) TestConnection(w http.ResponseWriter, r *http.Request)
 func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "auto-create chatwoot inbox")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -269,7 +269,7 @@ func (h *ChatwootHandler) AutoCreateInbox(w http.ResponseWriter, r *http.Request
 func (h *ChatwootHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get chatwoot stats")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return

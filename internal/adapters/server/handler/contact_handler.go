@@ -125,7 +125,7 @@ type BusinessProfileResponse struct {
 func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "check WhatsApp numbers")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -183,7 +183,7 @@ func (h *ContactHandler) CheckWhatsApp(w http.ResponseWriter, r *http.Request) {
 func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get profile picture")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -234,7 +234,7 @@ func (h *ContactHandler) GetProfilePicture(w http.ResponseWriter, r *http.Reques
 func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get user info")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -294,7 +294,7 @@ func (h *ContactHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "list contacts")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -362,7 +362,7 @@ func (h *ContactHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "sync contacts")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -413,7 +413,7 @@ func (h *ContactHandler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 func (h *ContactHandler) GetBusinessProfile(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get business profile")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -484,7 +484,7 @@ func (h *ContactHandler) IsOnWhatsApp(w http.ResponseWriter, r *http.Request) {
 func (h *ContactHandler) GetAllContacts(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get all contacts")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return

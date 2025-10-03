@@ -11,7 +11,7 @@ import (
 func setupMediaRoutes(r chi.Router, sessionService *services.SessionService, appLogger *logger.Logger) {
 	mediaHandler := handler.NewMediaHandler(sessionService, appLogger)
 
-	r.Route("/{sessionId}/media", func(r chi.Router) {
+	r.Route("/{sessionName}/media", func(r chi.Router) {
 
 		r.Post("/download", mediaHandler.DownloadMedia)
 		r.Get("/info", mediaHandler.GetMediaInfo)

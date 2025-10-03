@@ -45,7 +45,7 @@ func NewGroupHandler(
 func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "create group")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -86,7 +86,7 @@ func (h *GroupHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "list groups")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -121,7 +121,7 @@ func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
 func (h *GroupHandler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "get group info")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -165,7 +165,7 @@ func (h *GroupHandler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 func (h *GroupHandler) UpdateGroupParticipants(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "update group participants")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -209,7 +209,7 @@ func (h *GroupHandler) UpdateGroupParticipants(w http.ResponseWriter, r *http.Re
 func (h *GroupHandler) SetGroupName(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "set group name")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return

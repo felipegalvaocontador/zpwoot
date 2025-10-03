@@ -73,13 +73,7 @@ func (s *MessageService) resolveSessionID(ctx context.Context, idOrName string) 
 		return uuid.Nil, "", nil, err
 	}
 
-	// Converter para *session.Session
-	sessionPtr, ok := resolved.Session.(*session.Session)
-	if !ok {
-		return uuid.Nil, "", nil, fmt.Errorf("invalid session type")
-	}
-
-	return resolved.ID, resolved.Name, sessionPtr, nil
+	return resolved.ID, resolved.Name, resolved.Session, nil
 }
 
 type CreateMessageRequest struct {
@@ -316,9 +310,9 @@ func (s *MessageService) SendTextMessage(ctx context.Context, sessionName, to, c
 	}
 
 	s.logger.InfoWithFields("Text message sent successfully", map[string]interface{}{
-		"session_id": sessionID,
-		"message_id": result.MessageID,
-		"to":         result.To,
+		"session_name": sessionName,
+		"message_id":   result.MessageID,
+		"to":           result.To,
 	})
 
 	return response, nil
@@ -356,10 +350,10 @@ func (s *MessageService) SendMediaMessage(ctx context.Context, sessionName, to, 
 	}
 
 	s.logger.InfoWithFields("Media message sent successfully", map[string]interface{}{
-		"session_id": sessionID,
-		"message_id": result.MessageID,
-		"to":         result.To,
-		"media_type": mediaType,
+		"session_name": sessionName,
+		"message_id":   result.MessageID,
+		"to":           result.To,
+		"media_type":   mediaType,
 	})
 
 	return response, nil
@@ -391,7 +385,7 @@ func (s *MessageService) SendLocationMessage(ctx context.Context, sessionID, to 
 		return nil, fmt.Errorf("sessionID and to are required")
 	}
 
-	_, _, sessionName, err := s.resolveSessionID(ctx, sessionID)
+	_, sessionName, _, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +425,7 @@ func (s *MessageService) SendContactMessage(ctx context.Context, sessionID, to, 
 		return nil, fmt.Errorf("sessionID, to, contactName, and contactPhone are required")
 	}
 
-	_, _, err := s.resolveSessionID(ctx, sessionID)
+	_, _, _, err := s.resolveSessionID(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}

@@ -39,7 +39,7 @@ func NewWebhookHandler(
 func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "set webhook config")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -70,7 +70,7 @@ func (h *WebhookHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
 func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "find webhook config")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return
@@ -102,7 +102,7 @@ func (h *WebhookHandler) FindConfig(w http.ResponseWriter, r *http.Request) {
 func (h *WebhookHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
 	h.LogRequest(r, "test webhook")
 
-	sessionID := chi.URLParam(r, "sessionId")
+	sessionID := chi.URLParam(r, "sessionName")
 	if sessionID == "" {
 		h.GetWriter().WriteBadRequest(w, "Session ID is required")
 		return

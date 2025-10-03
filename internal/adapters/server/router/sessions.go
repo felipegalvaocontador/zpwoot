@@ -11,18 +11,24 @@ import (
 func setupSessionRoutes(r chi.Router, sessionService *services.SessionService, appLogger *logger.Logger) {
 	sessionHandler := handler.NewSessionHandler(sessionService, appLogger)
 
+	// Session management routes
 	r.Post("/create", sessionHandler.CreateSession)
 	r.Get("/list", sessionHandler.ListSessions)
-	r.Get("/{sessionId}/info", sessionHandler.GetSessionInfo)
-	r.Delete("/{sessionId}/delete", sessionHandler.DeleteSession)
 
-	r.Post("/{sessionId}/connect", sessionHandler.ConnectSession)
-	r.Post("/{sessionId}/logout", sessionHandler.LogoutSession)
-	r.Get("/{sessionId}/qr", sessionHandler.GetQRCode)
-	r.Post("/{sessionId}/pair", sessionHandler.PairPhone)
+	// Session-specific routes using session name (e.g., /sessions/my-session/info)
+	r.Get("/{sessionName}/info", sessionHandler.GetSessionInfo)
+	r.Delete("/{sessionName}/delete", sessionHandler.DeleteSession)
 
-	r.Post("/{sessionId}/proxy/set", sessionHandler.SetProxy)
-	r.Get("/{sessionId}/proxy/find", sessionHandler.GetProxy)
+	// Connection management
+	r.Post("/{sessionName}/connect", sessionHandler.ConnectSession)
+	r.Post("/{sessionName}/logout", sessionHandler.LogoutSession)
+	r.Get("/{sessionName}/qr", sessionHandler.GetQRCode)
+	r.Post("/{sessionName}/pair", sessionHandler.PairPhone)
 
-	r.Get("/{sessionId}/stats", sessionHandler.GetSessionStats)
+	// Proxy configuration
+	r.Post("/{sessionName}/proxy/set", sessionHandler.SetProxy)
+	r.Get("/{sessionName}/proxy/find", sessionHandler.GetProxy)
+
+	// Statistics
+	r.Get("/{sessionName}/stats", sessionHandler.GetSessionStats)
 }

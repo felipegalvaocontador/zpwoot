@@ -12,7 +12,7 @@ func setupContactRoutes(r chi.Router, sessionService *services.SessionService, a
 
 	contactHandler := handler.NewContactHandler(nil, sessionService, appLogger)
 
-	r.Route("/{sessionId}/contacts", func(r chi.Router) {
+	r.Route("/{sessionName}/contacts", func(r chi.Router) {
 
 		r.Post("/check", contactHandler.CheckWhatsApp)
 		r.Post("/is-on-whatsapp", contactHandler.IsOnWhatsApp)

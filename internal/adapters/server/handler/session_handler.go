@@ -25,18 +25,20 @@ func NewSessionHandler(sessionService *services.SessionService, logger *logger.L
 	}
 }
 
+// resolveSessionIdentifier resolves a session name from URL to internal UUID
+// Accepts session.name from public API and resolves to UUID for internal operations
 func (h *SessionHandler) resolveSessionIdentifier(r *http.Request) (uuid.UUID, string, error) {
-	sessionIdentifier := chi.URLParam(r, "sessionId")
-	if sessionIdentifier == "" {
-		return uuid.Nil, "", fmt.Errorf("session identifier is required")
+	sessionName := chi.URLParam(r, "sessionName")
+	if sessionName == "" {
+		return uuid.Nil, "", fmt.Errorf("session name is required")
 	}
 
-	sessionID, err := h.sessionService.ResolveSessionID(r.Context(), sessionIdentifier)
+	sessionID, err := h.sessionService.ResolveSessionID(r.Context(), sessionName)
 	if err != nil {
-		return uuid.Nil, sessionIdentifier, fmt.Errorf("session not found: %w", err)
+		return uuid.Nil, sessionName, fmt.Errorf("session not found: %w", err)
 	}
 
-	return sessionID, sessionIdentifier, nil
+	return sessionID, sessionName, nil
 }
 
 // @Summary Create new session

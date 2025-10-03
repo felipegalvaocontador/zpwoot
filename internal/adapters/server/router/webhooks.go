@@ -11,7 +11,7 @@ import (
 func setupWebhookRoutes(r chi.Router, sessionService *services.SessionService, appLogger *logger.Logger) {
 	webhookHandler := handler.NewWebhookHandler(sessionService, appLogger)
 
-	r.Route("/{sessionId}/webhook", func(r chi.Router) {
+	r.Route("/{sessionName}/webhook", func(r chi.Router) {
 
 		r.Post("/set", webhookHandler.SetConfig)
 		r.Get("/find", webhookHandler.FindConfig)

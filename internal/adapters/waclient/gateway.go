@@ -1577,8 +1577,6 @@ func (g *Gateway) SendTextMessage(ctx context.Context, sessionName, to, content 
 		return nil, fmt.Errorf("session %s not found", sessionName)
 	}
 
-
-
 	if !client.IsLoggedIn() {
 		return nil, fmt.Errorf("session %s is not logged in", sessionName)
 	}

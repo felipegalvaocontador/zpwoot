@@ -114,7 +114,6 @@ func (h *EventHandler) handleConnected(_ *events.Connected, sessionID string) {
 		"session_id": sessionID,
 	})
 
-
 	h.notifySessionConnected(sessionID)
 
 	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
@@ -130,7 +129,6 @@ func (h *EventHandler) handleDisconnected(_ *events.Disconnected, sessionID stri
 	h.logger.WarnWithFields("WhatsApp disconnected", map[string]interface{}{
 		"session_id": sessionID,
 	})
-
 
 	h.notifySessionDisconnected(sessionID, "disconnected")
 
@@ -503,7 +501,6 @@ func (h *EventHandler) extractMessageContent(message *waE2E.Message) map[string]
 
 	return content
 }
-
 
 func (h *EventHandler) notifySessionConnected(sessionID string) {
 	handlers := h.gateway.getEventHandlers("global")

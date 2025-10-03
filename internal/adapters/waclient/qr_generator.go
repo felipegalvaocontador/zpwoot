@@ -19,10 +19,8 @@ import (
 	"zpwoot/platform/logger"
 )
 
-
 type QRGenerator struct {
 	logger *logger.Logger
-
 
 	mu            sync.RWMutex
 	qrCode        string
@@ -39,22 +37,17 @@ func NewQRGenerator(logger *logger.Logger) *QRGenerator {
 	}
 }
 
-
 func (g *QRGenerator) StartQRLoop(ctx context.Context, qrChan <-chan whatsmeow.QRChannelItem, sessionName string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-
 	g.stopInternal()
-
 
 	g.ctx, g.cancel = context.WithCancel(ctx)
 	g.isActive = true
 
-
 	go g.runQRLoop(qrChan, sessionName)
 }
-
 
 func (g *QRGenerator) Stop() {
 	g.mu.Lock()
@@ -160,7 +153,6 @@ func (g *QRGenerator) Generate(ctx context.Context, sessionName string) (*sessio
 	return nil, fmt.Errorf("QR code generation is handled by WhatsApp events")
 }
 
-
 func (g *QRGenerator) GetQRCode() (string, bool) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -176,13 +168,11 @@ func (g *QRGenerator) GetQRCode() (string, bool) {
 	return g.qrCode, true
 }
 
-
 func (g *QRGenerator) IsActive() bool {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.isActive
 }
-
 
 func (g *QRGenerator) GetQRCodeExpiry() time.Time {
 	g.mu.RLock()

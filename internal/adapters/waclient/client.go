@@ -54,7 +54,6 @@ func (w *WhatsmeowLogger) Sub(module string) waLog.Logger {
 	return &WhatsmeowLogger{logger: w.logger}
 }
 
-
 type ConnectionState int
 
 const (
@@ -88,7 +87,6 @@ type QRCodeEvent struct {
 	ExpiresAt   time.Time
 }
 
-
 type ClientConfig struct {
 	SessionName string
 	Device      *store.Device
@@ -98,28 +96,22 @@ type ClientConfig struct {
 }
 
 type Client struct {
-
 	sessionName string
 	client      *whatsmeow.Client
 	device      *store.Device
 	logger      *logger.Logger
-
 
 	mu           sync.RWMutex
 	state        ConnectionState
 	lastActivity time.Time
 	errorMessage string
 
-
 	qrGenerator *QRGenerator
-
 
 	eventHandlers []func(interface{})
 
-
 	ctx    context.Context
 	cancel context.CancelFunc
-
 
 	proxyConfig *session.ProxyConfig
 }
@@ -137,12 +129,10 @@ func validateConfig(config ClientConfig) error {
 	return nil
 }
 
-
 func NewClient(config ClientConfig) (*Client, error) {
 	if err := validateConfig(config); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
-
 
 	device := config.Device
 	if device == nil {
@@ -153,10 +143,8 @@ func NewClient(config ClientConfig) (*Client, error) {
 		device = deviceStore
 	}
 
-
 	waLogger := NewWhatsmeowLogger(config.Logger)
 	whatsmeowClient := whatsmeow.NewClient(device, waLogger)
-
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -184,7 +172,6 @@ func NewClient(config ClientConfig) (*Client, error) {
 	return client, nil
 }
 
-
 func NewClientLegacy(sessionName string, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
 	config := ClientConfig{
 		SessionName: sessionName,
@@ -193,7 +180,6 @@ func NewClientLegacy(sessionName string, container *sqlstore.Container, logger *
 	}
 	return NewClient(config)
 }
-
 
 func NewClientWithDevice(sessionName string, deviceStore *store.Device, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
 	config := ClientConfig{
@@ -204,7 +190,6 @@ func NewClientWithDevice(sessionName string, deviceStore *store.Device, containe
 	}
 	return NewClient(config)
 }
-
 
 func (c *Client) Connect() error {
 	c.mu.Lock()
@@ -217,18 +202,15 @@ func (c *Client) Connect() error {
 	c.setState(StateConnecting)
 	c.clearError()
 
-
 	if c.cancel != nil {
 		c.cancel()
 	}
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 
-
 	go c.performConnection()
 
 	return nil
 }
-
 
 func (c *Client) performConnection() {
 	defer func() {
@@ -240,7 +222,6 @@ func (c *Client) performConnection() {
 			c.setError(fmt.Sprintf("connection panic: %v", r))
 		}
 	}()
-
 
 	if c.client.IsConnected() {
 		c.client.Disconnect()
@@ -328,8 +309,6 @@ func (c *Client) waitForAuthentication() {
 		}
 	}
 }
-
-
 
 // State management methods
 func (c *Client) setState(state ConnectionState) {

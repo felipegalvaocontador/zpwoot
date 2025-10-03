@@ -92,10 +92,10 @@ func (h *MessageHandler) SendTextMessage(w http.ResponseWriter, r *http.Request)
 	}
 
 	h.LogSuccess("send text message", map[string]interface{}{
-		"session_id":  sessionID,
-		"message_id":  response.MessageID,
-		"remote_jid":  req.RemoteJID,
-		"body_len":    len(req.Body),
+		"session_id": sessionID,
+		"message_id": response.MessageID,
+		"remote_jid": req.RemoteJID,
+		"body_len":   len(req.Body),
 	})
 
 	h.GetWriter().WriteSuccess(w, response, "Text message sent successfully")
@@ -1149,19 +1149,16 @@ func (h *MessageHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	var req contracts.MarkAsReadRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Invalid request body")
 		return
 	}
 
-
 	if err := h.GetValidator().ValidateStruct(&req); err != nil {
 		h.GetWriter().WriteBadRequest(w, "Validation failed", err.Error())
 		return
 	}
-
 
 	_, err := h.sessionService.GetSession(r.Context(), sessionID)
 	if err != nil {
@@ -1276,8 +1273,6 @@ func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 
 	h.GetWriter().WriteSuccess(w, nil, "Message deleted successfully")
 }
-
-
 
 func parseIntQuery(r *http.Request, key string, defaultValue int) int {
 	value := r.URL.Query().Get(key)

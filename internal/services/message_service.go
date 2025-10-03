@@ -25,7 +25,6 @@ type MessageService struct {
 	logger    *logger.Logger
 	validator *validation.Validator
 
-
 	sessionService *SessionService
 }
 
@@ -50,7 +49,6 @@ func NewMessageService(
 		sessionService: sessionService,
 	}
 }
-
 
 func (s *MessageService) resolveSessionID(ctx context.Context, sessionIdentifier string) (uuid.UUID, *session.Session, error) {
 	sessionUUID, err := s.sessionService.ResolveSessionID(ctx, sessionIdentifier)

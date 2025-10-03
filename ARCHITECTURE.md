@@ -427,7 +427,7 @@ type NewsletterHandler struct {
 }
 ```
 
-### **Migrando Código Legacy**
+### **Refatorando Código Existente**
 
 1. **Identificar lógica de negócio**
 2. **Extrair para core**

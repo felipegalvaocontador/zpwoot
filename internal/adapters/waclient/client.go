@@ -172,14 +172,7 @@ func NewClient(config ClientConfig) (*Client, error) {
 	return client, nil
 }
 
-func NewClientLegacy(sessionName string, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
-	config := ClientConfig{
-		SessionName: sessionName,
-		Container:   container,
-		Logger:      logger,
-	}
-	return NewClient(config)
-}
+
 
 func NewClientWithDevice(sessionName string, deviceStore *store.Device, container *sqlstore.Container, logger *logger.Logger) (*Client, error) {
 	config := ClientConfig{
@@ -331,23 +324,7 @@ func (c *Client) clearError() {
 	c.errorMessage = ""
 }
 
-// Legacy method for backward compatibility
-func (c *Client) setStatus(status string) {
-	var state ConnectionState
-	switch status {
-	case "connecting":
-		state = StateConnecting
-	case "connected":
-		state = StateConnected
-	case "logged_in":
-		state = StateLoggedIn
-	case "disconnected":
-		state = StateDisconnected
-	default:
-		state = StateError
-	}
-	c.setState(state)
-}
+
 
 func (c *Client) setupEventHandlers() {
 	c.client.AddEventHandler(c.handleEvent)

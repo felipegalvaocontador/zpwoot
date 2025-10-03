@@ -1,7 +1,6 @@
 -- =====================================================
 -- zpwoot Database Schema - Initial Migration
 -- Clean Architecture Implementation
--- Based on legacy migrations: 001-004
 -- =====================================================
 
 -- Create function for automatic updatedAt trigger

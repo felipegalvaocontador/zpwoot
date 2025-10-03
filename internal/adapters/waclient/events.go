@@ -14,17 +14,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-type EventHandler struct {
-	gateway     *Gateway
-	sessionName string
-	logger      *logger.Logger
-
-	qrGenerator *QRGenerator
-
-	webhookHandler  WebhookEventHandler
-	chatwootManager ChatwootManager
-}
-
 type WebhookEventHandler interface {
 	HandleWhatsmeowEvent(evt interface{}, sessionID string) error
 }
@@ -34,12 +23,22 @@ type ChatwootManager interface {
 	ProcessWhatsAppMessage(sessionID, messageID, from, content, messageType string, timestamp time.Time, fromMe bool) error
 }
 
+type EventHandler struct {
+	gateway     *Gateway
+	sessionName string
+	logger      *logger.Logger
+
+	webhookHandler  WebhookEventHandler
+	chatwootManager ChatwootManager
+	messageMapper   *MessageMapper
+}
+
 func NewEventHandler(gateway *Gateway, sessionName string, logger *logger.Logger) *EventHandler {
 	return &EventHandler{
-		gateway:     gateway,
-		sessionName: sessionName,
-		logger:      logger,
-		qrGenerator: NewQRGenerator(logger),
+		gateway:       gateway,
+		sessionName:   sessionName,
+		logger:        logger,
+		messageMapper: NewMessageMapper(),
 	}
 }
 
@@ -52,9 +51,7 @@ func (h *EventHandler) SetChatwootManager(manager ChatwootManager) {
 }
 
 func (h *EventHandler) HandleEvent(evt interface{}, sessionID string) {
-
 	h.deliverToWebhook(evt, sessionID)
-
 	h.handleEventInternal(evt, sessionID)
 }
 
@@ -115,14 +112,7 @@ func (h *EventHandler) handleConnected(_ *events.Connected, sessionID string) {
 	})
 
 	h.notifySessionConnected(sessionID)
-
-	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
-		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
-			"session_id": sessionID,
-			"status":     "connected",
-			"error":      err.Error(),
-		})
-	}
+	h.updateSessionStatus(sessionID, "connected")
 }
 
 func (h *EventHandler) handleDisconnected(_ *events.Disconnected, sessionID string) {
@@ -131,14 +121,7 @@ func (h *EventHandler) handleDisconnected(_ *events.Disconnected, sessionID stri
 	})
 
 	h.notifySessionDisconnected(sessionID, "disconnected")
-
-	if err := h.gateway.UpdateSessionStatus(sessionID, "disconnected"); err != nil {
-		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
-			"session_id": sessionID,
-			"status":     "disconnected",
-			"error":      err.Error(),
-		})
-	}
+	h.updateSessionStatus(sessionID, "disconnected")
 }
 
 func (h *EventHandler) handleLoggedOut(evt *events.LoggedOut, sessionID string) {
@@ -147,13 +130,7 @@ func (h *EventHandler) handleLoggedOut(evt *events.LoggedOut, sessionID string) 
 		"reason":     evt.Reason,
 	})
 
-	if err := h.gateway.UpdateSessionStatus(sessionID, "logged_out"); err != nil {
-		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
-			"session_id": sessionID,
-			"status":     "logged_out",
-			"error":      err.Error(),
-		})
-	}
+	h.updateSessionStatus(sessionID, "logged_out")
 }
 
 func (h *EventHandler) handleQREvent(sessionID string) {
@@ -161,13 +138,7 @@ func (h *EventHandler) handleQREvent(sessionID string) {
 		"session_id": sessionID,
 	})
 
-	if err := h.gateway.UpdateSessionStatus(sessionID, "qr_code"); err != nil {
-		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
-			"session_id": sessionID,
-			"status":     "qr_code",
-			"error":      err.Error(),
-		})
-	}
+	h.updateSessionStatus(sessionID, "qr_code")
 }
 
 func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
@@ -178,15 +149,7 @@ func (h *EventHandler) handleQRCodeEvent(evt *QRCodeEvent, sessionID string) {
 		"expires_at":   evt.ExpiresAt,
 	})
 
-	h.qrGenerator.DisplayQRCodeInTerminal(evt.QRCode, evt.SessionName)
-
-	if err := h.gateway.UpdateSessionStatus(sessionID, "qr_code"); err != nil {
-		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
-			"session_id": sessionID,
-			"status":     "qr_code",
-			"error":      err.Error(),
-		})
-	}
+	h.updateSessionStatus(sessionID, "qr_code")
 
 	if err := h.gateway.UpdateSessionQRCode(sessionID, evt.QRCode, evt.ExpiresAt); err != nil {
 		h.logger.ErrorWithFields("Failed to update QR code in database", map[string]interface{}{
@@ -213,13 +176,7 @@ func (h *EventHandler) handlePairSuccess(evt *events.PairSuccess, sessionID stri
 		})
 	}
 
-	if err := h.gateway.UpdateSessionStatus(sessionID, "connected"); err != nil {
-		h.logger.ErrorWithFields("Failed to update session status after pairing", map[string]interface{}{
-			"session_id": sessionID,
-			"status":     "connected",
-			"error":      err.Error(),
-		})
-	}
+	h.updateSessionStatus(sessionID, "connected")
 }
 
 func (h *EventHandler) handlePairError(evt *events.PairError, sessionID string) {
@@ -227,7 +184,6 @@ func (h *EventHandler) handlePairError(evt *events.PairError, sessionID string) 
 		"session_id": sessionID,
 		"error":      evt.Error.Error(),
 	})
-
 }
 
 func (h *EventHandler) handleMessage(evt *events.Message, sessionID string) {
@@ -257,7 +213,6 @@ func (h *EventHandler) handleReceipt(evt *events.Receipt, sessionID string) {
 		"sender":     evt.Sender.String(),
 		"timestamp":  evt.Timestamp,
 	})
-
 }
 
 func (h *EventHandler) handleOtherEvents(evt interface{}, sessionID string) {
@@ -327,13 +282,11 @@ func (h *EventHandler) processMessageForChatwoot(evt *events.Message, sessionID 
 }
 
 func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (string, string) {
-	// Use the mapper for consistent message extraction
-	mapper := NewMessageMapper()
-	return mapper.extractMessageContent(message)
+	return h.messageMapper.extractMessageContent(message)
 }
 
 func (h *EventHandler) extractContactNumber(jid string) string {
-	// Use the mapper for consistent JID to phone number conversion
+
 	mapper := NewMessageMapper()
 	return mapper.JIDToPhoneNumber(jid)
 }
@@ -467,7 +420,6 @@ func (h *EventHandler) convertWhatsmeowMessage(evt *events.Message, sessionID st
 func (h *EventHandler) extractMessageContent(message *waE2E.Message) map[string]interface{} {
 	content := make(map[string]interface{})
 
-	// Get basic content and type using mapper
 	contentStr, msgType := h.extractMessageContentString(message)
 	content["type"] = msgType
 
@@ -535,5 +487,15 @@ func (h *EventHandler) notifySessionDisconnected(sessionID, reason string) {
 			}()
 			sessionHandler.OnSessionDisconnected(h.sessionName, reason)
 		}(handler)
+	}
+}
+
+func (h *EventHandler) updateSessionStatus(sessionID, status string) {
+	if err := h.gateway.UpdateSessionStatus(sessionID, status); err != nil {
+		h.logger.ErrorWithFields("Failed to update session status", map[string]interface{}{
+			"session_id": sessionID,
+			"status":     status,
+			"error":      err.Error(),
+		})
 	}
 }

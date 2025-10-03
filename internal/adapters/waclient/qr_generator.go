@@ -149,7 +149,6 @@ func (g *QRGenerator) handleQRSuccess(sessionName string) {
 }
 
 func (g *QRGenerator) Generate(ctx context.Context, sessionName string) (*session.QRCodeResponse, error) {
-
 	return nil, fmt.Errorf("QR code generation is handled by WhatsApp events")
 }
 
@@ -181,7 +180,6 @@ func (g *QRGenerator) GetQRCodeExpiry() time.Time {
 }
 
 func (g *QRGenerator) GenerateQRCode(data string) (string, error) {
-
 	return data, nil
 }
 
@@ -196,7 +194,6 @@ func (g *QRGenerator) GenerateQRCodeImage(data string) (string, error) {
 	}
 
 	qr.DisableBorder = false
-
 	img := qr.Image(256)
 
 	var buf bytes.Buffer

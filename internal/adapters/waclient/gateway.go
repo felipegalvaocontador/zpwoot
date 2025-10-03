@@ -322,6 +322,63 @@ func (g *Gateway) getDeviceJIDFromDatabase(sessionUUID string) (string, error) {
 	return *deviceJID, nil
 }
 
+func (g *Gateway) getDeviceJIDsBatch(sessionUUIDs []string) (map[string]string, error) {
+	if len(sessionUUIDs) == 0 {
+		return make(map[string]string), nil
+	}
+
+	deviceJIDs := make(map[string]string, len(sessionUUIDs))
+
+	if len(sessionUUIDs) <= 10 {
+		for _, uuid := range sessionUUIDs {
+			deviceJID, err := g.getDeviceJIDFromDatabase(uuid)
+			if err != nil {
+				g.logger.WarnWithFields("Failed to get device JID", map[string]interface{}{
+					"session_uuid": uuid,
+					"error":        err.Error(),
+				})
+				continue
+			}
+			if deviceJID != "" {
+				deviceJIDs[uuid] = deviceJID
+			}
+		}
+		return deviceJIDs, nil
+	}
+
+	if g.sessionService != nil {
+		return g.getDeviceJIDsFromService(sessionUUIDs)
+	}
+
+	for _, uuid := range sessionUUIDs {
+		deviceJID, err := g.getDeviceJIDFromDatabase(uuid)
+		if err != nil {
+			continue
+		}
+		if deviceJID != "" {
+			deviceJIDs[uuid] = deviceJID
+		}
+	}
+
+	return deviceJIDs, nil
+}
+
+func (g *Gateway) getDeviceJIDsFromService(sessionUUIDs []string) (map[string]string, error) {
+	deviceJIDs := make(map[string]string)
+
+	for _, uuid := range sessionUUIDs {
+		session, err := g.sessionService.GetSession(context.Background(), uuid)
+		if err != nil {
+			continue
+		}
+		if session.Session.DeviceJID != nil && *session.Session.DeviceJID != "" {
+			deviceJIDs[uuid] = *session.Session.DeviceJID
+		}
+	}
+
+	return deviceJIDs, nil
+}
+
 func (g *Gateway) newClientWithDeviceJID(sessionName, deviceJID string) (*Client, error) {
 	jid, err := types.ParseJID(deviceJID)
 	if err != nil {
@@ -347,10 +404,63 @@ func (g *Gateway) newClientWithDeviceJID(sessionName, deviceJID string) (*Client
 }
 
 func (g *Gateway) RestoreAllSessions(ctx context.Context, sessionNames []string) error {
+	if len(sessionNames) == 0 {
+		return nil
+	}
+
 	g.logger.InfoWithFields("Restoring WhatsApp clients for existing sessions", map[string]interface{}{
 		"session_count": len(sessionNames),
 	})
 
+	sessionUUIDs := make([]string, 0, len(sessionNames))
+	for _, sessionName := range sessionNames {
+		if sessionUUID, exists := g.sessionUUIDs[sessionName]; exists {
+			sessionUUIDs = append(sessionUUIDs, sessionUUID)
+		}
+	}
+
+	deviceJIDs, err := g.getDeviceJIDsBatch(sessionUUIDs)
+	if err != nil {
+		g.logger.WarnWithFields("Failed to get device JIDs in batch, falling back to individual queries", map[string]interface{}{
+			"error": err.Error(),
+		})
+
+		return g.restoreSessionsSequential(ctx, sessionNames)
+	}
+
+	successCount := 0
+	for _, sessionName := range sessionNames {
+		sessionUUID, exists := g.sessionUUIDs[sessionName]
+		if !exists {
+			g.logger.ErrorWithFields("Session UUID not found", map[string]interface{}{
+				"session_name": sessionName,
+			})
+			continue
+		}
+
+		deviceJID := deviceJIDs[sessionUUID]
+
+		err := g.restoreSessionWithDeviceJID(ctx, sessionName, sessionUUID, deviceJID)
+		if err != nil {
+			g.logger.ErrorWithFields("Failed to restore session", map[string]interface{}{
+				"session_name": sessionName,
+				"error":        err.Error(),
+			})
+			continue
+		}
+		successCount++
+	}
+
+	g.logger.InfoWithFields("Session restoration completed", map[string]interface{}{
+		"total_sessions": len(sessionNames),
+		"successful":     successCount,
+		"failed":         len(sessionNames) - successCount,
+	})
+
+	return nil
+}
+
+func (g *Gateway) restoreSessionsSequential(ctx context.Context, sessionNames []string) error {
 	for _, sessionName := range sessionNames {
 		err := g.RestoreSession(ctx, sessionName)
 		if err != nil {
@@ -358,14 +468,57 @@ func (g *Gateway) RestoreAllSessions(ctx context.Context, sessionNames []string)
 				"session_name": sessionName,
 				"error":        err.Error(),
 			})
-
 			continue
 		}
 	}
+	return nil
+}
 
-	g.logger.InfoWithFields("Session restoration completed", map[string]interface{}{
-		"session_count": len(sessionNames),
-	})
+func (g *Gateway) restoreSessionWithDeviceJID(_ context.Context, sessionName, _ /* sessionUUID */, deviceJID string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if _, exists := g.clients[sessionName]; exists {
+		return nil
+	}
+
+	var client *Client
+	var err error
+
+	if deviceJID != "" {
+
+		client, err = g.newClientWithDeviceJID(sessionName, deviceJID)
+		if err != nil {
+			g.logger.WarnWithFields("Failed to load existing device, creating new one", map[string]interface{}{
+				"session_name": sessionName,
+				"device_jid":   deviceJID,
+				"error":        err.Error(),
+			})
+
+			config := ClientConfig{
+				SessionName: sessionName,
+				Container:   g.container,
+				Logger:      g.logger,
+			}
+			client, err = NewClient(config)
+		}
+	} else {
+
+		config := ClientConfig{
+			SessionName: sessionName,
+			Container:   g.container,
+			Logger:      g.logger,
+		}
+		client, err = NewClient(config)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
+
+	g.setupEventHandlers(client, sessionName)
+
+	g.clients[sessionName] = client
 
 	return nil
 }

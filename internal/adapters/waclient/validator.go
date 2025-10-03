@@ -153,7 +153,6 @@ func (v *Validator) IsUserJID(jid string) bool {
 	return parsedJID.Server == types.DefaultUserServer
 }
 
-// GetJIDType returns the type of JID (user, group, broadcast)
 func (v *Validator) GetJIDType(jid string) string {
 	if v.IsUserJID(jid) {
 		return "user"

@@ -46,6 +46,22 @@ func (m *MessageMapper) extractMessageContent(message *waE2E.Message) (string, s
 		return "", "unknown"
 	}
 
+	if content, msgType := m.extractTextContent(message); msgType != "" {
+		return content, msgType
+	}
+
+	if content, msgType := m.extractMediaContent(message); msgType != "" {
+		return content, msgType
+	}
+
+	if content, msgType := m.extractSpecialContent(message); msgType != "" {
+		return content, msgType
+	}
+
+	return "[Unsupported message type]", "unknown"
+}
+
+func (m *MessageMapper) extractTextContent(message *waE2E.Message) (string, string) {
 	if message.Conversation != nil {
 		return *message.Conversation, "text"
 	}
@@ -54,6 +70,10 @@ func (m *MessageMapper) extractMessageContent(message *waE2E.Message) (string, s
 		return *message.ExtendedTextMessage.Text, "text"
 	}
 
+	return "", ""
+}
+
+func (m *MessageMapper) extractMediaContent(message *waE2E.Message) (string, string) {
 	if message.ImageMessage != nil {
 		caption := ""
 		if message.ImageMessage.Caption != nil {
@@ -82,6 +102,10 @@ func (m *MessageMapper) extractMessageContent(message *waE2E.Message) (string, s
 		return fmt.Sprintf("[Document: %s]", filename), "document"
 	}
 
+	return "", ""
+}
+
+func (m *MessageMapper) extractSpecialContent(message *waE2E.Message) (string, string) {
 	if message.StickerMessage != nil {
 		return "[Sticker]", "sticker"
 	}
@@ -98,11 +122,10 @@ func (m *MessageMapper) extractMessageContent(message *waE2E.Message) (string, s
 		return fmt.Sprintf("[Contact: %s]", name), "contact"
 	}
 
-	return "[Unknown message type]", "unknown"
+	return "", ""
 }
 
 func (m *MessageMapper) JIDToPhoneNumber(jid string) string {
-
 	parts := strings.Split(jid, "@")
 	if len(parts) > 0 {
 		return parts[0]
@@ -111,7 +134,6 @@ func (m *MessageMapper) JIDToPhoneNumber(jid string) string {
 }
 
 func (m *MessageMapper) PhoneNumberToJID(phoneNumber string) types.JID {
-	// Use validator for consistent phone number cleaning
 	validator := NewValidator()
 	cleanNumber := validator.CleanPhoneNumber(phoneNumber)
 

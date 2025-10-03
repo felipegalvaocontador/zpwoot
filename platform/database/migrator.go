@@ -14,7 +14,6 @@ import (
 	"zpwoot/platform/logger"
 )
 
-//go:embed migrations/*.sql
 var migrationsFS embed.FS
 
 type Migration struct {

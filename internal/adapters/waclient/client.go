@@ -106,8 +106,6 @@ type Client struct {
 	lastActivity time.Time
 	errorMessage string
 
-	qrGenerator *QRGenerator
-
 	eventHandlers []func(interface{})
 
 	ctx    context.Context
@@ -149,13 +147,13 @@ func NewClient(config ClientConfig) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	client := &Client{
-		sessionName:   config.SessionName,
-		client:        whatsmeowClient,
-		device:        device,
-		logger:        config.Logger,
-		state:         StateDisconnected,
-		lastActivity:  time.Now(),
-		qrGenerator:   NewQRGenerator(config.Logger),
+		sessionName:  config.SessionName,
+		client:       whatsmeowClient,
+		device:       device,
+		logger:       config.Logger,
+		state:        StateDisconnected,
+		lastActivity: time.Now(),
+
 		eventHandlers: make([]func(interface{}), 0),
 		ctx:           ctx,
 		cancel:        cancel,
@@ -243,7 +241,6 @@ func (c *Client) connectExistingDevice() {
 		return
 	}
 
-	// Wait for authentication to complete
 	c.waitForAuthentication()
 }
 
@@ -251,16 +248,6 @@ func (c *Client) connectNewDevice() {
 	c.logger.InfoWithFields("Connecting new device", map[string]interface{}{
 		"session_name": c.sessionName,
 	})
-
-	qrChan, err := c.client.GetQRChannel(c.ctx)
-	if err != nil {
-		c.logger.ErrorWithFields("Failed to get QR channel", map[string]interface{}{
-			"session_name": c.sessionName,
-			"error":        err.Error(),
-		})
-		c.setError(fmt.Sprintf("QR channel failed: %v", err))
-		return
-	}
 
 	if err := c.client.Connect(); err != nil {
 		c.logger.ErrorWithFields("Failed to connect new device", map[string]interface{}{
@@ -271,11 +258,10 @@ func (c *Client) connectNewDevice() {
 		return
 	}
 
-	c.qrGenerator.StartQRLoop(c.ctx, qrChan, c.sessionName)
 }
 
 func (c *Client) waitForAuthentication() {
-	// Wait up to 10 seconds for authentication
+
 	timeout := time.After(10 * time.Second)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
@@ -301,7 +287,6 @@ func (c *Client) waitForAuthentication() {
 	}
 }
 
-// State management methods
 func (c *Client) setState(state ConnectionState) {
 	c.state = state
 	c.lastActivity = time.Now()
@@ -430,7 +415,6 @@ func (c *Client) handlePairErrorEvent(evt *events.PairError) {
 	})
 }
 
-// Disconnect gracefully disconnects the client
 func (c *Client) Disconnect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -439,15 +423,10 @@ func (c *Client) Disconnect() error {
 		"session_name": c.sessionName,
 	})
 
-	// Stop QR process
-	c.qrGenerator.Stop()
-
-	// Disconnect WhatsApp client
 	if c.client.IsConnected() {
 		c.client.Disconnect()
 	}
 
-	// Cancel context
 	if c.cancel != nil {
 		c.cancel()
 	}
@@ -472,12 +451,9 @@ func (c *Client) Logout() error {
 		return fmt.Errorf("failed to logout: %w", err)
 	}
 
-	// State is managed through setState method now
-
 	return nil
 }
 
-// Public getters
 func (c *Client) GetState() ConnectionState {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -505,12 +481,7 @@ func (c *Client) GetQRCode() (string, error) {
 		return "", fmt.Errorf("client is not connected")
 	}
 
-	// Use QRGenerator to get current QR code
-	if qrCode, valid := c.qrGenerator.GetQRCode(); valid {
-		return qrCode, nil
-	}
-
-	return "", fmt.Errorf("no QR code available")
+	return "", fmt.Errorf("QR code generation handled externally")
 }
 
 func (c *Client) SetProxy(proxy *session.ProxyConfig) error {

@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -148,23 +149,26 @@ func main() {
 
 func connectOnStartup(container *container.Container, logger *logger.Logger) {
 	const (
-		startupDelay     = 3 * time.Second
-		operationTimeout = 60 * time.Second
+		startupDelay     = 1 * time.Second
+		operationTimeout = 90 * time.Second
 		sessionLimit     = 100
-		reconnectDelay   = 1 * time.Second
+		reconnectDelay   = 500 * time.Millisecond
 	)
 
 	time.Sleep(startupDelay)
 
 	sessionService := container.GetSessionService()
 	if sessionService == nil {
+		logger.Warn("Session service not available, skipping auto-reconnect")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), operationTimeout)
 	defer cancel()
 
-	logger.Info("Restoring sessions and registering UUIDs...")
+	startTime := time.Now()
+	logger.Info("Starting session restoration and auto-reconnect process...")
+
 	if err := sessionService.RestoreAllSessions(ctx); err != nil {
 		logger.ErrorWithFields("Failed to restore sessions", map[string]interface{}{
 			"error": err.Error(),
@@ -174,17 +178,21 @@ func connectOnStartup(container *container.Container, logger *logger.Logger) {
 
 	sessions := getExistingSessions(ctx, sessionService, sessionLimit, logger)
 	if len(sessions) == 0 {
+		logger.Info("No sessions available for auto-reconnect")
 		return
 	}
 
 	stats := reconnectSessions(ctx, sessions, sessionService, logger, reconnectDelay)
 
-	if stats.connected > 0 {
-		logger.InfoWithFields("Auto-reconnect completed", map[string]interface{}{
-			"module":    "session",
-			"connected": stats.connected,
-		})
-	}
+	duration := time.Since(startTime)
+	logger.InfoWithFields("Auto-reconnect process completed", map[string]interface{}{
+		"duration":     duration.String(),
+		"total":        len(sessions),
+		"connected":    stats.connected,
+		"skipped":      stats.skipped,
+		"failed":       stats.failed,
+		"success_rate": fmt.Sprintf("%.1f%%", float64(stats.connected)/float64(len(sessions))*100),
+	})
 }
 
 func getExistingSessions(ctx context.Context, sessionService *services.SessionService, limit int, logger *logger.Logger) []sessionInfo {
@@ -201,9 +209,11 @@ func getExistingSessions(ctx context.Context, sessionService *services.SessionSe
 		return nil
 	}
 
-	var sessionsWithCredentials []sessionInfo
+	sessionsWithCredentials := make([]sessionInfo, 0, len(response.Sessions))
+
 	for _, sessionResponse := range response.Sessions {
 		session := sessionResponse.Session
+
 		if session.DeviceJID != "" {
 			sessionsWithCredentials = append(sessionsWithCredentials, sessionInfo{
 				ID:        session.ID,
@@ -213,10 +223,28 @@ func getExistingSessions(ctx context.Context, sessionService *services.SessionSe
 		}
 	}
 
+	logger.InfoWithFields("Found sessions for reconnection", map[string]interface{}{
+		"total_sessions": len(response.Sessions),
+		"reconnectable":  len(sessionsWithCredentials),
+		"needs_pairing":  len(response.Sessions) - len(sessionsWithCredentials),
+	})
+
 	return sessionsWithCredentials
 }
 
 func reconnectSessions(ctx context.Context, sessions []sessionInfo, sessionService *services.SessionService, logger *logger.Logger, delay time.Duration) reconnectStats {
+	if len(sessions) == 0 {
+		return reconnectStats{}
+	}
+
+	if len(sessions) <= 3 {
+		return reconnectSessionsSequential(ctx, sessions, sessionService, logger, delay)
+	}
+
+	return reconnectSessionsParallel(ctx, sessions, sessionService, logger)
+}
+
+func reconnectSessionsSequential(ctx context.Context, sessions []sessionInfo, sessionService *services.SessionService, logger *logger.Logger, delay time.Duration) reconnectStats {
 	stats := reconnectStats{}
 
 	for _, session := range sessions {
@@ -245,6 +273,53 @@ func reconnectSessions(ctx context.Context, sessions []sessionInfo, sessionServi
 		}
 	}
 
+	return stats
+}
+
+func reconnectSessionsParallel(ctx context.Context, sessions []sessionInfo, sessionService *services.SessionService, logger *logger.Logger) reconnectStats {
+	const maxConcurrency = 5
+
+	semaphore := make(chan struct{}, maxConcurrency)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	stats := reconnectStats{}
+
+	for _, session := range sessions {
+		wg.Add(1)
+		go func(sess sessionInfo) {
+			defer wg.Done()
+
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			select {
+			case <-ctx.Done():
+				mu.Lock()
+				stats.failed++
+				mu.Unlock()
+				return
+			default:
+			}
+
+			result, err := sessionService.ConnectSession(ctx, sess.ID)
+
+			mu.Lock()
+			if err != nil {
+				stats.failed++
+			} else if result.Success {
+				if result.QRCode != "" {
+					stats.skipped++
+				} else {
+					stats.connected++
+				}
+			} else {
+				stats.failed++
+			}
+			mu.Unlock()
+		}(session)
+	}
+
+	wg.Wait()
 	return stats
 }
 

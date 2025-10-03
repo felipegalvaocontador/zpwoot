@@ -159,7 +159,12 @@ func (g *Gateway) CreateSession(ctx context.Context, sessionName string) error {
 		return fmt.Errorf("session %s already exists", sessionName)
 	}
 
-	client, err := NewClient(sessionName, g.container, g.logger)
+	config := ClientConfig{
+		SessionName: sessionName,
+		Container:   g.container,
+		Logger:      g.logger,
+	}
+	client, err := NewClient(config)
 	if err != nil {
 		return fmt.Errorf("failed to create WhatsApp client: %w", err)
 	}
@@ -255,14 +260,24 @@ func (g *Gateway) newClientWithExistingDevice(sessionName, sessionUUID string) (
 			"session_name": sessionName,
 			"error":        err.Error(),
 		})
-		return NewClient(sessionName, g.container, g.logger)
+		config := ClientConfig{
+			SessionName: sessionName,
+			Container:   g.container,
+			Logger:      g.logger,
+		}
+		return NewClient(config)
 	}
 
 	if deviceJID == "" {
 		g.logger.InfoWithFields("No deviceJID found, creating new device", map[string]interface{}{
 			"session_name": sessionName,
 		})
-		return NewClient(sessionName, g.container, g.logger)
+		config := ClientConfig{
+			SessionName: sessionName,
+			Container:   g.container,
+			Logger:      g.logger,
+		}
+		return NewClient(config)
 	}
 
 	g.logger.InfoWithFields("Loading existing device", map[string]interface{}{
@@ -276,7 +291,12 @@ func (g *Gateway) newClientWithExistingDevice(sessionName, sessionUUID string) (
 			"session_name": sessionName,
 			"error":        err.Error(),
 		})
-		return NewClient(sessionName, g.container, g.logger)
+		config := ClientConfig{
+			SessionName: sessionName,
+			Container:   g.container,
+			Logger:      g.logger,
+		}
+		return NewClient(config)
 	}
 
 	return client, nil
@@ -317,7 +337,13 @@ func (g *Gateway) newClientWithDeviceJID(sessionName, deviceJID string) (*Client
 		return nil, fmt.Errorf("device not found in store")
 	}
 
-	return NewClientWithDevice(sessionName, deviceStore, g.container, g.logger)
+	config := ClientConfig{
+		SessionName: sessionName,
+		Device:      deviceStore,
+		Container:   g.container,
+		Logger:      g.logger,
+	}
+	return NewClient(config)
 }
 
 func (g *Gateway) RestoreAllSessions(ctx context.Context, sessionNames []string) error {

@@ -3,7 +3,6 @@ package waclient
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -330,72 +329,15 @@ func (h *EventHandler) processMessageForChatwoot(evt *events.Message, sessionID 
 }
 
 func (h *EventHandler) extractMessageContentString(message *waE2E.Message) (string, string) {
-	if message == nil {
-		return "", "unknown"
-	}
-
-	if message.Conversation != nil {
-		return *message.Conversation, "text"
-	}
-
-	if message.ExtendedTextMessage != nil && message.ExtendedTextMessage.Text != nil {
-		return *message.ExtendedTextMessage.Text, "text"
-	}
-
-	if message.ImageMessage != nil {
-		caption := ""
-		if message.ImageMessage.Caption != nil {
-			caption = *message.ImageMessage.Caption
-		}
-		return caption, "image"
-	}
-
-	if message.AudioMessage != nil {
-		return "[Audio]", "audio"
-	}
-
-	if message.VideoMessage != nil {
-		caption := ""
-		if message.VideoMessage.Caption != nil {
-			caption = *message.VideoMessage.Caption
-		}
-		return caption, "video"
-	}
-
-	if message.DocumentMessage != nil {
-		filename := ""
-		if message.DocumentMessage.FileName != nil {
-			filename = *message.DocumentMessage.FileName
-		}
-		return fmt.Sprintf("[Document: %s]", filename), "document"
-	}
-
-	if message.StickerMessage != nil {
-		return "[Sticker]", "sticker"
-	}
-
-	if message.LocationMessage != nil {
-		return "[Location]", "location"
-	}
-
-	if message.ContactMessage != nil {
-		name := ""
-		if message.ContactMessage.DisplayName != nil {
-			name = *message.ContactMessage.DisplayName
-		}
-		return fmt.Sprintf("[Contact: %s]", name), "contact"
-	}
-
-	return "[Unknown message type]", "unknown"
+	// Use the mapper for consistent message extraction
+	mapper := NewMessageMapper()
+	return mapper.extractMessageContent(message)
 }
 
 func (h *EventHandler) extractContactNumber(jid string) string {
-
-	parts := strings.Split(jid, "@")
-	if len(parts) > 0 {
-		return parts[0]
-	}
-	return jid
+	// Use the mapper for consistent JID to phone number conversion
+	mapper := NewMessageMapper()
+	return mapper.JIDToPhoneNumber(jid)
 }
 
 func (h *EventHandler) handlePresence(evt *events.Presence, sessionID string) {
@@ -527,39 +469,36 @@ func (h *EventHandler) convertWhatsmeowMessage(evt *events.Message, sessionID st
 func (h *EventHandler) extractMessageContent(message *waE2E.Message) map[string]interface{} {
 	content := make(map[string]interface{})
 
+	// Get basic content and type using mapper
+	contentStr, msgType := h.extractMessageContentString(message)
+	content["type"] = msgType
+
 	switch {
 	case message.GetConversation() != "":
 		content["text"] = message.GetConversation()
-		content["type"] = "text"
 	case message.GetExtendedTextMessage() != nil:
 		content["text"] = message.GetExtendedTextMessage().GetText()
-		content["type"] = "extended_text"
 	case message.GetImageMessage() != nil:
 		img := message.GetImageMessage()
-		content["type"] = "image"
 		content["caption"] = img.GetCaption()
 		content["mimetype"] = img.GetMimetype()
 		content["url"] = img.GetURL()
 	case message.GetVideoMessage() != nil:
 		vid := message.GetVideoMessage()
-		content["type"] = "video"
 		content["caption"] = vid.GetCaption()
 		content["mimetype"] = vid.GetMimetype()
 		content["url"] = vid.GetURL()
 	case message.GetAudioMessage() != nil:
 		aud := message.GetAudioMessage()
-		content["type"] = "audio"
 		content["mimetype"] = aud.GetMimetype()
 		content["url"] = aud.GetURL()
 	case message.GetDocumentMessage() != nil:
 		doc := message.GetDocumentMessage()
-		content["type"] = "document"
 		content["filename"] = doc.GetFileName()
 		content["mimetype"] = doc.GetMimetype()
 		content["url"] = doc.GetURL()
 	default:
-		content["type"] = "unknown"
-		content["raw"] = fmt.Sprintf("%+v", message)
+		content["content"] = contentStr
 	}
 
 	return content

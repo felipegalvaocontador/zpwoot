@@ -257,135 +257,117 @@ func (c *Client) isDeviceRegistered() bool {
 	return c.device.ID != nil
 }
 
-func (c *Client) handleNewDeviceRegistration() {
+func (c *Client) connectExistingDevice() {
+	c.logger.InfoWithFields("Connecting existing device", map[string]interface{}{
+		"session_name": c.sessionName,
+	})
+
+	if err := c.client.Connect(); err != nil {
+		c.logger.ErrorWithFields("Failed to connect existing device", map[string]interface{}{
+			"session_name": c.sessionName,
+			"error":        err.Error(),
+		})
+		c.setError(fmt.Sprintf("connection failed: %v", err))
+		return
+	}
+
+	// Wait for authentication to complete
+	c.waitForAuthentication()
+}
+
+func (c *Client) connectNewDevice() {
+	c.logger.InfoWithFields("Connecting new device", map[string]interface{}{
+		"session_name": c.sessionName,
+	})
+
 	qrChan, err := c.client.GetQRChannel(c.ctx)
 	if err != nil {
 		c.logger.ErrorWithFields("Failed to get QR channel", map[string]interface{}{
 			"session_name": c.sessionName,
 			"error":        err.Error(),
 		})
-		c.setStatus("disconnected")
+		c.setError(fmt.Sprintf("QR channel failed: %v", err))
 		return
 	}
 
-	err = c.client.Connect()
-	if err != nil {
-		c.logger.ErrorWithFields("Failed to connect client", map[string]interface{}{
+	if err := c.client.Connect(); err != nil {
+		c.logger.ErrorWithFields("Failed to connect new device", map[string]interface{}{
 			"session_name": c.sessionName,
 			"error":        err.Error(),
 		})
-		c.setStatus("disconnected")
+		c.setError(fmt.Sprintf("connection failed: %v", err))
 		return
 	}
 
-	c.handleQRLoop(qrChan)
+	c.qrGenerator.StartQRLoop(c.ctx, qrChan, c.sessionName)
 }
 
-func (c *Client) handleExistingDeviceConnection() {
-	err := c.client.Connect()
-	if err != nil {
-		c.logger.ErrorWithFields("Failed to connect existing device", map[string]interface{}{
-			"session_name": c.sessionName,
-			"error":        err.Error(),
-		})
-		c.setStatus("disconnected")
-		return
-	}
-
-
-	go func() {
-		time.Sleep(2 * time.Second)
-		if c.client.IsConnected() && c.client.IsLoggedIn() {
-			c.mu.Lock()
-			c.isLoggedIn = true
-			c.mu.Unlock()
-			c.setStatus("logged_in")
-
-			c.logger.InfoWithFields("Successfully authenticated", map[string]interface{}{
-				"module": "whatsmeow",
-			})
-		}
-	}()
-}
-
-func (c *Client) handleQRLoop(qrChan <-chan whatsmeow.QRChannelItem) {
-	c.mu.Lock()
-	c.qrChannel = qrChan
-	c.qrContext, c.qrCancel = context.WithCancel(c.ctx)
-	c.mu.Unlock()
+func (c *Client) waitForAuthentication() {
+	// Wait up to 10 seconds for authentication
+	timeout := time.After(10 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
 
 	for {
 		select {
-		case <-c.qrContext.Done():
-			c.logger.InfoWithFields("QR loop cancelled", map[string]interface{}{
+		case <-timeout:
+			c.logger.WarnWithFields("Authentication timeout", map[string]interface{}{
 				"session_name": c.sessionName,
 			})
 			return
-
-		case evt, ok := <-qrChan:
-			if !ok {
-				c.logger.InfoWithFields("QR channel closed", map[string]interface{}{
+		case <-ticker.C:
+			if c.client.IsConnected() && c.client.IsLoggedIn() {
+				c.setState(StateLoggedIn)
+				c.logger.InfoWithFields("Authentication successful", map[string]interface{}{
 					"session_name": c.sessionName,
 				})
 				return
 			}
-
-			switch evt.Event {
-			case "code":
-				c.handleQRCode(evt.Code)
-			case "timeout":
-				c.logger.WarnWithFields("QR code timeout", map[string]interface{}{
-					"session_name": c.sessionName,
-				})
-				c.setStatus("disconnected")
-				return
-			}
+		case <-c.ctx.Done():
+			return
 		}
 	}
 }
 
-func (c *Client) handleQRCode(qrCode string) {
-	c.mu.Lock()
-	c.qrCode = qrCode
-	c.qrCodeExpires = time.Now().Add(30 * time.Second)
-	c.mu.Unlock()
 
-	c.logger.InfoWithFields("QR code generated", map[string]interface{}{
-		"session_name": c.sessionName,
-		"qr_code":      qrCode,
-	})
 
-	c.notifyEventHandlers(&QRCodeEvent{
-		SessionName: c.sessionName,
-		QRCode:      qrCode,
-		ExpiresAt:   c.qrCodeExpires,
-	})
-}
-
-func (c *Client) stopQRProcess() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.qrCancel != nil {
-		c.qrCancel()
-		c.qrCancel = nil
-	}
-
-	c.qrCode = ""
-	c.qrCodeExpires = time.Time{}
-}
-
-func (c *Client) setStatus(status string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.status = status
+// State management methods
+func (c *Client) setState(state ConnectionState) {
+	c.state = state
 	c.lastActivity = time.Now()
 
-	c.logger.DebugWithFields("Client status updated", map[string]interface{}{
+	c.logger.DebugWithFields("State changed", map[string]interface{}{
 		"session_name": c.sessionName,
-		"status":       status,
+		"new_state":    state.String(),
 	})
+}
+
+func (c *Client) setError(message string) {
+	c.state = StateError
+	c.errorMessage = message
+	c.lastActivity = time.Now()
+}
+
+func (c *Client) clearError() {
+	c.errorMessage = ""
+}
+
+// Legacy method for backward compatibility
+func (c *Client) setStatus(status string) {
+	var state ConnectionState
+	switch status {
+	case "connecting":
+		state = StateConnecting
+	case "connected":
+		state = StateConnected
+	case "logged_in":
+		state = StateLoggedIn
+	case "disconnected":
+		state = StateDisconnected
+	default:
+		state = StateError
+	}
+	c.setState(state)
 }
 
 func (c *Client) setupEventHandlers() {
@@ -445,38 +427,30 @@ func (c *Client) notifyEventHandlers(evt interface{}) {
 
 func (c *Client) handleConnectedEvent(_ *events.Connected) {
 	c.mu.Lock()
-	c.isConnected = true
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 
-	c.setStatus("connected")
-
-	c.logger.InfoWithFields("WhatsApp client connected", map[string]interface{}{
-		"module":  "client",
-		"session": c.sessionName,
+	c.setState(StateConnected)
+	c.logger.InfoWithFields("WhatsApp connected", map[string]interface{}{
+		"session_name": c.sessionName,
 	})
 }
 
 func (c *Client) handleDisconnectedEvent(_ *events.Disconnected) {
 	c.mu.Lock()
-	c.isConnected = false
-	c.isLoggedIn = false
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 
-	c.setStatus("disconnected")
-
-	c.logger.WarnWithFields("WhatsApp client disconnected", map[string]interface{}{
+	c.setState(StateDisconnected)
+	c.logger.WarnWithFields("WhatsApp disconnected", map[string]interface{}{
 		"session_name": c.sessionName,
 	})
 }
 
 func (c *Client) handleLoggedOutEvent(evt *events.LoggedOut) {
 	c.mu.Lock()
-	c.isLoggedIn = false
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 
-	c.setStatus("logged_out")
-
-	c.logger.WarnWithFields("WhatsApp client logged out", map[string]interface{}{
+	c.setState(StateDisconnected)
+	c.logger.WarnWithFields("WhatsApp logged out", map[string]interface{}{
 		"session_name": c.sessionName,
 		"reason":       evt.Reason,
 	})
@@ -484,57 +458,49 @@ func (c *Client) handleLoggedOutEvent(evt *events.LoggedOut) {
 
 func (c *Client) handlePairSuccessEvent(evt *events.PairSuccess) {
 	c.mu.Lock()
-	c.isLoggedIn = true
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 
-	c.setStatus("logged_in")
-	c.stopQRProcess()
-
+	c.setState(StateLoggedIn)
 	c.logger.InfoWithFields("WhatsApp pairing successful", map[string]interface{}{
 		"session_name": c.sessionName,
-		"jid":          evt.ID.String(),
+		"device_jid":   evt.ID.String(),
 	})
 }
 
 func (c *Client) handlePairErrorEvent(evt *events.PairError) {
-	c.setStatus("pair_error")
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
+	c.setError(fmt.Sprintf("pairing failed: %v", evt.Error))
 	c.logger.ErrorWithFields("WhatsApp pairing failed", map[string]interface{}{
 		"session_name": c.sessionName,
 		"error":        evt.Error.Error(),
 	})
 }
 
+// Disconnect gracefully disconnects the client
 func (c *Client) Disconnect() error {
-	c.logger.InfoWithFields("Starting client disconnection", map[string]interface{}{
-		"session_name": c.sessionName,
-	})
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.stopQRProcess()
-
-	if c.client.IsConnected() {
-		c.logger.InfoWithFields("Disconnecting whatsmeow client", map[string]interface{}{
-			"session_name": c.sessionName,
-		})
-		c.client.Disconnect()
-	}
-
-	if c.cancel != nil {
-		c.logger.InfoWithFields("Canceling client context", map[string]interface{}{
-			"session_name": c.sessionName,
-		})
-		c.cancel()
-	}
-
-	c.setStatus("disconnected")
-
-	c.logger.InfoWithFields("Client disconnection completed", map[string]interface{}{
+	c.logger.InfoWithFields("Disconnecting client", map[string]interface{}{
 		"session_name": c.sessionName,
 	})
 
+	// Stop QR process
+	c.qrGenerator.Stop()
+
+	// Disconnect WhatsApp client
+	if c.client.IsConnected() {
+		c.client.Disconnect()
+	}
+
+	// Cancel context
+	if c.cancel != nil {
+		c.cancel()
+	}
+
+	c.setState(StateDisconnected)
 	return nil
 }
 
@@ -542,7 +508,7 @@ func (c *Client) Logout() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if !c.isLoggedIn {
+	if !c.IsLoggedIn() {
 		return fmt.Errorf("client is not logged in")
 	}
 
@@ -554,46 +520,45 @@ func (c *Client) Logout() error {
 		return fmt.Errorf("failed to logout: %w", err)
 	}
 
-	c.isLoggedIn = false
-	c.qrCode = ""
-	c.qrCodeExpires = time.Time{}
+	// State is managed through setState method now
 
 	return nil
+}
+
+// Public getters
+func (c *Client) GetState() ConnectionState {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.state
 }
 
 func (c *Client) IsConnected() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.isConnected
+	return c.state == StateConnected || c.state == StateLoggedIn
 }
 
 func (c *Client) IsLoggedIn() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.isLoggedIn
+	return c.state == StateLoggedIn
 }
 
 func (c *Client) GetQRCode() (string, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	if c.isLoggedIn {
+	if c.IsLoggedIn() {
 		return "", fmt.Errorf("client is already logged in")
 	}
 
-	if !c.isConnected {
+	if !c.IsConnected() {
 		return "", fmt.Errorf("client is not connected")
 	}
 
-	if c.qrCode != "" && time.Now().Before(c.qrCodeExpires) {
-		return c.qrCode, nil
+	// Use QRGenerator to get current QR code
+	if qrCode, valid := c.qrGenerator.GetQRCode(); valid {
+		return qrCode, nil
 	}
 
-	if c.qrCode == "" {
-		return "", fmt.Errorf("no QR code available")
-	}
-
-	return c.qrCode, nil
+	return "", fmt.Errorf("no QR code available")
 }
 
 func (c *Client) SetProxy(proxy *session.ProxyConfig) error {
@@ -602,7 +567,7 @@ func (c *Client) SetProxy(proxy *session.ProxyConfig) error {
 
 	c.proxyConfig = proxy
 
-	if c.isConnected {
+	if c.IsConnected() {
 		if err := c.configureProxy(); err != nil {
 			return fmt.Errorf("failed to apply proxy configuration: %w", err)
 		}
@@ -612,9 +577,7 @@ func (c *Client) SetProxy(proxy *session.ProxyConfig) error {
 }
 
 func (c *Client) SetEventHandler(handler func(interface{})) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.eventHandler = handler
+	c.AddEventHandler(handler)
 }
 
 func (c *Client) GetJID() types.JID {
@@ -678,7 +641,14 @@ func (c *Client) configureProxy() error {
 func (c *Client) GetStatus() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.status
+	if c.state == StateError {
+		return fmt.Sprintf("error: %s", c.errorMessage)
+	}
+	return c.state.String()
+}
+
+func (c *Client) GetSessionName() string {
+	return c.sessionName
 }
 
 func (c *Client) AddEventHandler(handler func(interface{})) {

@@ -111,12 +111,9 @@ func (m *MessageMapper) JIDToPhoneNumber(jid string) string {
 }
 
 func (m *MessageMapper) PhoneNumberToJID(phoneNumber string) types.JID {
-
-	cleanNumber := strings.ReplaceAll(phoneNumber, "+", "")
-	cleanNumber = strings.ReplaceAll(cleanNumber, "-", "")
-	cleanNumber = strings.ReplaceAll(cleanNumber, " ", "")
-	cleanNumber = strings.ReplaceAll(cleanNumber, "(", "")
-	cleanNumber = strings.ReplaceAll(cleanNumber, ")", "")
+	// Use validator for consistent phone number cleaning
+	validator := NewValidator()
+	cleanNumber := validator.CleanPhoneNumber(phoneNumber)
 
 	return types.JID{
 		User:   cleanNumber,

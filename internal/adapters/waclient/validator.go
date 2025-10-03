@@ -153,6 +153,20 @@ func (v *Validator) IsUserJID(jid string) bool {
 	return parsedJID.Server == types.DefaultUserServer
 }
 
+// GetJIDType returns the type of JID (user, group, broadcast)
+func (v *Validator) GetJIDType(jid string) string {
+	if v.IsUserJID(jid) {
+		return "user"
+	}
+	if v.IsGroupJID(jid) {
+		return "group"
+	}
+	if v.IsBroadcastJID(jid) {
+		return "broadcast"
+	}
+	return "unknown"
+}
+
 func (v *Validator) ValidateMessageContent(content string, messageType string) error {
 	if content == "" && messageType == "text" {
 		return fmt.Errorf("text message content cannot be empty")
